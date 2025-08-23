@@ -1,3 +1,7 @@
+"""
+This module handles the sorting, renaming, and moving of PDF files.
+"""
+
 import unittest
 import os
 import shutil
@@ -8,40 +12,56 @@ from unittest.mock import patch, MagicMock, mock_open
 # We will assume the script is in the same directory and can be imported.
 import sortrenamemovepdf as srm
 
+
 class TestFilenameUtils(unittest.TestCase):
     """Tests for utility functions that manipulate filenames and strings."""
 
     def test_validate_and_trim_filename(self):
         """Tests the filename cleaning and validation logic."""
-        self.assertEqual(srm.validate_and_trim_filename("Valid_Filename_123"), "Valid_Filename_123")
+        self.assertEqual(
+            srm.validate_and_trim_filename("Valid_Filename_123"), "Valid_Filename_123"
+        )
         # Should remove leading/trailing whitespace and invalid characters
-        self.assertEqual(srm.validate_and_trim_filename("  file-with-spaces!@#$  "), "filewithspaces")
+        self.assertEqual(
+            srm.validate_and_trim_filename("  file-with-spaces!@#$  "), "filewithspaces"
+        )
         # Should handle unicode characters
-        self.assertEqual(srm.validate_and_trim_filename("你好世界_document"), "_document")
+        self.assertEqual(
+            srm.validate_and_trim_filename("你好世界_document"), "_document"
+        )
         # Should truncate long filenames
         self.assertEqual(len(srm.validate_and_trim_filename("a" * 200)), 160)
         # Should return a placeholder for empty or invalid names
         self.assertTrue(srm.validate_and_trim_filename("").startswith("empty_file_"))
-        self.assertTrue(srm.validate_and_trim_filename("!@#$%^&*()").startswith("invalid_name_"))
+        self.assertTrue(
+            srm.validate_and_trim_filename("!@#$%^&*()").startswith("invalid_name_")
+        )
 
-    @patch('os.path.exists')
+    @patch("os.path.exists")
     def test_handle_duplicate_filename(self, mock_exists):
         """Tests the logic for appending numbers to duplicate filenames."""
         # Case 1: No duplicate exists
         mock_exists.return_value = False
-        self.assertEqual(srm.handle_duplicate_filename("test_file", "/fake/dir"), "test_file")
+        self.assertEqual(
+            srm.handle_duplicate_filename("test_file", "/fake/dir"), "test_file"
+        )
         mock_exists.assert_called_with(os.path.join("/fake/dir", "test_file.pdf"))
 
         mock_exists.reset_mock()
         mock_exists.side_effect = [True, False]
-        self.assertEqual(srm.handle_duplicate_filename("test_file", "/fake/dir"), "test_file_1")
+        self.assertEqual(
+            srm.handle_duplicate_filename("test_file", "/fake/dir"), "test_file_1"
+        )
         self.assertEqual(mock_exists.call_count, 2)
 
         # Case 3: Multiple duplicates exist
         mock_exists.reset_mock()
         mock_exists.side_effect = [True, True, True, False]
-        self.assertEqual(srm.handle_duplicate_filename("test_file", "/fake/dir"), "test_file_3")
+        self.assertEqual(
+            srm.handle_duplicate_filename("test_file", "/fake/dir"), "test_file_3"
+        )
         self.assertEqual(mock_exists.call_count, 4)
+
 
 class TestContentHandling(unittest.TestCase):
     """Tests for functions that handle file content, like text extraction and truncation."""
@@ -55,7 +75,10 @@ class TestContentHandling(unittest.TestCase):
         self.assertLessEqual(len(srm.ENCODING.encode(truncated)), srm.MAX_LENGTH)
 
         short_text = "This is a short text that is well within the token limit."
-        self.assertEqual(srm.truncate_content_to_token_limit(short_text, srm.MAX_LENGTH), short_text)
+        self.assertEqual(
+            srm.truncate_content_to_token_limit(short_text, srm.MAX_LENGTH), short_text
+        )
+
 
 class TestFileProcessing(unittest.TestCase):
     """Tests the core file processing and moving logic."""
@@ -72,15 +95,15 @@ class TestFileProcessing(unittest.TestCase):
 
         # Create a dummy PDF file to be processed
         self.dummy_pdf_path = os.path.join(self.input_dir, "dummy.pdf")
-        with open(self.dummy_pdf_path, "w") as f:
+        with open(self.dummy_pdf_path, "w", encoding="utf-8") as f:
             f.write("dummy pdf content")
 
     def tearDown(self):
         """Remove the temporary directory structure after tests are complete."""
         shutil.rmtree(self.test_dir)
 
-    @patch('sortrenamemovepdf.get_new_filename_with_retry')
-    @patch('sortrenamemovepdf.extract_text_and_image')
+    @patch("sortrenamemovepdf.get_new_filename_with_retry")
+    @patch("sortrenamemovepdf.extract_text_and_image")
     def test_process_pdf_success(self, mock_extract, mock_get_filename):
         """Tests the successful processing of a single PDF file."""
         mock_extract.return_value = ("some extracted text", None)
@@ -90,33 +113,56 @@ class TestFileProcessing(unittest.TestCase):
         pbar = MagicMock()
         mock_progress_file = mock_open()
 
-        with patch('builtins.open', mock_progress_file):
-            with open('dummy_progress', 'a') as progress_f:
-                # Mock file locking as it's platform-specific
-                with patch('sortrenamemovepdf.lock_file'), patch('sortrenamemovepdf.unlock_file'):
-                    srm.process_pdf(self.dummy_pdf_path, "dummy.pdf", self.corrupted_dir, self.renamed_dir, pbar, progress_f)
+        with patch("builtins.open", mock_progress_file):
+            progress_f = mock_progress_file()
+            # Mock file locking as it's platform-specific
+            with patch("sortrenamemovepdf.lock_file"), patch(
+                "sortrenamemovepdf.unlock_file"
+            ):
+                srm.process_pdf(
+                    self.dummy_pdf_path,
+                    "dummy.pdf",
+                    self.corrupted_dir,
+                    self.renamed_dir,
+                    pbar,
+                    progress_f,
+                )
 
         # Verify the file was moved to the 'renamed' directory
         self.assertFalse(os.path.exists(self.dummy_pdf_path))
-        self.assertTrue(os.path.exists(os.path.join(self.renamed_dir, "new_filename_from_ai.pdf")))
+        self.assertTrue(
+            os.path.exists(os.path.join(self.renamed_dir, "new_filename_from_ai.pdf"))
+        )
         # Verify the progress bar was updated
         pbar.update.assert_called_once_with(1)
         # Verify progress was written to the log
         progress_f.write.assert_called_with("dummy.pdf\n")
 
-    @patch('sortrenamemovepdf.extract_text_and_image')
+    @patch("sortrenamemovepdf.extract_text_and_image")
     def test_process_pdf_corrupted(self, mock_extract):
         """Tests that a corrupted PDF is moved to the 'corrupted' directory."""
         from PyPDF2.errors import PdfReadError
-        mock_extract.side_effect = PdfReadError("This is a test error for a corrupted PDF")
+
+        mock_extract.side_effect = PdfReadError(
+            "This is a test error for a corrupted PDF"
+        )
 
         pbar = MagicMock()
         mock_progress_file = mock_open()
 
-        with patch('builtins.open', mock_progress_file):
-            with open('dummy_progress', 'a') as progress_f:
-                with patch('sortrenamemovepdf.lock_file'), patch('sortrenamemovepdf.unlock_file'):
-                    srm.process_pdf(self.dummy_pdf_path, "dummy.pdf", self.corrupted_dir, self.renamed_dir, pbar, progress_f)
+        with patch("builtins.open", mock_progress_file):
+            progress_f = mock_progress_file()
+            with patch("sortrenamemovepdf.lock_file"), patch(
+                "sortrenamemovepdf.unlock_file"
+            ):
+                srm.process_pdf(
+                    self.dummy_pdf_path,
+                    "dummy.pdf",
+                    self.corrupted_dir,
+                    self.renamed_dir,
+                    pbar,
+                    progress_f,
+                )
 
         # Verify the file was moved to the 'corrupted' directory
         self.assertFalse(os.path.exists(self.dummy_pdf_path))
@@ -124,7 +170,7 @@ class TestFileProcessing(unittest.TestCase):
         pbar.update.assert_called_once_with(1)
         progress_f.write.assert_called_with("dummy.pdf\n")
 
-    @patch('sortrenamemovepdf.get_filename_from_ai')
+    @patch("sortrenamemovepdf.get_filename_from_ai")
     def test_get_new_filename_with_retry_success(self, mock_get_filename_from_ai):
         """Tests the retry mechanism for the AI call, succeeding on the first try."""
         mock_get_filename_from_ai.return_value = "successful_name"
@@ -132,16 +178,19 @@ class TestFileProcessing(unittest.TestCase):
         self.assertEqual(result, "successful_name")
         mock_get_filename_from_ai.assert_called_once()
 
-    @patch('sortrenamemovepdf.get_filename_from_ai')
-    @patch('time.sleep', return_value=None) # Avoid actual sleeping during tests
-    def test_get_new_filename_with_retry_failure(self, mock_sleep, mock_get_filename_from_ai):
+    @patch("sortrenamemovepdf.get_filename_from_ai")
+    @patch("time.sleep", return_value=None)  # Avoid actual sleeping during tests
+    def test_get_new_filename_with_retry_failure(
+        self, mock_get_filename_from_ai, mock_sleep
+    ):
         """Tests that the retry mechanism fails gracefully after max retries."""
         mock_get_filename_from_ai.side_effect = Exception("API Error")
-        timestamp = time.strftime('%Y%m%d%H%M%S', time.gmtime())
+        timestamp = time.strftime("%Y%m%d%H%M%S", time.gmtime())
         result = srm.get_new_filename_with_retry("pdf content", max_retries=2)
         self.assertEqual(result, f"untitled_document_{timestamp}")
         self.assertEqual(mock_get_filename_from_ai.call_count, 2)
+        self.assertEqual(mock_sleep.call_count, 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
