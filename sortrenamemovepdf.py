@@ -724,15 +724,16 @@ def validate_and_trim_filename(initial_filename: str) -> str:
         timestamp = time.strftime('%Y%m%d%H%M%S', time.gmtime())
         return f'empty_file_{timestamp}'
 
-    # Normalize unicode and keep only [A-Za-z0-9_]
-    normalized = unicodedata.normalize('NFKD', initial_filename)
+    # Normalize unicode, encode to ASCII ignoring errors, then decode
+    normalized = unicodedata.normalize('NFKD', initial_filename).encode('ascii', 'ignore').decode('ascii')
+    # Keep only [A-Za-z0-9_]
     cleaned_filename = re.sub(r'[^a-zA-Z0-9_]', '', normalized)
 
     if not cleaned_filename:
         timestamp = time.strftime('%Y%m%d%H%M%S', time.gmtime())
         return f'invalid_name_{timestamp}'
 
-    return cleaned_filename[:100]
+    return cleaned_filename[:160]
 
 
 def handle_duplicate_filename(filename: str, folder: str) -> str:
