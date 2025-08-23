@@ -1,24 +1,31 @@
 # PDF Sort, Rename & Move Utility
 
-A powerful utility for organizing PDF documents using AI. This tool extracts content from PDFs, uses AI to generate descriptive filenames based on the content, and sorts them into appropriate folders.
+Organise PDFs with AI. The tool extracts content (text + OCR for scans), asks an AI model for a descriptive filename, and moves files into the right folder.
+
+---
 
 ## Features
+- **OpenAI (default) via Responses API** — GPT-5 / GPT-5-mini supported; sends a first-page image when available  
+- **OCR for scanned PDFs** — PyMuPDF render + Tesseract fallback (first N pages) with language hints  
+- **Filename hygiene** — underscores only, safe characters, de-dupe handling  
+- **Resumable runs** — `.progress` file with a `--reset-progress` flag  
+- **Sturdier file ops** — skips hidden/AppleDouble files, retries moves with copy-then-delete fallback  
+- **Multi-provider** — OpenAI, Claude, Gemini, Deepseek (OpenAI path is the most current)
 
-- **Multiple AI Provider Support**: Choose between OpenAI, Claude, Gemini, or Deepseek for PDF content analysis
-- **Smart Filename Generation**: AI analyzes PDF content to create meaningful filenames
-- **Corrupted File Handling**: Automatically detects and segregates corrupted or password-protected PDFs
-- **Progress Tracking**: Resumes processing if interrupted
-- **Cross-Platform Compatible**: Works on Windows, macOS, and Linux
+---
 
 ## Requirements
 
 ### Core Dependencies
 ```bash
-python >= 3.7
-PyPDF2 >= 3.0.0
-tiktoken >= 0.5.0
-tqdm >= 4.66.0
-requests >= 2.31.0
+python >= 3.8
+PyPDF >= 6.0.0
+tiktoken >= 0.11.0
+tqdm >= 4.67.1
+requests >= 2.32.5
+pymupdf >= 1.26.3
+pillow >= 11.3.0
+pytesseract >= 0.3.13
 ```
 
 ### Provider-Specific Dependencies
@@ -32,133 +39,159 @@ pip install openai
 pip install anthropic
 
 # For Gemini
-pip install google-generativeai
+pip install google-genai
 ```
 
+### OCR
+Recommended for scanning PDFs which may contain images rather than text
+```bash
+pip install pymupdf pillow pytesseract
+```
+
+And install the Tesseract binary:
+- macOS: `brew install tesseract`
+- Debian/Ubuntu: `sudo apt-get install tesseract-ocr`
+- Windows: install Tesseract (UB Mannheim builds are common)
+
+---
+
 ## Installation
+```bash
+git clone https://github.com/yourusername/sort-rename-move-pdf.git
+cd sort-rename-move-pdf
+# then install deps as above
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/sort-rename-move-pdf.git
-   cd sort-rename-move-pdf
-   ```
-
-2. Install the core dependencies:
-   ```bash
-   pip install PyPDF2 tiktoken tqdm requests
-   ```
-
-3. Install provider-specific dependencies (choose at least one):
-   ```bash
-   # For OpenAI
-   pip install openai
-   
-   # For Claude
-   pip install anthropic
-   
-   # For Gemini
-   pip install google-generativeai
-   ```
+--- 
 
 ## API Keys
 
-You'll need an API key for at least one of the supported AI providers:
+Set an env var or pass `--api-key`:
+- **OpenAI**: `OPENAI_API_KEY`
+- **Claude**: `CLAUDE_API_KEY`
+- **Gemini**: `GEMINI_API_KEY`
+- **Deepseek**: `DEEPSEEK_API_KEY`
 
-- **OpenAI**: Set as environment variable `OPENAI_API_KEY` or provide with `--api-key`
-- **Claude**: Set as environment variable `CLAUDE_API_KEY` or provide with `--api-key`
-- **Gemini**: Set as environment variable `GEMINI_API_KEY` or provide with `--api-key`
-- **Deepseek**: Set as environment variable `DEEPSEEK_API_KEY` or provide with `--api-key`
+--- 
 
 ## Usage
 
-### Basic Usage
-
+### Basic
 ```bash
-python sortrenamemovepdf.py -i /path/to/pdfs -c /path/to/corrupted -r /path/to/renamed
+python sortrenamemovepdf.py \
+  -i /path/to/pdfs \
+  -c /path/to/corrupted \
+  -r /path/to/renamed
 ```
 
-### Using Different AI Providers
-
+### OpenAI models
 ```bash
-# Use OpenAI's GPT-4o
+# GPT-5 mini (default if not set)
+python sortrenamemovepdf.py -i ./input -c ./corrupted -r ./renamed -p openai -m gpt-5-mini
+# GPT-5 (full)
+python sortrenamemovepdf.py -i ./input -c ./corrupted -r ./renamed -p openai -m gpt-5
+# GPT-4o (vision-friendly)
 python sortrenamemovepdf.py -i ./input -c ./corrupted -r ./renamed -p openai -m gpt-4o
+```
 
-# Use Claude
+### Other providers
+```bash
+# Claude
 python sortrenamemovepdf.py -i ./input -c ./corrupted -r ./renamed -p claude -m claude-3-sonnet
-
-# Use Gemini
+# Gemini
 python sortrenamemovepdf.py -i ./input -c ./corrupted -r ./renamed -p gemini
 ```
 
-### List Available Models
+### OCR language hint (default: English)
+```bash
+python sortrenamemovepdf.py ... --ocr-lang "eng"
+# examples: "eng+deu", "eng+ind"
+```
 
+### Reset progress tracking
+```bash
+python sortrenamemovepdf.py ... --reset-progress
+```
+
+### List available models
 ```bash
 python sortrenamemovepdf.py --list-models
 ```
 
-### Command-Line Arguments
-
-```
--i, --input       Input folder containing PDF files
--c, --corrupted   Folder for corrupted PDF files
--r, --renamed     Folder for renamed PDF files
--p, --provider    AI provider (openai, claude, gemini, deepseek)
--m, --model       Model to use for the selected provider
--k, --api-key     API key for the selected provider
--l, --list-models List all available models by provider and exit
-```
-
-## How It Works
-
-1. The script scans the input folder for PDF files
-2. For each PDF:
-   - Extracts text content with intelligent page limiting for large files
-   - Sends the content to the selected AI provider
-   - Generates a descriptive filename
-   - Handles duplicates with sequential numbering
-   - Moves the file to the renamed folder
-3. Corrupted or password-protected PDFs are moved to the corrupted folder
-4. Progress is tracked to allow resuming if interrupted
-
-## Examples
-
-### Organizing Research Papers
-
+### Command-line arguments
 ```bash
-python sortrenamemovepdf.py -i ./research_papers -c ./corrupted_papers -r ./organized_papers
+-i, --input         Input folder containing PDF files
+-c, --corrupted     Folder for corrupted PDF files
+-r, --renamed       Folder for renamed PDF files
+-p, --provider      AI provider (openai, claude, gemini, deepseek)
+-m, --model         Model to use for the selected provider
+-k, --api-key       API key for the selected provider
+-l, --list-models   List all available models by provider and exit
+--ocr-lang          Tesseract OCR language hint (default: "eng")
+--reset-progress    Delete .progress and process all files from scratch
 ```
 
-### Processing Legal Documents with Claude
+---
 
-```bash
-python sortrenamemovepdf.py -i ./legal_docs -c ./damaged_docs -r ./processed_docs -p claude -m claude-3-opus
-```
+## How it works
 
-### Processing Large Batches of Files
+1. Finds PDFs in the input folder (skips hidden/AppleDouble files like `._scan.pdf`).
+2. Extracts content:
+    - Native text via PyMuPDF / PyPDF2
+    - If too little text, OCR first N pages with Tesseract
+    - Renders the first page to an image for AI vision context
+3. Calls the selected AI model to propose a filename.
+4. Sanitises and de-dupes; moves the file to the renamed folder.
+5. Corrupted/encrypted PDFs are moved to the corrupted folder.
+6. Progress is tracked so runs can resume.
 
-For large batches, the tool automatically tracks progress and can be safely interrupted and resumed:
-
-```bash
-python sortrenamemovepdf.py -i ./large_batch -c ./corrupted -r ./processed
-```
+---
 
 ## Troubleshooting
 
-- **Missing Dependencies**: Ensure you've installed the required packages for your chosen provider
-- **API Key Issues**: Check that your API key is valid and has been set correctly
-- **Processing Errors**: If you see specific errors, check the `pdf_processing_errors.log` file for details
-- **Rate Limiting**: The script includes exponential backoff for API retries
+- **All files named `empty_file_*`**
+    - Ensure `pymupdf`, `pillow`, `pytesseract` are installed **and** the Tesseract binary is installed.
+    - Try a vision-capable model (`-m gpt-4o`).
+    - Check that your PDFs aren’t zero-byte or image-only without OCR tooling.
+- **“Permission denied” on moves**
+    - Cloud sync/AV tools can lock files. Use a non-synced target folder or retry; the script will attempt copy-then-delete.
+- **Malformed PDFs like `._scan.pdf`**
+    - These are macOS resource forks; they’re skipped.
+- **Rate limiting / network blips**
+    - The script retries with exponential backoff; see `pdf_processing_errors.log`.
 
-## Performance Considerations
+---
 
-- Very large PDFs are automatically limited to the first 100 pages for performance
-- For batch processing, the script uses efficient token counting and file handling
-- Progress is saved after each file, so it's safe to interrupt and resume later
+## Performance
+
+- Very large PDFs: auto-limit to first 100 pages for text extraction.
+- Token handling: truncation via `tiktoken` with binary-search trimming.
+- Per-file progress is written; reset with `--reset-progress`.
+
+---
+
+## Status & roadmap
+
+- **OpenAI** path is the most current (Responses API, vision inputs).
+- **Anthropic/Gemini** paths are functional but may need SDK updates to match the latest APIs and add vision support.
+- Tests will be added in a future revision (unit + integration with fixture PDFs).
+
+---
+
+## Credit
+
+Forked from **[munir-abbasi/sort-rename-move-pdf](https://github.com/munir-abbasi/sort-rename-move-pdf)** — thanks to the original author for the foundation. 
+
+---
 
 ## License
 
-MIT License
+MIT
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+PRs welcome — especially for provider SDK updates, test fixtures, and vision/auto-rotation improvements.
+
+---
