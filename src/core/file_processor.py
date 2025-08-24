@@ -77,6 +77,23 @@ def _generate_filename(
     return organizer.filename_handler.validate_and_trim_filename(new_file_name)
 
 
+def _move_file_only(
+    input_path: str,
+    filename: str,
+    renamed_folder: str,
+    new_file_name: str,
+    organizer,
+    display_context,
+) -> str:
+    """Move file to renamed folder (progress recording handled separately)."""
+    display_context.set_status("moving_file")
+    file_extension = os.path.splitext(input_path)[1]
+    final_file_name = organizer.move_file_to_category(
+        input_path, filename, renamed_folder, new_file_name, file_extension
+    )
+    return final_file_name
+
+
 def _move_and_record_file(
     input_path: str,
     filename: str,
@@ -86,11 +103,9 @@ def _move_and_record_file(
     progress_f,
     display_context,
 ) -> str:
-    """Move file to renamed folder and record progress."""
-    display_context.set_status("moving_file")
-    file_extension = os.path.splitext(input_path)[1]
-    final_file_name = organizer.move_file_to_category(
-        input_path, filename, renamed_folder, new_file_name, file_extension
+    """Move file to renamed folder and record progress (legacy function)."""
+    final_file_name = _move_file_only(
+        input_path, filename, renamed_folder, new_file_name, organizer, display_context
     )
 
     # Record that this file has been processed.
@@ -99,6 +114,29 @@ def _move_and_record_file(
     )
 
     return final_file_name
+
+
+def _handle_processing_error_no_progress(
+    error: Exception,
+    filename: str,
+    input_path: str,
+    unprocessed_folder: str,
+    organizer,
+    display_context,
+) -> tuple:
+    """Handle processing errors by moving to unprocessed folder (progress recording handled separately)."""
+    error_msg = f"Error processing {filename}: {str(error)}"
+    display_context.show_error(error_msg)
+
+    try:
+        if os.path.exists(input_path):
+            unprocessed_path = os.path.join(unprocessed_folder, filename)
+            organizer.file_manager.safe_move(input_path, unprocessed_path)
+            display_context.show_warning("Moved to unprocessed folder")
+    except OSError as move_error:
+        display_context.show_error(f"Failed to move file: {str(move_error)}")
+
+    return False, None
 
 
 def _handle_processing_error(
@@ -110,23 +148,17 @@ def _handle_processing_error(
     progress_f,
     display_context,
 ) -> tuple:
-    """Handle processing errors by moving to unprocessed folder."""
-    error_msg = f"Error processing {filename}: {str(error)}"
-    display_context.show_error(error_msg)
+    """Handle processing errors by moving to unprocessed folder (legacy function)."""
+    success, result = _handle_processing_error_no_progress(
+        error, filename, input_path, unprocessed_folder, organizer, display_context
+    )
 
-    try:
-        if os.path.exists(input_path):
-            unprocessed_path = os.path.join(unprocessed_folder, filename)
-            organizer.file_manager.safe_move(input_path, unprocessed_path)
-            display_context.show_warning("Moved to unprocessed folder")
+    # Record progress
+    organizer.progress_tracker.record_progress(
+        progress_f, filename, organizer.file_manager
+    )
 
-        organizer.progress_tracker.record_progress(
-            progress_f, filename, organizer.file_manager
-        )
-    except OSError as move_error:
-        display_context.show_error(f"Failed to move file: {str(move_error)}")
-
-    return False, None
+    return success, result
 
 
 def _handle_runtime_error(error: RuntimeError, filename: str, display_context) -> tuple:
@@ -155,45 +187,54 @@ def process_file_enhanced_core(
     display_context: Any,
 ) -> Tuple[bool, Optional[str]]:
     """Core file processing logic (called by retry wrapper)."""
+    success = False
+    result = None
+    
     try:
         if not os.path.isfile(input_path):
             display_context.show_error(f"File not found: {input_path}")
-            return False, None
+            success, result = False, None
+        else:
+            # Extract content
+            text, img_b64 = _extract_file_content(input_path, ocr_lang, display_context)
 
-        # Extract content
-        text, img_b64 = _extract_file_content(input_path, ocr_lang, display_context)
+            # Generate filename
+            new_file_name = _generate_filename(
+                text, img_b64, ai_client, organizer, display_context
+            )
 
-        # Generate filename
-        new_file_name = _generate_filename(
-            text, img_b64, ai_client, organizer, display_context
-        )
+            # Move file (without recording progress)
+            final_file_name = _move_file_only(
+                input_path,
+                filename,
+                renamed_folder,
+                new_file_name,
+                organizer,
+                display_context,
+            )
 
-        # Move and record file
-        final_file_name = _move_and_record_file(
-            input_path,
-            filename,
-            renamed_folder,
-            new_file_name,
-            organizer,
-            progress_f,
-            display_context,
-        )
-
-        return True, final_file_name
+            success, result = True, final_file_name
 
     except (ValueError, OSError, FileNotFoundError) as e:
-        return _handle_processing_error(
+        success, result = _handle_processing_error_no_progress(
             e,
             filename,
             input_path,
             unprocessed_folder,
             organizer,
-            progress_f,
             display_context,
         )
 
     except RuntimeError as e:
-        return _handle_runtime_error(e, filename, display_context)
+        success, result = _handle_runtime_error(e, filename, display_context)
+    
+    finally:
+        # Record progress once at the end, regardless of success/failure
+        organizer.progress_tracker.record_progress(
+            progress_f, filename, organizer.file_manager
+        )
+    
+    return success, result
 
 
 def process_file_with_retry(
@@ -431,11 +472,14 @@ def process_file(
             else:
                 pbar.set_postfix({"Status": "Error", "Message": "File not found"})
 
-            organizer.progress_tracker.record_progress(
-                progress_f, filename, organizer.file_manager
-            )
+            # Progress recording is already handled in success path above
         except OSError as move_error:
             pbar.set_postfix({"Status": "Error", "Message": str(move_error)})
+        
+        # Record progress once for error case
+        organizer.progress_tracker.record_progress(
+            progress_f, filename, organizer.file_manager
+        )
         return False
     except RuntimeError as e:
         error_msg = f"Unexpected error with file {filename}: {str(e)}"
