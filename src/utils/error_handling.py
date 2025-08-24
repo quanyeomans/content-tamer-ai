@@ -250,7 +250,7 @@ class RetryHandler:
 
         if self.stats.recoverable_errors_encountered > 0:
             parts.append(
-                f"ℹ️  {self.stats.recoverable_errors_encountered} retry attempts were made due to temporary permission/lock issues "
+                f"ℹ️  {self.stats.recoverable_errors_encountered} files had temporary permission/lock issues "
                 f"(typically caused by antivirus scans or cloud sync)"
             )
 
