@@ -60,20 +60,53 @@ class ProcessingContext:
 
     def complete_file(self, filename: str, new_filename: str = "") -> None:
         """Mark file as successfully completed."""
+        self.display.progress.add_success()
         self.display.progress.update(status="completed", increment=True)
-        if new_filename and not self.display.options.quiet:
-            self.show_success(f"→ {new_filename}")
+        
+        # Always show success line for completed files (unless in quiet mode)
+        if not self.display.options.quiet:
+            # Check if we have a full progress display with stats
+            if hasattr(self.display.progress, 'stats'):
+                percentage = self.display.progress.stats.progress_percentage
+                success_count = self.display.progress.stats.success_count
+                
+                # Create progress bar with correct length
+                bar_length = 40
+                filled_length = int(percentage / 100 * bar_length)
+                
+                # Use ASCII characters for better compatibility
+                bar = '#' * filled_length + '.' * (bar_length - filled_length)
+                
+                # Use actual new filename if available, otherwise show as processed
+                display_name = new_filename if new_filename and new_filename != "processed" else filename
+                success_line = f"[{bar}] {percentage:5.1f}% -> {display_name} SUCCESS"
+                
+                # Write to the display manager's output file
+                output_file = self.display.options.file or sys.stdout
+                output_file.write(success_line + '\n')
+                output_file.flush()
+            else:
+                # Fallback for SimpleProgressDisplay
+                display_name = new_filename if new_filename and new_filename != "processed" else filename
+                output_file = self.display.options.file or sys.stdout
+                # Use ASCII characters for better compatibility
+                success_line = f"SUCCESS {display_name} - Success"
+                output_file.write(success_line + '\n')
+                output_file.flush()
 
     def fail_file(self, filename: str, error_details: str = "") -> None:
         """Mark file as failed."""
         self.display.progress.add_error()
         self.display.progress.update(status="failed", increment=True)
-        if error_details:
-            self.show_error(f"Failed to process {filename}: {error_details}")
+        # Error details will be shown in final summary instead of during processing
 
     def show_success(self, message: str) -> None:
-        """Show success message."""
-        self.display.messages.success(message, location=DisplayLocation.BELOW_PROGRESS)
+        """Show success message as a permanent line."""
+        # Temporarily disable progress to show permanent success message
+        was_active = self.display.messages._progress_active
+        self.display.messages.set_progress_active(False)
+        self.display.messages.success(message, location=DisplayLocation.INLINE)
+        self.display.messages.set_progress_active(was_active)
 
     def show_warning(self, message: str) -> None:
         """Show warning message."""

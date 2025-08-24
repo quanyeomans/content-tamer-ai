@@ -66,6 +66,8 @@ class ErrorClassifier:
             error_code == errno.EBUSY
             or "file is being used" in error_str
             or "errno 32" in error_str
+            or "temporarily locked" in error_str
+            or "file locked" in error_str
         ):
             return ErrorClassification(
                 error_type=ErrorType.FILE_LOCKED,
@@ -179,8 +181,7 @@ class RetryHandler:
                 if attempt > 0:
                     # This was a successful retry
                     self.stats.add_attempt(success=True, was_retry=True)
-                    display_context.set_status("recovered")
-                    display_context.show_info("✅ Successfully processed after retry")
+                    display_context.set_status("completed")
                 else:
                     # First attempt success
                     self.stats.add_attempt(success=True, was_retry=False)
@@ -208,19 +209,8 @@ class RetryHandler:
                     # Calculate wait time with exponential backoff
                     wait_time = error_classification.suggested_wait_time * (2**attempt)
 
-                    # Show user-friendly retry message (not alarming)
-                    if attempt == 0:
-                        # First retry - show informative message
-                        display_context.set_status("retrying")
-                        display_context.show_info(
-                            f"⏳ {error_classification.user_message}, retrying..."
-                        )
-                    else:
-                        # Subsequent retries - quieter message
-                        display_context.set_status("retrying")
-                        display_context.show_debug(
-                            f"Retry attempt {attempt + 1} for {filename}"
-                        )
+                    # Show only status update, no verbose messages during processing
+                    display_context.set_status("retrying")
 
                     # Wait before retry
                     time.sleep(wait_time)
@@ -232,16 +222,10 @@ class RetryHandler:
                         # Recoverable error but exhausted retries
                         self.stats.add_attempt(success=False, was_retry=True)
                         display_context.set_status("failed")
-                        display_context.show_warning(
-                            f"⚠️ {error_classification.user_message} - failed after {self.max_attempts} attempts"
-                        )
                     else:
                         # Permanent error
                         self.stats.add_permanent_error()
                         display_context.set_status("failed")
-                        display_context.show_error(
-                            f"❌ {error_classification.user_message}: {filename}"
-                        )
 
                     return False, None, error_classification
 

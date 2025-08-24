@@ -208,16 +208,13 @@ class TestPDFProcessorIntegration(unittest.TestCase):
         
         processor = PDFProcessor()
         
-        # Capture print output to verify threat analysis runs
-        with patch('builtins.print') as mock_print:
-            content, image = processor.extract_content(pdf_file)
-            
-            # Check if any PDF analysis messages were printed
-            print_calls = [str(call) for call in mock_print.call_args_list]
-            analysis_printed = any("PDF Analysis" in call or "PDF Security" in call for call in print_calls)
-            
-            # Should have run analysis (may or may not print depending on threat level)
-            self.assertIsInstance(content, str)
+        # Test that threat analysis runs internally (no longer prints to stdout)
+        content, image = processor.extract_content(pdf_file)
+        
+        # Should successfully extract content and run analysis internally
+        self.assertIsInstance(content, str)
+        self.assertNotEqual(content, "")
+        self.assertFalse(content.startswith("Error:"))
     
     def test_pdf_processor_handles_analysis_errors(self):
         """Test that PDFProcessor handles analysis errors gracefully."""

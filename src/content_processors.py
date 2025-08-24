@@ -104,11 +104,8 @@ class PDFProcessor(ContentProcessor):
             analyzer = PDFAnalyzer()
             threat_analysis = analyzer.analyze_pdf(file_path)
             
-            # Log threat analysis results (avoiding unicode in print for Windows compatibility)
-            if threat_analysis.should_warn:
-                print(f"PDF Security Warning [{threat_analysis.threat_level.value.upper()}]: {threat_analysis.summary}")
-            elif threat_analysis.threat_level != ThreatLevel.SAFE:
-                print(f"PDF Analysis [{threat_analysis.threat_level.value.upper()}]: {threat_analysis.summary}")
+            # Note: Threat analysis results are logged internally by the security module
+            # They can be accessed via the threat_analysis object if needed for reporting
             
             # Continue with content extraction regardless of threat level
             # (non-destructive approach - we warn but don't block)
@@ -254,9 +251,8 @@ class PDFProcessor(ContentProcessor):
                 total_pages = len(reader.pages)
                 if max_pages is None and total_pages > 100:
                     max_pages = 100
-                    print(
-                        f"Warning: PDF has {total_pages} pages. Limiting to first {max_pages} pages for performance."
-                    )
+                    # Note: Removed print() to avoid corrupting progress display
+                    # This information is not critical for user display during processing
 
                 pages_to_process = (
                     reader.pages
@@ -270,9 +266,9 @@ class PDFProcessor(ContentProcessor):
                         page_text = page.extract_text() or ""
                         content.append(page_text)
                     except (TypeError, KeyError, ValueError) as e:
-                        print(
-                            f"Warning: Could not extract text from a page due to malformed content: {str(e)}"
-                        )
+                        # Note: Removed print() to avoid corrupting progress display
+                        # This is a recoverable error - processing continues with other pages
+                        pass
 
                 joined = (" ".join(content)).strip()
                 if not joined:

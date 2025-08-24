@@ -7,7 +7,11 @@ Main application logic coordinating all components for document processing.
 import os
 from typing import Optional, Set
 
-from .directory_manager import get_api_details, DEFAULT_PROCESSED_DIR, DEFAULT_PROCESSING_DIR
+from .directory_manager import (
+    get_api_details,
+    DEFAULT_PROCESSED_DIR,
+    DEFAULT_PROCESSING_DIR,
+)
 from .file_processor import process_file_enhanced
 
 # Import utils with fallback
@@ -17,6 +21,7 @@ try:
 except ImportError:
     import sys
     import os
+
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     from utils.error_handling import create_retry_handler
     from utils.display_manager import DisplayManager, DisplayOptions
@@ -30,6 +35,7 @@ try:
 except ImportError:
     import sys
     import os
+
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     from ai_providers import AIProviderFactory
     from content_processors import ContentProcessorFactory
@@ -97,8 +103,12 @@ def _process_files_batch(
     organizer,
     display_manager,
     session_retry_handler,
-) -> bool:
-    """Process batch of files with error handling."""
+) -> tuple[bool, int, int, list]:
+    """Process batch of files with error handling. Returns (success, successful_count, failed_count, error_details)."""
+    successful_count = 0
+    failed_count = 0
+    error_details = []
+
     try:
         with open(progress_file, "a", encoding="utf-8") as progress_f:
             with display_manager.processing_context(
@@ -131,19 +141,42 @@ def _process_files_batch(
                         retry_handler=session_retry_handler,
                     )
 
-                    if success and new_filename:
-                        ctx.complete_file(filename, new_filename)
-                    elif not success:
-                        ctx.fail_file(filename, "Processing failed")
+                    if success:
+                        # File was processed successfully
+                        display_name = new_filename if new_filename else "processed"
+                        ctx.complete_file(filename, display_name)
+                        successful_count += 1
                     else:
-                        ctx.complete_file(filename, "processed")
-        return True
+                        # File processing failed after all retries
+                        # Move file to unprocessed folder
+                        try:
+                            if os.path.exists(input_path):
+                                unprocessed_path = os.path.join(
+                                    unprocessed_dir, filename
+                                )
+                                organizer.file_manager.safe_move(
+                                    input_path, unprocessed_path
+                                )
+                        except OSError:
+                            pass  # Will be noted in error summary
+
+                        ctx.fail_file(filename, "Processing failed")
+                        failed_count += 1
+                        error_details.append(
+                            {"filename": filename, "error": "Processing failed"}
+                        )
+        return True, successful_count, failed_count, error_details
     except KeyboardInterrupt:
         display_manager.warning("Process interrupted by user. Progress has been saved.")
-        return True  # Not a failure - user choice
+        return (
+            True,
+            successful_count,
+            failed_count,
+            error_details,
+        )  # Not a failure - user choice
     except IOError as e:
         display_manager.critical(f"Error writing to progress file: {e}")
-        return False
+        return False, successful_count, failed_count, error_details
 
 
 def organize_content(
@@ -162,7 +195,7 @@ def organize_content(
     Processes any content type - PDFs, images, screenshots - and generates
     meaningful, descriptive filenames based on document content.
     """
-    # Initialize display system  
+    # Initialize display system
     display_manager = _setup_display_manager(display_options)
 
     # Security validation for paths
@@ -170,21 +203,26 @@ def organize_content(
         from utils.security import PathValidator, SecurityError
     except ImportError:
         import sys
+
         sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
         from utils.security import PathValidator, SecurityError
-    
+
     try:
         # Validate all directory paths for security
         safe_input_dir = PathValidator.validate_directory(input_dir)
         safe_unprocessed_dir = PathValidator.validate_directory(unprocessed_dir)
         safe_renamed_dir = PathValidator.validate_directory(renamed_dir)
-        
+
         # Create allowed base directories set for file validation
         allowed_dirs = {safe_input_dir, safe_unprocessed_dir, safe_renamed_dir}
-        
+
         # Update paths to use validated versions
-        input_dir, unprocessed_dir, renamed_dir = safe_input_dir, safe_unprocessed_dir, safe_renamed_dir
-        
+        input_dir, unprocessed_dir, renamed_dir = (
+            safe_input_dir,
+            safe_unprocessed_dir,
+            safe_renamed_dir,
+        )
+
     except SecurityError as e:
         display_manager.critical(f"Security error in directory paths: {e}")
         return False
@@ -238,7 +276,7 @@ def organize_content(
     session_retry_handler = create_retry_handler(max_attempts=3)
 
     # Process files batch
-    success = _process_files_batch(
+    success, successful_count, failed_count, error_details = _process_files_batch(
         processable_files,
         processed_files,
         input_dir,
@@ -260,14 +298,21 @@ def organize_content(
     if retry_summary:
         display_manager.info(retry_summary)
 
-    # Show completion statistics
+    # Show completion statistics with actual counts
     display_manager.show_completion_stats(
         {
             "total_files": total_files,
-            "successful": total_files,  # Will be updated with actual stats in future enhancement
+            "successful": successful_count,
+            "errors": failed_count,
             "recoverable_errors": session_retry_handler.get_stats().recoverable_errors_encountered,
             "successful_retries": session_retry_handler.get_stats().successful_retries,
         }
     )
+
+    # Show detailed error summary if there were failures
+    if error_details:
+        display_manager.info("\n📋 Detailed Error Summary:")
+        for error in error_details:
+            display_manager.error(f"❌ {error['filename']}: {error['error']}")
 
     return True

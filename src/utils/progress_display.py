@@ -19,6 +19,7 @@ class ProgressStats:
 
     total: int = 0
     completed: int = 0
+    succeeded: int = 0
     failed: int = 0
     warnings: int = 0
     start_time: float = field(default_factory=time.time)
@@ -31,7 +32,7 @@ class ProgressStats:
     @property
     def success_count(self) -> int:
         """Get successful processing count."""
-        return self.completed - self.failed
+        return self.succeeded
 
     @property
     def progress_percentage(self) -> float:
@@ -88,6 +89,10 @@ class ProgressDisplay:
         """Increment error count."""
         self.stats.failed += 1
 
+    def add_success(self) -> None:
+        """Increment success count."""
+        self.stats.succeeded += 1
+
     def finish(self, final_message: str = "Processing complete") -> None:
         """Complete progress display."""
         self._show_cursor()
@@ -110,12 +115,18 @@ class ProgressDisplay:
             self._cursor_hidden = False
 
     def _clear_current_line(self) -> None:
-        """Clear the current terminal line."""
+        """Clear the current terminal line and stats line if present."""
         if not self.formatter.no_color:
+            # Clear current line
             self.file.write(f"\r{Colors.CLEAR_LINE}")
+            # If stats are shown, also clear the stats line
+            if self.show_stats and self.stats.total > 0:
+                self.file.write(f"\n{Colors.CLEAR_LINE}\r{Colors.CURSOR_UP}")
         else:
             # Fallback: overwrite with spaces
             self.file.write(f"\r{' ' * self.last_line_length}\r")
+            if self.show_stats and self.stats.total > 0:
+                self.file.write(f"\n{' ' * 80}\r{Colors.CURSOR_UP if not self.formatter.no_color else ''}")
 
     def _render_progress(self, description: str = "Processing") -> None:
         """Render the complete progress display."""
@@ -295,9 +306,12 @@ class SimpleProgressDisplay:
         self.completed = 0
         self.total = 0
         self.file = file or sys.stdout
+        # Add stats tracking to match ProgressDisplay interface
+        self.stats = ProgressStats()
 
     def start(self, total: int, description: str = "Processing") -> None:
         self.total = total
+        self.stats.total = total
         self.file.write(f"{description} {total} files...\n")
         self.file.flush()
 
@@ -306,15 +320,19 @@ class SimpleProgressDisplay:
     ) -> None:
         if increment:
             self.completed += 1
+            self.stats.completed += 1
         if filename:
             self.file.write(f"[{self.completed}/{self.total}] {filename}\n")
             self.file.flush()
 
     def add_warning(self) -> None:
-        pass
+        self.stats.warnings += 1
 
     def add_error(self) -> None:
-        pass
+        self.stats.failed += 1
+
+    def add_success(self) -> None:
+        self.stats.succeeded += 1
 
     def finish(self, final_message: str = "Processing complete") -> None:
         self.file.write(f"{final_message}\n")

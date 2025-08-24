@@ -388,9 +388,11 @@ class MessageHandler:
             self.file.flush()
         elif location == DisplayLocation.BELOW_PROGRESS:
             # Show message below current progress
-            self.file.write(f"\n{formatted_message}")
-            if not self._progress_active:
-                self.file.write("\n")
+            if self._progress_active:
+                # Move to new line after progress, show message, no extra newline
+                self.file.write(f"\n{formatted_message}")
+            else:
+                self.file.write(f"\n{formatted_message}\n")
             self.file.flush()
         else:  # INLINE or default
             self.file.write(f"{formatted_message}\n")
@@ -436,20 +438,25 @@ class MessageHandler:
             self.file.flush()
         elif location == DisplayLocation.BELOW_PROGRESS:
             # Show message below current progress
-            self.file.write(f"\n{formatted_message}")
-            if not self._progress_active:
-                self.file.write("\n")
+            if self._progress_active:
+                # Move to new line after progress, show message, no extra newline
+                self.file.write(f"\n{formatted_message}")
+            else:
+                self.file.write(f"\n{formatted_message}\n")
             self.file.flush()
         else:  # INLINE or default
             self.file.write(f"{formatted_message}\n")
             self.file.flush()
 
     def _clear_progress_line(self) -> None:
-        """Clear the current progress line."""
+        """Clear the current progress line and stats line."""
         if not self.formatter.no_color:
+            # Clear current line and potential stats line below
             self.file.write(f"\r{Colors.CLEAR_LINE}")
+            # Also clear the line below (stats line) and return cursor
+            self.file.write(f"\n{Colors.CLEAR_LINE}\r{Colors.CURSOR_UP}")
         else:
-            self.file.write("\r")
+            self.file.write("\r" + " " * 80 + "\r")
 
     def show_summary(self) -> None:
         """Enhanced session summary with statistics and suppressed messages."""

@@ -1,3 +1,0 @@
-This is a test file to verify the default folder structure works.
-The system should try to process this file and move it to unprocessed
-since it's not a supported file type (PDF or image).

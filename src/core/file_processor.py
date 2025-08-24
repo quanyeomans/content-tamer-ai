@@ -125,16 +125,12 @@ def _handle_processing_error_no_progress(
     display_context,
 ) -> tuple:
     """Handle processing errors by moving to unprocessed folder (progress recording handled separately)."""
-    error_msg = f"Error processing {filename}: {str(error)}"
-    display_context.show_error(error_msg)
-
     try:
         if os.path.exists(input_path):
             unprocessed_path = os.path.join(unprocessed_folder, filename)
             organizer.file_manager.safe_move(input_path, unprocessed_path)
-            display_context.show_warning("Moved to unprocessed folder")
-    except OSError as move_error:
-        display_context.show_error(f"Failed to move file: {str(move_error)}")
+    except OSError:
+        pass  # Error will be handled in summary
 
     return False, None
 
@@ -164,13 +160,12 @@ def _handle_processing_error(
 def _handle_runtime_error(error: RuntimeError, filename: str, display_context) -> tuple:
     """Handle runtime errors by logging."""
     error_msg = f"Unexpected error with file {filename}: {str(error)}"
-    display_context.show_error(error_msg)
 
     try:
         with open(ERROR_LOG_FILE, mode="a", encoding="utf-8") as log:
             log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {error_msg}\\n")
-    except (IOError, OSError) as log_error:
-        display_context.show_warning(f"Could not write to error log: {str(log_error)}")
+    except (IOError, OSError):
+        pass  # Error will be handled in summary
 
     return False, None
 
@@ -192,7 +187,6 @@ def process_file_enhanced_core(
     
     try:
         if not os.path.isfile(input_path):
-            display_context.show_error(f"File not found: {input_path}")
             success, result = False, None
         else:
             # Extract content
@@ -216,14 +210,9 @@ def process_file_enhanced_core(
             success, result = True, final_file_name
 
     except (ValueError, OSError, FileNotFoundError) as e:
-        success, result = _handle_processing_error_no_progress(
-            e,
-            filename,
-            input_path,
-            unprocessed_folder,
-            organizer,
-            display_context,
-        )
+        # Don't move files or do error handling during retries - let the retry system handle it
+        # The retry handler will determine if this is a recoverable error
+        success, result = False, None
 
     except RuntimeError as e:
         success, result = _handle_runtime_error(e, filename, display_context)
@@ -253,7 +242,7 @@ def process_file_with_retry(
 
     def _process_operation():
         """Inner function that performs the actual file processing."""
-        return process_file_enhanced_core(
+        success, result = process_file_enhanced_core(
             input_path=input_path,
             filename=filename,
             unprocessed_folder=unprocessed_folder,
@@ -264,6 +253,12 @@ def process_file_with_retry(
             organizer=organizer,
             display_context=display_context,
         )
+        # The retry handler expects operations that succeed to return a result
+        # and operations that fail to raise an exception
+        if success:
+            return result
+        else:
+            raise RuntimeError("File processing failed")
 
     # Use the retry handler to execute the operation
     success, result, error_classification = retry_handler.execute_with_retry(
