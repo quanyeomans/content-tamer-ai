@@ -185,6 +185,9 @@ class ProgressDisplay:
             "failed": ("bright_red", "❌", "Failed"),
             "warning": ("bright_yellow", "⚠️", "Warning"),
             "skipped": ("dim", "⏭️", "Skipped"),
+            "retrying": ("yellow", "🔄", "Retrying"),
+            "recovered": ("bright_green", "♻️", "Recovered"),
+            "temp_issue": ("yellow", "⏳", "Waiting"),
         }
         
         color, icon, text = status_config.get(status, ("white", "•", status))
@@ -200,6 +203,9 @@ class ProgressDisplay:
                 "❌": "[ERR]",
                 "⚠️": "[WARN]",
                 "⏭️": "[SKIP]",
+                "🔄": "[RETRY]",
+                "♻️": "[RECOV]",
+                "⏳": "[WAIT]",
             }
             icon = icon_map.get(icon, icon)
         

@@ -14,6 +14,8 @@ import requests
 from openai import APIError, OpenAI
 from tqdm import tqdm
 
+from utils.error_handling import create_retry_handler, RetryHandler
+
 
 def _print_capabilities(ocr_lang: str) -> None:
     """Prints the status of optional dependencies."""
@@ -210,6 +212,9 @@ def organize_content(
 
     # Enhanced processing with display manager
     try:
+        # Initialize session-level retry handler for statistics
+        session_retry_handler = create_retry_handler(max_attempts=3)
+        
         with open(progress_file, "a", encoding="utf-8") as progress_f:
             with display_manager.processing_context(
                 total_files=total_files, 
@@ -239,6 +244,7 @@ def organize_content(
                         ai_client,
                         organizer,
                         ctx,
+                        retry_handler=session_retry_handler,
                     )
                     
                     if success and new_filename:
@@ -255,10 +261,17 @@ def organize_content(
         display_manager.critical(f"Error writing to progress file: {e}")
         return False
 
+    # Show retry/recovery summary if there were any recoverable errors
+    retry_summary = session_retry_handler.format_session_summary()
+    if retry_summary:
+        display_manager.info(retry_summary)
+    
     # Show completion statistics
     display_manager.show_completion_stats({
         "total_files": total_files,
         "successful": total_files,  # Will be updated with actual stats in future enhancement
+        "recoverable_errors": session_retry_handler.get_stats().recoverable_errors_encountered,
+        "successful_retries": session_retry_handler.get_stats().successful_retries,
     })
     
     return True
@@ -347,6 +360,44 @@ def process_file(
     pbar.update(1)
 
 
+def process_file_with_retry(
+    input_path: str,
+    filename: str,
+    unprocessed_folder: str,
+    renamed_folder: str,
+    progress_f: Any,
+    ocr_lang: str,
+    ai_client: Any,
+    organizer: Any,
+    display_context: Any,
+    retry_handler: RetryHandler,
+) -> Tuple[bool, Optional[str]]:
+    """Process a file with intelligent retry logic for recoverable errors."""
+    
+    def _process_operation():
+        """Inner function that performs the actual file processing."""
+        return process_file_enhanced_core(
+            input_path=input_path,
+            filename=filename,
+            unprocessed_folder=unprocessed_folder,
+            renamed_folder=renamed_folder,
+            progress_f=progress_f,
+            ocr_lang=ocr_lang,
+            ai_client=ai_client,
+            organizer=organizer,
+            display_context=display_context
+        )
+    
+    # Use the retry handler to execute the operation
+    success, result, error_classification = retry_handler.execute_with_retry(
+        operation=_process_operation,
+        display_context=display_context,
+        filename=filename
+    )
+    
+    return success, result
+
+
 def process_file_enhanced(
     input_path: str,
     filename: str,
@@ -357,8 +408,39 @@ def process_file_enhanced(
     ai_client: Any,
     organizer: Any,
     display_context: Any,
+    retry_handler: Optional[RetryHandler] = None,
 ) -> Tuple[bool, Optional[str]]:
-    """Enhanced file processing with integrated display updates."""
+    """Enhanced file processing with intelligent retry logic."""
+    # Create retry handler if not provided
+    if retry_handler is None:
+        retry_handler = create_retry_handler(max_attempts=3)
+    
+    return process_file_with_retry(
+        input_path=input_path,
+        filename=filename,
+        unprocessed_folder=unprocessed_folder,
+        renamed_folder=renamed_folder,
+        progress_f=progress_f,
+        ocr_lang=ocr_lang,
+        ai_client=ai_client,
+        organizer=organizer,
+        display_context=display_context,
+        retry_handler=retry_handler
+    )
+
+
+def process_file_enhanced_core(
+    input_path: str,
+    filename: str,
+    unprocessed_folder: str,
+    renamed_folder: str,
+    progress_f: Any,
+    ocr_lang: str,
+    ai_client: Any,
+    organizer: Any,
+    display_context: Any,
+) -> Tuple[bool, Optional[str]]:
+    """Core file processing logic (called by retry wrapper)."""
     try:
         if not os.path.isfile(input_path):
             display_context.show_error(f"File not found: {input_path}")

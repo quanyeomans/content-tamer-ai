@@ -77,6 +77,10 @@ class ProcessingContext:
     def show_info(self, message: str) -> None:
         """Show informational message."""
         self.display.messages.info(message, location=DisplayLocation.BELOW_PROGRESS)
+        
+    def show_debug(self, message: str) -> None:
+        """Show debug message."""
+        self.display.messages.debug(message, location=DisplayLocation.BELOW_PROGRESS)
 
 
 class DisplayManager:
@@ -182,6 +186,16 @@ class DisplayManager:
         if "total_files" in stats and stats["total_files"] > 0:
             success_rate = (stats.get("successful", 0) / stats["total_files"]) * 100
             self.messages.success(f"Processing complete: {success_rate:.1f}% success rate")
+            
+        # Show enhanced retry/recovery statistics
+        if stats.get("successful_retries", 0) > 0:
+            self.messages.info(f"✅ {stats['successful_retries']} files recovered after temporary issues")
+            
+        if stats.get("recoverable_errors", 0) > 0:
+            self.messages.info(
+                f"ℹ️  {stats['recoverable_errors']} files encountered temporary permission/access issues "
+                f"(typically antivirus scans or cloud sync) but processing continued"
+            )
             
         if stats.get("errors", 0) > 0:
             self.messages.error(f"{stats['errors']} files could not be processed")
