@@ -99,21 +99,57 @@ def get_api_details(provider: str, model: str) -> str:
     api_key = os.environ.get(env_var_name)
     
     if not api_key:
-        # Use secure masked input for API key entry
-        try:
-            api_key = getpass.getpass(
-                f"Please enter your {provider.capitalize()} API key (input will be hidden): "
-            ).strip()
-        except (KeyboardInterrupt, EOFError):
-            raise ValueError("API key entry cancelled by user.")
+        # Use secure masked input for API key entry with retry logic
+        print(f"\nAPI Key Input Help:")
+        print(f"• Your input will be hidden for security")
+        print(f"• You'll see confirmation with character count after pasting")
+        print(f"• OpenAI keys start with 'sk-' and are ~51 characters long")
+        print(f"• You can set OPENAI_API_KEY environment variable to skip this step")
         
-        if not api_key:
-            raise ValueError(f"{provider.capitalize()} API key is required.")
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                if attempt > 0:
+                    print(f"\nAttempt {attempt + 1} of {max_attempts}")
+                
+                api_key = getpass.getpass(
+                    f"Please enter your {provider.capitalize()} API key (input will be hidden): "
+                ).strip()
+                
+                # Provide user feedback about the input received
+                if api_key:
+                    print(f"[OK] Received API key ({len(api_key)} characters)")
+                    if len(api_key) < 20:
+                        print(f"[WARNING] Key seems short for {provider.capitalize()} (got {len(api_key)} chars, expected 40+)")
+                    
+                    # Try validation
+                    try:
+                        validated_key = _validate_api_key(api_key, provider)
+                        print("[OK] API key format validated successfully")
+                        return validated_key
+                    except ValueError as e:
+                        print(f"[ERROR] Validation failed: {e}")
+                        if attempt < max_attempts - 1:
+                            print("Please try again...")
+                            continue
+                        else:
+                            raise
+                else:
+                    print("[ERROR] No input received")
+                    if attempt < max_attempts - 1:
+                        print("Please try again...")
+                        continue
+                    else:
+                        raise ValueError(f"{provider.capitalize()} API key is required.")
+                        
+            except (KeyboardInterrupt, EOFError):
+                raise ValueError("API key entry cancelled by user.")
+        
+        # If we get here, all attempts failed
+        raise ValueError(f"Failed to get valid API key after {max_attempts} attempts.")
 
-    # Enhanced API key validation
-    api_key = _validate_api_key(api_key, provider)
-    
-    return api_key
+    # For API keys from environment variables, still validate
+    return _validate_api_key(api_key, provider)
 
 
 def _validate_api_key(api_key: str, provider: str) -> str:
@@ -132,10 +168,14 @@ def _validate_api_key(api_key: str, provider: str) -> str:
     """
     # Basic security checks
     if len(api_key) < 10:
-        raise ValueError(f"{provider.capitalize()} API key appears to be too short.")
+        raise ValueError(
+            f"{provider.capitalize()} API key appears to be too short ({len(api_key)} characters). "
+            f"Expected format: OpenAI keys start with 'sk-' and are ~51 characters long. "
+            f"Please check your paste was successful and try again."
+        )
     
     if len(api_key) > 512:
-        raise ValueError(f"{provider.capitalize()} API key appears to be too long.")
+        raise ValueError(f"{provider.capitalize()} API key appears to be too long ({len(api_key)} characters).")
     
     # Check for obviously fake or test keys
     test_patterns = [
