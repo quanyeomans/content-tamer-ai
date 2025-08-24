@@ -156,6 +156,7 @@ def get_core_requirements():
         "pymupdf>=1.26.3",
         "pillow>=11.3.0",
         "pytesseract>=0.3.13",
+        "pdfid>=1.1.0",
     ]
 
 
@@ -363,6 +364,7 @@ def verify_installation():
         ("pymupdf", "fitz"),
         ("pillow", "PIL"),
         ("pytesseract", "pytesseract"),
+        ("pdfid", "pdfid"),
     ]
     
     failed_imports = []

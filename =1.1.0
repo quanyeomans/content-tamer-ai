@@ -1,0 +1,5 @@
+Collecting pdfid
+  Downloading pdfid-1.1.3-py3-none-any.whl.metadata (740 bytes)
+Downloading pdfid-1.1.3-py3-none-any.whl (13 kB)
+Installing collected packages: pdfid
+Successfully installed pdfid-1.1.3

@@ -81,11 +81,11 @@ class PDFProcessor(ContentProcessor):
         """Extract all possible content from a PDF with security validation."""
         # Validate file path and content
         try:
-            from utils.security import PathValidator, ContentValidator, SecurityError
+            from utils.security import PathValidator, ContentValidator, SecurityError, PDFAnalyzer, ThreatLevel
         except ImportError:
             import sys
             sys.path.insert(0, os.path.dirname(__file__))
-            from utils.security import PathValidator, ContentValidator, SecurityError
+            from utils.security import PathValidator, ContentValidator, SecurityError, PDFAnalyzer, ThreatLevel
         
         try:
             # Basic file validation - check it's actually a file and reasonable size
@@ -99,6 +99,19 @@ class PDFProcessor(ContentProcessor):
                 
             if file_size == 0:
                 return "Error: File is empty", None
+            
+            # Perform PDF threat analysis
+            analyzer = PDFAnalyzer()
+            threat_analysis = analyzer.analyze_pdf(file_path)
+            
+            # Log threat analysis results (avoiding unicode in print for Windows compatibility)
+            if threat_analysis.should_warn:
+                print(f"PDF Security Warning [{threat_analysis.threat_level.value.upper()}]: {threat_analysis.summary}")
+            elif threat_analysis.threat_level != ThreatLevel.SAFE:
+                print(f"PDF Analysis [{threat_analysis.threat_level.value.upper()}]: {threat_analysis.summary}")
+            
+            # Continue with content extraction regardless of threat level
+            # (non-destructive approach - we warn but don't block)
             
             # Extract content using existing method
             content, image_b64 = self._extract_text_and_image(

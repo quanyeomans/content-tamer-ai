@@ -8,7 +8,8 @@ and AI prompt construction to prevent injection attacks and path traversal.
 import os
 import re
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Dict, Any
+from enum import Enum
 
 
 # Security constants
@@ -294,3 +295,207 @@ def get_security_config() -> dict:
 def update_security_config(**kwargs) -> None:
     """Update security configuration (for testing only)."""
     SECURITY_CONFIG.update(kwargs)
+
+
+# PDF Threat Detection
+class ThreatLevel(Enum):
+    """PDF threat level classifications."""
+    SAFE = "safe"
+    LOW = "low" 
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class PDFThreatAnalysis:
+    """Results from PDF threat analysis."""
+    
+    def __init__(self, threat_level: ThreatLevel, indicators: Dict[str, Any], summary: str):
+        self.threat_level = threat_level
+        self.indicators = indicators
+        self.summary = summary
+    
+    @property
+    def is_safe(self) -> bool:
+        """Check if PDF is considered safe for processing."""
+        return self.threat_level in [ThreatLevel.SAFE, ThreatLevel.LOW]
+    
+    @property
+    def should_warn(self) -> bool:
+        """Check if user should be warned about this PDF."""
+        return self.threat_level in [ThreatLevel.MEDIUM, ThreatLevel.HIGH]
+
+
+class PDFAnalyzer:
+    """Analyzes PDF files for potential security threats using PDFiD."""
+    
+    def __init__(self):
+        self._pdfid_available = self._check_pdfid_availability()
+    
+    def _check_pdfid_availability(self) -> bool:
+        """Check if PDFiD is available for use."""
+        try:
+            from pdfid.pdfid import PDFiD
+            return True
+        except ImportError:
+            return False
+    
+    def analyze_pdf(self, file_path: str) -> PDFThreatAnalysis:
+        """
+        Analyze PDF file for potential security threats.
+        
+        Args:
+            file_path: Path to PDF file to analyze
+            
+        Returns:
+            PDFThreatAnalysis with threat level and details
+        """
+        if not self._pdfid_available:
+            return PDFThreatAnalysis(
+                threat_level=ThreatLevel.SAFE,
+                indicators={'pdfid_available': False},
+                summary="PDFiD not available - basic processing only"
+            )
+        
+        try:
+            return self._run_pdfid_analysis(file_path)
+        except Exception as e:
+            return PDFThreatAnalysis(
+                threat_level=ThreatLevel.LOW,
+                indicators={'analysis_error': str(e)},
+                summary=f"Analysis failed: {str(e)}"
+            )
+    
+    def _run_pdfid_analysis(self, file_path: str) -> PDFThreatAnalysis:
+        """Run PDFiD analysis on the PDF file."""
+        from pdfid.pdfid import PDFiD
+        
+        # Pre-check file existence to avoid PDFiD calling sys.exit()
+        if not os.path.isfile(file_path):
+            raise Exception(f"File not found: {file_path}")
+        
+        # Run PDFiD analysis
+        try:
+            xmldoc = PDFiD(file_path, allNames=False, extraData=False, disarm=False, force=False)
+            
+            # Extract key indicators
+            indicators = self._extract_indicators(xmldoc)
+            
+            # Calculate threat level
+            threat_level = self._calculate_threat_level(indicators)
+            
+            # Generate summary
+            summary = self._generate_summary(threat_level, indicators)
+            
+            return PDFThreatAnalysis(threat_level, indicators, summary)
+            
+        except SystemExit:
+            # PDFiD calls sys.exit() on various errors
+            raise Exception("PDFiD encountered a fatal error during analysis")
+        except Exception as e:
+            raise Exception(f"PDFiD analysis failed: {str(e)}")
+    
+    def _extract_indicators(self, xmldoc) -> Dict[str, Any]:
+        """Extract threat indicators from PDFiD XML output."""
+        indicators = {}
+        
+        # Parse the XML structure - PDFiD returns specific format
+        import xml.etree.ElementTree as ET
+        
+        try:
+            # Get the root element 
+            if hasattr(xmldoc, 'getroot'):
+                root = xmldoc.getroot() if callable(xmldoc.getroot) else xmldoc.getroot
+            else:
+                # Handle string output
+                root = ET.fromstring(str(xmldoc))
+            
+            # Extract key threat indicators
+            for keyword in root.findall('.//Keyword'):
+                name = keyword.get('Name', '')
+                count = int(keyword.get('Count', 0))
+                
+                if name == '/JS' or name == '/JavaScript':
+                    indicators['javascript'] = count
+                elif name == '/OpenAction':
+                    indicators['open_action'] = count
+                elif name == '/AA':  # Additional Actions
+                    indicators['additional_actions'] = count
+                elif name == '/EmbeddedFile':
+                    indicators['embedded_files'] = count
+                elif name == '/XFA':  # XML Forms Architecture
+                    indicators['xfa_forms'] = count
+                elif name == '/URI':
+                    indicators['uri_references'] = count
+                elif name == '/SubmitForm':
+                    indicators['submit_form'] = count
+                elif name == '/Launch':
+                    indicators['launch_action'] = count
+                
+        except Exception as e:
+            indicators['parse_error'] = str(e)
+        
+        return indicators
+    
+    def _calculate_threat_level(self, indicators: Dict[str, Any]) -> ThreatLevel:
+        """Calculate overall threat level based on indicators."""
+        if 'parse_error' in indicators:
+            return ThreatLevel.LOW
+        
+        # High threat indicators
+        high_risk_count = 0
+        if indicators.get('javascript', 0) > 0:
+            high_risk_count += 1
+        if indicators.get('launch_action', 0) > 0:
+            high_risk_count += 2  # Launch actions are very suspicious
+        if indicators.get('embedded_files', 0) > 0:
+            high_risk_count += 1
+        
+        # Medium threat indicators  
+        medium_risk_count = 0
+        if indicators.get('open_action', 0) > 0:
+            medium_risk_count += 1
+        if indicators.get('additional_actions', 0) > 0:
+            medium_risk_count += 1
+        if indicators.get('uri_references', 0) > 0:
+            medium_risk_count += 1
+        if indicators.get('submit_form', 0) > 0:
+            medium_risk_count += 1
+        if indicators.get('xfa_forms', 0) > 0:
+            medium_risk_count += 1
+        
+        # Determine threat level
+        if high_risk_count >= 2:
+            return ThreatLevel.HIGH
+        elif high_risk_count >= 1:
+            return ThreatLevel.MEDIUM
+        elif medium_risk_count >= 3:
+            return ThreatLevel.MEDIUM
+        elif medium_risk_count >= 1:
+            return ThreatLevel.LOW
+        else:
+            return ThreatLevel.SAFE
+    
+    def _generate_summary(self, threat_level: ThreatLevel, indicators: Dict[str, Any]) -> str:
+        """Generate human-readable summary of threats detected."""
+        if threat_level == ThreatLevel.SAFE:
+            return "PDF appears safe - no suspicious indicators detected"
+        
+        threats = []
+        
+        if indicators.get('javascript', 0) > 0:
+            threats.append(f"JavaScript code ({indicators['javascript']} instances)")
+        if indicators.get('launch_action', 0) > 0:
+            threats.append(f"Launch actions ({indicators['launch_action']} instances)")  
+        if indicators.get('embedded_files', 0) > 0:
+            threats.append(f"Embedded files ({indicators['embedded_files']} instances)")
+        if indicators.get('open_action', 0) > 0:
+            threats.append(f"Auto-open actions ({indicators['open_action']} instances)")
+        if indicators.get('uri_references', 0) > 0:
+            threats.append(f"External URI references ({indicators['uri_references']} instances)")
+        if indicators.get('submit_form', 0) > 0:
+            threats.append(f"Form submissions ({indicators['submit_form']} instances)")
+        
+        if threats:
+            return f"Potential threats detected: {', '.join(threats)}"
+        else:
+            return f"PDF has {threat_level.value} risk indicators"

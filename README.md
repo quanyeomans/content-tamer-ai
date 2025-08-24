@@ -215,7 +215,7 @@ documents/
 ## 📄 Supported File Types
 
 ### ✅ Currently Supported
-- **📄 PDF Files** — Native text + OCR + vision analysis
+- **📄 PDF Files** — Native text + OCR + vision analysis with security scanning
 - **🖼️ Images** — PNG, JPG, BMP, TIFF, GIF with full OCR
 - **📱 Screenshots** — Perfect for organizing screenshot collections
 - **🔍 Scanned Documents** — Auto-orientation and cleanup
@@ -249,12 +249,33 @@ Content Tamer AI is becoming a comprehensive **digital life organization platfor
 ## 🧪 Quality & Reliability
 
 **Production-Ready Codebase:**
-- ✅ **208 comprehensive tests** covering all components and architectural layers (201 passing, 7 with known issues)
+- ✅ **241 comprehensive tests** covering all components and architectural layers (234 passing, 7 with known issues)
 - ✅ **Full type annotations** with static analysis
 - ✅ **Refactored modular architecture** for maintainability and extensibility
 - ✅ **Cross-platform compatibility** (Windows, macOS, Linux)
 - ✅ **Crash-safe processing** with resume capability
 - ✅ **Rich CLI testing** including display components and message handling
+
+---
+
+## 🔒 Security & Safety
+
+**Enterprise-Grade Security Controls:**
+- 🛡️ **PDF Threat Detection** — Integrated PDFiD analysis detects JavaScript, embedded files, and malicious content
+- 🚫 **Prompt Injection Protection** — Advanced pattern detection prevents AI manipulation attacks  
+- 🔒 **Path Traversal Prevention** — Secure file handling blocks directory traversal exploits
+- 🔐 **Secure API Key Handling** — Masked input and validation prevent credential exposure
+- 📏 **File Size Limits** — 50MB PDF / 10MB image limits prevent resource exhaustion
+- ✅ **Input Sanitization** — Comprehensive content validation and control character removal
+
+**PDF Security Analysis:**
+Content Tamer AI automatically analyzes PDFs for potential threats:
+- **🟢 SAFE**: Clean PDFs process normally
+- **🟡 LOW/MEDIUM**: Suspicious content generates warnings but continues processing  
+- **🔴 HIGH**: Multiple threat indicators trigger enhanced warnings
+
+**Non-Destructive Approach:**
+Our security philosophy prioritizes **user control** over blocking. We detect and warn about potential threats while preserving document integrity - perfect for personal document organization where you know your files.
 
 ---
 
