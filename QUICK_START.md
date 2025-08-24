@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide
+# 🚀 Content Tamer AI - Quick Start
 
 **Get running in under 2 minutes!**
 
@@ -6,8 +6,8 @@
 
 ```bash
 # Clone the project
-git clone https://github.com/yourusername/sort-rename-move-pdf.git
-cd sort-rename-move-pdf
+git clone https://github.com/quanyeomans/content-tamer-ai.git
+cd content-tamer-ai
 
 # Run the smart installer (handles everything automatically)
 python install.py
@@ -36,7 +36,8 @@ set OPENAI_API_KEY=your-key-here             # Windows
 
 ```bash
 # Just run it - uses smart defaults
-python run.py
+content-tamer-ai
+# or: python run.py
 
 # That's it! 🎉
 ```
@@ -67,8 +68,8 @@ meeting_notes_project_kickoff_january.pdf
 ## 🆘 Need Help?
 
 ```bash
-python run.py --help          # Show all options
-python run.py --list-models   # See available AI models
+content-tamer-ai --help          # Show all options
+content-tamer-ai --list-models   # See available AI models
 ```
 
 **Problems?** Check the full [README.md](README.md) for detailed troubleshooting.

@@ -1,14 +1,14 @@
 """
-AI-Powered Document Organization System
+Content Tamer AI - Intelligent Document Organization
 
-Intelligent document processing with AI-generated filenames.
-Supports PDFs, images, and screenshots with multi-provider AI integration.
+Transform digital chaos into organized, searchable assets.
+AI-powered content analysis and filename generation for any document type.
 """
 
 __version__ = "2.0.0"
-__author__ = "AI-Powered Document Organization Project"
+__author__ = "Content Tamer AI Project"
 
 # Import main functions for easy access
-from .main import list_available_models, sort_and_rename_pdfs
+from .main import list_available_models, organize_content
 
-__all__ = ["sort_and_rename_pdfs", "list_available_models"]
+__all__ = ["organize_content", "list_available_models"]

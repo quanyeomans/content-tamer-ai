@@ -83,7 +83,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
 
     @patch('main.get_api_details')
     @patch('main.AIProviderFactory.create')
-    def test_sort_and_rename_pdfs_success(self, mock_create_ai, mock_get_api):
+    def test_organize_content_success(self, mock_create_ai, mock_get_api):
         """Test successful end-to-end processing."""
         # Mock AI client
         mock_ai_client = MagicMock()
@@ -108,7 +108,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
                 mock_organizer_class.return_value = mock_organizer
                 
                 # Run the main function
-                success = main.sort_and_rename_pdfs(
+                success = main.organize_content(
                     self.input_dir,
                     self.unprocessed_dir, 
                     self.renamed_dir,
@@ -125,11 +125,11 @@ class TestIntegrationWorkflow(unittest.TestCase):
                 self.assertTrue(mock_organizer.move_file_to_category.called)
 
     @patch('main.get_api_details')
-    def test_sort_and_rename_pdfs_invalid_provider(self, mock_get_api):
+    def test_organize_content_invalid_provider(self, mock_get_api):
         """Test handling of invalid AI provider."""
         mock_get_api.side_effect = ValueError("Unsupported provider")
         
-        success = main.sort_and_rename_pdfs(
+        success = main.organize_content(
             self.input_dir,
             self.unprocessed_dir,
             self.renamed_dir,

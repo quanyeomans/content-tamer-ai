@@ -118,7 +118,7 @@ def get_api_details(provider: str, model: str) -> str:
     return api_key
 
 
-def sort_and_rename_pdfs(
+def organize_content(
     input_dir: str,
     unprocessed_dir: str,
     renamed_dir: str,
@@ -127,7 +127,12 @@ def sort_and_rename_pdfs(
     reset_progress: bool = False,
     ocr_lang: str = "eng",
 ) -> bool:
-    """The main function that orchestrates the PDF processing workflow."""
+    """
+    Organize and intelligently rename documents using AI analysis.
+    
+    Processes any content type - PDFs, images, screenshots - and generates
+    meaningful, descriptive filenames based on document content.
+    """
     if not os.path.exists(input_dir):
         print(f"Error: Input folder '{input_dir}' does not exist.")
         return False
@@ -211,6 +216,7 @@ def sort_and_rename_pdfs(
         return False
 
     return True
+
 
 
 def process_file(
@@ -344,7 +350,7 @@ def get_filename_from_ai(
 ) -> str:
     if ai_client is None:
         raise RuntimeError(
-            "AI client not initialized. Call sort_and_rename_pdfs first."
+            "AI client not initialized. Call organize_content first."
         )
     return ai_client.generate_filename(pdf_content, image_b64)
 
@@ -374,26 +380,26 @@ def list_available_models() -> None:
 def parse_arguments():
     """Sets up and parses the command-line arguments that the script accepts."""
     parser = argparse.ArgumentParser(
-        description="Sort and rename PDF files based on their content",
+        description="Content Tamer AI - Organize documents with intelligent AI-powered filename generation",
         epilog="""
 Examples:
-  # Use defaults (documents/input -> documents/processed + documents/processed/unprocessed)
-  python sortrenamemovepdf.py
+  # Process documents using defaults (documents/input -> documents/processed)
+  content-tamer-ai
 
-  # Use defaults with specific model
-  python sortrenamemovepdf.py -p openai -m gpt-4o
+  # Use specific AI provider and model
+  content-tamer-ai -p openai -m gpt-4o
 
-  # Use custom folders
-  python sortrenamemovepdf.py -i ./input -r ./renamed -u ./unprocessed
+  # Use custom folders for organization
+  content-tamer-ai -i ./my-documents -r ./organized -u ./needs-review
 
-  # List all available models
-  python sortrenamemovepdf.py --list-models
+  # List all available AI models
+  content-tamer-ai --list-models
 """,
     )
     parser.add_argument(
         "--input",
         "-i",
-        help=f"Input folder containing PDF files (default: {DEFAULT_INPUT_DIR})",
+        help=f"Input folder containing documents to organize (PDFs, images, screenshots) (default: {DEFAULT_INPUT_DIR})",
     )
     parser.add_argument(
         "--unprocessed",
@@ -403,7 +409,7 @@ Examples:
     parser.add_argument(
         "--renamed",
         "-r",
-        help=f"Folder for renamed PDF files (default: {DEFAULT_PROCESSED_DIR})",
+        help=f"Folder for organized documents with AI-generated names (default: {DEFAULT_PROCESSED_DIR})",
     )
     parser.add_argument(
         "--provider",
@@ -438,7 +444,7 @@ Examples:
 
 
 def main() -> int:
-    """Main function to parse arguments and run the PDF processing."""
+    """Main function to parse arguments and run intelligent document organization."""
     try:
         # This block runs when the script is executed directly from the command line.
         args = parse_arguments()
@@ -480,8 +486,8 @@ def main() -> int:
                 print(f"  Processed: {renamed_dir}")
                 print(f"  Unprocessed: {unprocessed_dir}")
 
-            # Start the main PDF processing task.
-            success = sort_and_rename_pdfs(
+            # Start the main content organization task.
+            success = organize_content(
                 input_dir,
                 unprocessed_dir,
                 renamed_dir,
@@ -492,10 +498,10 @@ def main() -> int:
             )
 
             if not success:
-                print("PDF sorting and renaming failed.")
+                print("Content organization failed.")
                 return 1
             else:
-                print("PDF sorting and renaming completed successfully.")
+                print("Content organization completed successfully.")
                 return 0
         finally:
             # Restore the original API key environment variable if it was changed.

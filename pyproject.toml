@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sort-rename-move-pdf"
+name = "content-tamer-ai"
 version = "2.0.0"
-description = "AI-Powered Document Organization System with multi-provider support"
+description = "Content Tamer AI - Intelligent document organization with AI-powered filename generation"
 authors = [
-    {name = "AI-Powered Document Organization Project"}
+    {name = "Content Tamer AI Project"}
 ]
 readme = "README.md"
 license = {text = "MIT"}
@@ -58,12 +58,13 @@ all = [
 ]
 
 [project.scripts]
-sort-rename-pdf = "src.main:main"
+content-tamer-ai = "src.main:main"
+ct = "src.main:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/sort-rename-move-pdf"
-Repository = "https://github.com/yourusername/sort-rename-move-pdf"
-Issues = "https://github.com/yourusername/sort-rename-move-pdf/issues"
+Homepage = "https://github.com/quanyeomans/content-tamer-ai"
+Repository = "https://github.com/quanyeomans/content-tamer-ai"
+Issues = "https://github.com/quanyeomans/content-tamer-ai/issues"
 
 # Black configuration
 [tool.black]

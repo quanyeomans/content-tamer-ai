@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Simple entry point for AI-Powered Document Organization System
+Content Tamer AI - Entry Point Script
 
-This script provides an easy way to run the document processing system.
+Simple entry point for intelligent document organization.
 For new users, simply run: python run.py
 
 For advanced usage, see: python run.py --help

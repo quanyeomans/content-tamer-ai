@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Cross-platform installation script for AI-Powered Document Organization System.
+Cross-platform installation script for Content Tamer AI.
 
 This script checks system requirements, validates Python environment, 
 and installs dependencies with user consent.
@@ -45,7 +45,7 @@ def print_header():
     """Print installation header."""
     print(f"{Colors.CYAN}{Colors.BOLD}")
     print("=" * 70)
-    print("  AI-Powered Document Organization System")
+    print("  Content Tamer AI - Intelligent Document Organization")
     print("  Cross-Platform Installation Script")
     print("=" * 70)
     print(f"{Colors.END}")
