@@ -41,12 +41,14 @@ try:
     from .content_processors import ContentProcessorFactory
     from .file_organizer import FilenameHandler, FileOrganizer, ProgressTracker
     from .utils.text_utils import truncate_content_to_token_limit
+    from .utils.display_manager import DisplayManager, DisplayOptions
 except ImportError:
     # Direct import (when run as script)
     from ai_providers import AI_PROVIDERS, DEFAULT_MODELS, AIProviderFactory
     from content_processors import ContentProcessorFactory
     from file_organizer import FilenameHandler, FileOrganizer, ProgressTracker
     from utils.text_utils import truncate_content_to_token_limit
+    from utils.display_manager import DisplayManager, DisplayOptions
 
 
 # -----------------------------
@@ -126,6 +128,7 @@ def organize_content(
     model: Optional[str] = None,
     reset_progress: bool = False,
     ocr_lang: str = "eng",
+    display_options: Optional[dict] = None,
 ) -> bool:
     """
     Organize and intelligently rename documents using AI analysis.
@@ -133,22 +136,44 @@ def organize_content(
     Processes any content type - PDFs, images, screenshots - and generates
     meaningful, descriptive filenames based on document content.
     """
+    # Initialize display system
+    display_opts = display_options or {}
+    display_manager = DisplayManager(DisplayOptions(
+        verbose=display_opts.get('verbose', False),
+        quiet=display_opts.get('quiet', False),
+        no_color=display_opts.get('no_color', False),
+        show_stats=display_opts.get('show_stats', True)
+    ))
+    
+    # Validate input directory
     if not os.path.exists(input_dir):
-        print(f"Error: Input folder '{input_dir}' does not exist.")
+        display_manager.critical(f"Input folder '{input_dir}' does not exist.")
         return False
 
+    # Setup AI client
     try:
         if model is None:
             model = AIProviderFactory.get_default_model(provider)
         api_key = get_api_details(provider, model)
         ai_client = AIProviderFactory.create(provider, model, api_key)
+        
+        display_manager.info(f"Using {provider} provider with model {model}")
     except (ValueError, ImportError) as e:
-        print(f"Error setting up AI client: {e}")
+        display_manager.critical(f"Error setting up AI client: {e}")
         return False
 
     # Initialize file organizer
     organizer = FileOrganizer()
     organizer.create_directories(unprocessed_dir, renamed_dir)
+
+    # Show startup information
+    display_manager.show_startup_info({
+        "directories": {
+            "input": input_dir,
+            "processed": renamed_dir,
+            "unprocessed": unprocessed_dir
+        }
+    })
 
     # Get content processor factory to check supported file types
     content_factory = ContentProcessorFactory(ocr_lang)
@@ -170,8 +195,8 @@ def organize_content(
 
     total_files = len(processable_files)
     if total_files == 0:
-        print(f"No processable files found in {input_dir}")
-        print(f"Supported extensions: {', '.join(supported_extensions)}")
+        display_manager.warning(f"No processable files found in {input_dir}")
+        display_manager.info(f"Supported extensions: {', '.join(supported_extensions)}")
         return True
 
     # Use .processing directory for progress file if using defaults, otherwise use renamed_dir
@@ -183,38 +208,59 @@ def organize_content(
         progress_file, input_dir, reset_progress
     )
 
+    # Enhanced processing with display manager
     try:
-        with open(progress_file, "a", encoding="utf-8") as progress_f, tqdm(
-            total=total_files, desc="Processing Files", unit="file"
-        ) as pbar:
-            for filename in processable_files:
-                if filename in processed_files:
-                    pbar.update(1)
-                    continue
+        with open(progress_file, "a", encoding="utf-8") as progress_f:
+            with display_manager.processing_context(
+                total_files=total_files, 
+                description="Processing Files"
+            ) as ctx:
+                for filename in processable_files:
+                    if filename in processed_files:
+                        ctx.skip_file(filename)
+                        continue
 
-                input_path = os.path.normpath(os.path.join(input_dir, filename))
-                if not os.path.exists(input_path):
-                    print(f"\nWarning: File {filename} no longer exists, skipping.")
-                    pbar.update(1)
-                    continue
+                    input_path = os.path.normpath(os.path.join(input_dir, filename))
+                    if not os.path.exists(input_path):
+                        ctx.show_warning(f"File {filename} no longer exists, skipping")
+                        ctx.skip_file(filename)
+                        continue
 
-                process_file(
-                    input_path,
-                    filename,
-                    unprocessed_dir,
-                    renamed_dir,
-                    pbar,
-                    progress_f,
-                    ocr_lang,
-                    ai_client,
-                    organizer,
-                )
+                    # Start processing the file
+                    ctx.start_file(filename)
+                    
+                    success, new_filename = process_file_enhanced(
+                        input_path,
+                        filename,
+                        unprocessed_dir,
+                        renamed_dir,
+                        progress_f,
+                        ocr_lang,
+                        ai_client,
+                        organizer,
+                        ctx,
+                    )
+                    
+                    if success and new_filename:
+                        ctx.complete_file(filename, new_filename)
+                    elif not success:
+                        ctx.fail_file(filename, "Processing failed")
+                    else:
+                        ctx.complete_file(filename, "processed")
+
     except KeyboardInterrupt:
-        print("\nProcess interrupted by user. Progress has been saved.")
+        display_manager.warning("Process interrupted by user. Progress has been saved.")
+        return True  # Not a failure - user choice
     except IOError as e:
-        print(f"\nError writing to progress file: {e}")
+        display_manager.critical(f"Error writing to progress file: {e}")
         return False
 
+    # Show completion statistics
+    display_manager.show_completion_stats({
+        "total_files": total_files,
+        "successful": total_files,  # Will be updated with actual stats in future enhancement
+    })
+    
     return True
 
 
@@ -299,6 +345,144 @@ def process_file(
         pbar.set_postfix({"Status": "Error", "Message": "Unexpected error"})
 
     pbar.update(1)
+
+
+def process_file_enhanced(
+    input_path: str,
+    filename: str,
+    unprocessed_folder: str,
+    renamed_folder: str,
+    progress_f: Any,
+    ocr_lang: str,
+    ai_client: Any,
+    organizer: Any,
+    display_context: Any,
+) -> Tuple[bool, Optional[str]]:
+    """Enhanced file processing with integrated display updates."""
+    try:
+        if not os.path.isfile(input_path):
+            display_context.show_error(f"File not found: {input_path}")
+            return False, None
+
+        # Extract content using appropriate processor
+        display_context.set_status("extracting_content")
+        content_factory = ContentProcessorFactory(ocr_lang)
+        processor = content_factory.get_processor(input_path)
+        if not processor:
+            raise ValueError(f"Unsupported file type: {input_path}")
+
+        text, img_b64 = processor.extract_content(input_path)
+
+        # If the extractor returned an error message, treat it as an unprocessable file.
+        if text.startswith("Error"):
+            raise ValueError(text)
+
+        # If the file is empty (no text or image), give it a generic name.
+        if not text and not img_b64:
+            display_context.show_warning("File appears to be empty")
+            display_context.set_status("generating_filename")
+            timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
+            new_file_name = f"empty_file_{timestamp}"
+        else:
+            # Get a new filename from the AI, with retries in case of network issues.
+            display_context.set_status("generating_filename")
+            new_file_name = get_new_filename_with_retry_enhanced(
+                ai_client, text, img_b64, display_context
+            )
+            new_file_name = organizer.filename_handler.validate_and_trim_filename(
+                new_file_name
+            )
+
+        # Move the file to the renamed folder with proper extension handling
+        display_context.set_status("moving_file")
+        file_extension = os.path.splitext(input_path)[1]
+        final_file_name = organizer.move_file_to_category(
+            input_path, filename, renamed_folder, new_file_name, file_extension
+        )
+
+        # Record that this file has been processed.
+        organizer.progress_tracker.record_progress(
+            progress_f, filename, organizer.file_manager
+        )
+
+        return True, final_file_name
+
+    except (ValueError, OSError, FileNotFoundError) as e:
+        error_msg = f"Error processing {filename}: {str(e)}"
+        display_context.show_error(error_msg)
+        
+        try:
+            if os.path.exists(input_path):
+                unprocessed_path = os.path.join(unprocessed_folder, filename)
+                organizer.file_manager.safe_move(input_path, unprocessed_path)
+                display_context.show_warning(f"Moved to unprocessed folder")
+            
+            organizer.progress_tracker.record_progress(
+                progress_f, filename, organizer.file_manager
+            )
+        except OSError as move_error:
+            display_context.show_error(f"Failed to move file: {str(move_error)}")
+
+        return False, None
+        
+    except RuntimeError as e:
+        error_msg = f"Unexpected error with file {filename}: {str(e)}"
+        display_context.show_error(error_msg)
+        
+        try:
+            with open(ERROR_LOG_FILE, mode="a", encoding="utf-8") as log:
+                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {error_msg}\n")
+        except (IOError, OSError) as log_error:
+            display_context.show_warning(f"Could not write to error log: {str(log_error)}")
+
+        return False, None
+
+
+def get_new_filename_with_retry_enhanced(
+    ai_client: Any,
+    pdf_content: str,
+    image_b64: Optional[str] = None,
+    display_context: Any = None,
+    max_retries: int = MAX_RETRIES,
+) -> str:
+    """Enhanced filename retry with display integration."""
+    timeout_count = 0
+    for attempt in range(max_retries):
+        try:
+            return get_filename_from_ai(ai_client, pdf_content, image_b64)
+        except RuntimeError as e:
+            error_str = str(e).lower()
+            is_timeout = any(
+                t in error_str
+                for t in ["timeout", "timed out", "connection", "network"]
+            )
+            
+            if is_timeout:
+                timeout_count += 1
+                wait_time = RETRY_DELAY * (2**timeout_count)  # Exponential backoff
+                if display_context:
+                    display_context.show_warning(
+                        f"API timeout/network error. Retrying in {wait_time} seconds..."
+                    )
+            else:
+                wait_time = RETRY_DELAY * (attempt + 1)  # Linear backoff
+                if display_context:
+                    display_context.show_warning(
+                        f"API error: {str(e)}. Retrying in {wait_time} seconds..."
+                    )
+
+            time.sleep(wait_time)
+
+            if attempt == max_retries - 1:
+                if display_context:
+                    display_context.show_error(
+                        f"Failed to get filename from API after {max_retries} attempts"
+                    )
+                timestamp = time.strftime("%Y%m%d%H%M%S", time.gmtime())
+                if timeout_count > 0:
+                    return f"network_error_{timestamp}"
+                else:
+                    return f"untitled_document_{timestamp}"
 
 
 def get_new_filename_with_retry(
@@ -440,6 +624,31 @@ Examples:
         action="store_true",
         help="Ignore and delete existing .progress file before run",
     )
+    
+    # Display options
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="Minimal output (progress bar only, suppress info and success messages)",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Detailed logging output (show debug messages and additional info)",
+    )
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable colored output (useful for CI/CD or when output is redirected)",
+    )
+    parser.add_argument(
+        "--no-stats",
+        action="store_true",
+        help="Disable statistics display in progress bar",
+    )
+    
     return parser.parse_args()
 
 
@@ -449,7 +658,8 @@ def main() -> int:
         # This block runs when the script is executed directly from the command line.
         args = parse_arguments()
         # Set the OCR language from the command-line argument.
-        _print_capabilities(args.ocr_lang)
+        if not args.quiet:
+            _print_capabilities(args.ocr_lang)
 
         # If the user just wants to see the available models, print them and exit.
         if args.list_models:
@@ -461,12 +671,22 @@ def main() -> int:
         api_key_set = False
 
         try:
+            # Setup display options
+            display_options = {
+                'verbose': args.verbose,
+                'quiet': args.quiet,
+                'no_color': args.no_color,
+                'show_stats': not args.no_stats,
+            }
+            
             if args.api_key:
                 env_var = f"{args.provider.upper()}_API_KEY"
                 original_env = (env_var, os.environ.get(env_var))
                 os.environ[env_var] = args.api_key
                 api_key_set = True
-                print(f"Using provided {args.provider.capitalize()} API key")
+                # Use enhanced display for API key message
+                if not args.quiet:
+                    print(f"Using provided {args.provider.capitalize()} API key")
 
             # Get the folder paths from the arguments, or use defaults
             if args.input or args.renamed or args.unprocessed:
@@ -480,13 +700,15 @@ def main() -> int:
                 )
             else:
                 # Use default directory structure
-                print("Using default directory structure:")
+                if not args.quiet:
+                    print("Using default directory structure:")
                 input_dir, renamed_dir, unprocessed_dir = ensure_default_directories()
-                print(f"  Input: {input_dir}")
-                print(f"  Processed: {renamed_dir}")
-                print(f"  Unprocessed: {unprocessed_dir}")
+                if not args.quiet:
+                    print(f"  Input: {input_dir}")
+                    print(f"  Processed: {renamed_dir}")
+                    print(f"  Unprocessed: {unprocessed_dir}")
 
-            # Start the main content organization task.
+            # Start the main content organization task with enhanced display
             success = organize_content(
                 input_dir,
                 unprocessed_dir,
@@ -495,13 +717,16 @@ def main() -> int:
                 args.model,
                 reset_progress=args.reset_progress,
                 ocr_lang=args.ocr_lang,
+                display_options=display_options,
             )
 
             if not success:
-                print("Content organization failed.")
+                if not args.quiet:
+                    print("Content organization failed.")
                 return 1
             else:
-                print("Content organization completed successfully.")
+                if not args.quiet:
+                    print("Content organization completed successfully.")
                 return 0
         finally:
             # Restore the original API key environment variable if it was changed.

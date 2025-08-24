@@ -160,3 +160,108 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# ===== IDE and Editor Configuration Files =====
+# Visual Studio Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/settings.json.example
+
+# Claude Code IDE
+.claude/
+!.claude/settings.json.example
+
+# JetBrains IDEs (IntelliJ, PyCharm, etc.)
+.idea/
+*.iml
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+.vimrc.local
+.vim/
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Atom
+.atom/
+
+# ===== OS Generated Files =====
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Icon?
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== Development and Cache Files =====
+# Application-specific cache/temp files
+documents/.processing/
+documents/cache/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Node.js (if any JS tooling is added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python additional
+*.pyc.orig
+.python-version
+*.pyd
+*.pyo
+
+# ===== Security and Environment =====
+# API keys and secrets
+.env.local
+.env.production
+.env.development
+secrets.json
+api_keys.json
+config.local.json
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+id_ed25519*

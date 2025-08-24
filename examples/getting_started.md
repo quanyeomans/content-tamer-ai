@@ -25,6 +25,7 @@ This directory contains sample files to help you get started quickly.
 3. **Run the system**:
    ```bash
    python run.py
+   # You'll see a rich progress bar with real-time updates!
    ```
 
 4. **Check results**:
@@ -39,6 +40,13 @@ This directory contains sample files to help you get started quickly.
 
 ## What to Expect
 
+**Rich Visual Interface:**
+```
+Processing documents... ████████████████████ 100% → meeting_notes_q4_planning.pdf ✅ Done
+✅ 2 processed │ ⏱️ 12.3s elapsed
+```
+
+**Processing Flow:**
 - The system will extract text from your documents
 - Send the content to AI for intelligent filename generation
 - Move successfully processed files to the `processed` folder
@@ -54,6 +62,10 @@ This directory contains sample files to help you get started quickly.
 
 1. Try processing your own documents
 2. Experiment with different AI models: `python run.py --list-models`
-3. Customize processing with advanced options: `python run.py --help`
+3. Try different display modes:
+   - `python run.py --quiet` (minimal output)
+   - `python run.py --verbose` (detailed logging)
+   - `python run.py --no-color` (plain text)
+4. Customize processing with advanced options: `python run.py --help`
 
 For detailed documentation, see the main README.md file.

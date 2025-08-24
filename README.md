@@ -33,6 +33,7 @@ content-tamer-ai  # Uses smart defaults - just works!
 - **📝 Descriptive Filenames** — Generates meaningful names up to 160 characters
 - **🔄 Batch Processing** — Handle hundreds of files with crash-safe resume
 - **🎛️ Zero Configuration** — Works immediately with smart defaults
+- **🎨 Enhanced CLI Experience** — Rich progress bars, intelligent messaging, and visual feedback
 
 ### 🤖 AI Provider Support
 - **OpenAI** ✅ **Production Ready** — GPT-5, GPT-4o with full vision support
@@ -142,6 +143,12 @@ content-tamer-ai -i ~/Downloads -r ~/Organized
 
 # Multi-language OCR
 content-tamer-ai --ocr-lang "eng+spa"  # English + Spanish
+
+# Display and output control
+content-tamer-ai --quiet            # Minimal output, progress bar only
+content-tamer-ai --verbose          # Detailed logging with debug info
+content-tamer-ai --no-color         # Plain text output (great for scripts)
+content-tamer-ai --no-stats         # Hide statistics in progress display
 ```
 
 ### 🔍 Helpful Commands
@@ -149,7 +156,39 @@ content-tamer-ai --ocr-lang "eng+spa"  # English + Spanish
 ```bash
 content-tamer-ai --help          # Show all options
 content-tamer-ai --list-models   # See available AI models
+content-tamer-ai --quiet         # Clean, minimal output
+content-tamer-ai --verbose       # Detailed processing information
 ```
+
+---
+
+## 🎨 Enhanced User Experience
+
+Content Tamer AI features a completely redesigned CLI experience with intelligent visual feedback:
+
+### 🌈 Rich Visual Interface
+- **Color-coded progress bars** with real-time status indicators
+- **Smart terminal detection** with graceful fallbacks for all environments
+- **Unicode icons** with ASCII alternatives for maximum compatibility
+- **Highlighted target filenames** showing exactly what each file becomes
+
+### 📊 Intelligent Progress Display
+```
+Processing documents... ████████████████████████████████████ 85.2% → quarterly_report_2024_financials.pdf ✅ Done
+✅ 12 processed │ ⚠️ 2 warnings │ ⏱️ 45.3s elapsed
+```
+
+### 🎛️ Adaptive Messaging System
+- **Progressive disclosure** - Choose your information level (minimal/standard/detailed/debug)
+- **Message prioritization** - Critical alerts always visible, debug info when you need it
+- **Smart grouping** - Similar messages consolidated to prevent spam
+- **Context hints** - See exactly which file triggered each message
+
+### 🔧 Display Control Options
+- `--quiet` - Clean progress bar only, perfect for automation
+- `--verbose` - Full diagnostic output for troubleshooting
+- `--no-color` - Plain text mode for scripts and CI/CD
+- `--no-stats` - Minimal progress without detailed statistics
 
 ---
 
@@ -210,11 +249,12 @@ Content Tamer AI is becoming a comprehensive **digital life organization platfor
 ## 🧪 Quality & Reliability
 
 **Production-Ready Codebase:**
-- ✅ **66 comprehensive tests** covering all components
+- ✅ **189 comprehensive tests** covering all components and UI enhancements
 - ✅ **Full type annotations** with static analysis
 - ✅ **Modular architecture** for easy extension
 - ✅ **Cross-platform compatibility** (Windows, macOS, Linux)
 - ✅ **Crash-safe processing** with resume capability
+- ✅ **Rich CLI testing** including display components and message handling
 
 ---
 
@@ -231,6 +271,12 @@ Content Tamer AI is becoming a comprehensive **digital life organization platfor
 git clone https://github.com/quanyeomans/content-tamer-ai.git
 cd content-tamer-ai
 python install.py  # Get set up
+
+# Configure your IDE (optional but recommended)
+cp .vscode/settings.json.example .vscode/settings.json  # VS Code
+cp .claude/settings.json.example .claude/settings.local.json  # Claude Code
+# See docs/IDE_SETUP.md for other IDEs
+
 # Make your changes
 python -m pytest   # Run tests
 ```
@@ -253,9 +299,13 @@ python -m pytest   # Run tests
 - **Files named `empty_file_*`** — Install OCR dependencies or use vision model (`-m gpt-4o`)
 - **Permission errors** — Use non-synced folders, antivirus may lock files
 - **API errors** — Check API key is set correctly for your provider
+- **Garbled progress display** — Use `--no-color` for terminals with limited Unicode support
+- **Too much/little output** — Use `--quiet` for minimal output or `--verbose` for detailed logging
 
 ### Getting Help
 - Check the detailed error logs in `documents/.processing/errors.log`
+- Run with `--verbose` for comprehensive diagnostic output
+- Use `--debug` mode for maximum detail (messages, timing, system info)
 - [Open an issue](https://github.com/quanyeomans/content-tamer-ai/issues) for bug reports
 - Use `content-tamer-ai --help` for all command options
 

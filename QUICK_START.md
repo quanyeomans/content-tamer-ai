@@ -35,11 +35,24 @@ set OPENAI_API_KEY=your-key-here             # Windows
 ## 3. Run It!
 
 ```bash
-# Just run it - uses smart defaults
+# Just run it - uses smart defaults with beautiful progress bars
 content-tamer-ai
 # or: python run.py
 
 # That's it! 🎉
+```
+
+### 🎨 Want Different Output?
+
+```bash
+# Clean, minimal output (great for automation)
+content-tamer-ai --quiet
+
+# Detailed diagnostic output (perfect for troubleshooting) 
+content-tamer-ai --verbose
+
+# Plain text without colors (useful for scripts)
+content-tamer-ai --no-color
 ```
 
 ## 📁 What Happens
@@ -49,7 +62,13 @@ content-tamer-ai
 3. **Run the command:** `python run.py`
 4. **Check results:** `documents/processed/`
 
-## 🎯 Example Results
+## 🎨 What You'll See
+
+**Rich Progress Display:**
+```
+Processing documents... ████████████████████ 75.0% → quarterly_report_finances.pdf ⚙️ Processing
+✅ 6 processed │ ⚠️ 1 warnings │ ⏱️ 23.4s elapsed
+```
 
 **Before:**
 ```
@@ -70,9 +89,10 @@ meeting_notes_project_kickoff_january.pdf
 ```bash
 content-tamer-ai --help          # Show all options
 content-tamer-ai --list-models   # See available AI models
+content-tamer-ai --verbose       # Get detailed diagnostic output
 ```
 
-**Problems?** Check the full [README.md](README.md) for detailed troubleshooting.
+**Problems?** Check the full [README.md](README.md) for detailed troubleshooting and display options.
 
 ---
 
