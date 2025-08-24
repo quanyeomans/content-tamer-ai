@@ -311,9 +311,13 @@ python -m pytest   # Run tests
 
 ---
 
-## Credits & License
+## Acknowledgments
 
-Originally inspired by document organization needs, completely rebuilt as a modern AI-powered platform.
+Content Tamer AI was originally forked from [sort-rename-move-pdf](https://github.com/munir-abbasi/sort-rename-move-pdf) by munir-abbasi. We're grateful for that foundational work, though Content Tamer AI has since evolved significantly in scope and functionality to become a comprehensive AI-powered content intelligence platform.
+
+The original project focused specifically on PDF processing, while Content Tamer AI now handles all document types, images, screenshots, and various content formats with advanced AI-powered organization capabilities.
+
+## Credits & License
 
 **MIT License** - see LICENSE file for details.
 

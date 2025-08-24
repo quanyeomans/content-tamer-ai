@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "content-tamer-ai"
 version = "2.0.0"
-description = "Content Tamer AI - Intelligent document organization with AI-powered filename generation"
+description = "AI-powered document intelligence for organizing digital content. Evolved from sort-rename-move-pdf to provide comprehensive multi-format content organization."
 authors = [
     {name = "Content Tamer AI Project"}
 ]

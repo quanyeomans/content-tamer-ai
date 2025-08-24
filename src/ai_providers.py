@@ -126,44 +126,81 @@ class OpenAIProvider(AIProvider):
             raise ImportError("Please install OpenAI: pip install openai")
         self.client = OpenAI(api_key=api_key)
 
+    def _build_content_parts(self, content: str, image_b64: Optional[str]) -> list:
+        """Build content parts for API request."""
+        parts = []
+        if content:
+            parts.append(
+                {
+                    "type": "input_text",
+                    "text": (
+                        "You are a document analyst. Create a concise, human-readable filename "
+                        "for this PDF based on its visible content. Use underscores between words. "
+                        "Return ONLY the filename. 4-8 words, 60 chars max.\n\n"
+                        f"---\nEXTRACTED_TEXT_START\n{content[:8000]}\nEXTRACTED_TEXT_END\n"
+                    ),
+                }
+            )
+        if image_b64:
+            parts.append({"type": "input_image", "image_url": image_b64})
+        return parts
+
+    def _build_base_payload(self, parts: list) -> dict:
+        """Build base API payload."""
+        base = {
+            "model": self.model,
+            "instructions": get_system_prompt("openai"),
+            "input": [{"role": "user", "content": parts}],
+            "max_output_tokens": 50,
+        }
+        model_lc = (self.model or "").lower()
+        if "gpt-5" in model_lc:
+            base["reasoning"] = {"effort": "low"}
+        else:
+            base["temperature"] = 0.1
+            base["top_p"] = 0.9
+        return base
+
+    def _handle_image_error(self, base: dict, parts: list, client) -> str:
+        """Handle image-related API errors by retrying without image."""
+        noimg = dict(base)
+        noimg["input"] = [
+            {
+                "role": "user",
+                "content": [c for c in parts if c.get("type") != "input_image"],
+            }
+        ]
+        noimg.pop("reasoning", None)
+        noimg["temperature"] = 0.1
+        noimg["top_p"] = 0.9
+        resp = client.responses.create(**noimg)
+        return (resp.output_text or "").strip()
+
+    def _try_fallback_model(self, base: dict, client, image_b64: Optional[str]) -> str:
+        """Try fallback vision-capable model if original failed."""
+        if not image_b64:
+            return ""
+
+        fallback_model = "gpt-4o"
+        fb = dict(base)
+        fb["model"] = fallback_model
+        fb.pop("reasoning", None)
+        fb["temperature"] = 0.1
+        fb["top_p"] = 0.9
+        try:
+            resp = client.responses.create(**fb)
+            return (resp.output_text or "").strip()
+        except Exception:
+            return ""
+
     def generate_filename(self, content: str, image_b64: Optional[str] = None) -> str:
         try:
             client = self.client.with_options(timeout=90)
-
-            parts = []
-            if content:
-                parts.append(
-                    {
-                        "type": "input_text",
-                        "text": (
-                            "You are a document analyst. Create a concise, human-readable filename "
-                            "for this PDF based on its visible content. Use underscores between words. "
-                            "Return ONLY the filename. 4-8 words, 60 chars max.\n\n"
-                            f"---\nEXTRACTED_TEXT_START\n{content[:8000]}\nEXTRACTED_TEXT_END\n"
-                        ),
-                    }
-                )
-            if image_b64:
-                parts.append({"type": "input_image", "image_url": image_b64})
-
-            base = {
-                "model": self.model,
-                "instructions": get_system_prompt("openai"),
-                "input": [{"role": "user", "content": parts}],
-                "max_output_tokens": 50,
-            }
-            model_lc = (self.model or "").lower()
-            if "gpt-5" in model_lc:
-                base["reasoning"] = {"effort": "low"}
-            else:
-                base["temperature"] = 0.1
-                base["top_p"] = 0.9
-
-            def _call(payload):
-                return client.responses.create(**payload)
+            parts = self._build_content_parts(content, image_b64)
+            base = self._build_base_payload(parts)
 
             try:
-                resp = _call(base)
+                resp = client.responses.create(**base)
                 raw = (resp.output_text or "").strip()
             except Exception as e:
                 # Handle APIError if available, otherwise any exception
@@ -174,20 +211,7 @@ class OpenAIProvider(AIProvider):
                 ):
                     msg = str(e).lower()
                     if "image" in msg:  # Model doesn't support images, retry without
-                        noimg = dict(base)
-                        noimg["input"] = [
-                            {
-                                "role": "user",
-                                "content": [
-                                    c for c in parts if c.get("type") != "input_image"
-                                ],
-                            }
-                        ]
-                        noimg.pop("reasoning", None)
-                        noimg["temperature"] = 0.1
-                        noimg["top_p"] = 0.9
-                        resp = _call(noimg)
-                        raw = (resp.output_text or "").strip()
+                        raw = self._handle_image_error(base, parts, client)
                     else:
                         raise
                 else:
@@ -195,17 +219,7 @@ class OpenAIProvider(AIProvider):
 
             # Fallback to vision-capable model if no response and image available
             if not raw and image_b64:
-                fallback_model = "gpt-4o"
-                fb = dict(base)
-                fb["model"] = fallback_model
-                fb.pop("reasoning", None)
-                fb["temperature"] = 0.1
-                fb["top_p"] = 0.9
-                try:
-                    resp = _call(fb)
-                    raw = (resp.output_text or "").strip()
-                except Exception:
-                    pass
+                raw = self._try_fallback_model(base, client, image_b64)
 
             return raw
         except Exception as e:

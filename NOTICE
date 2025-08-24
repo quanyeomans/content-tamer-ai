@@ -1,0 +1,19 @@
+Content Tamer AI
+Copyright (c) 2024 Content Tamer AI Contributors
+
+This project contains code originally from sort-rename-move-pdf:
+https://github.com/munir-abbasi/sort-rename-move-pdf
+Copyright (c) munir-abbasi
+Licensed under MIT License
+
+The original code has been substantially modified and extended to:
+- Support multiple file formats (PDFs, images, screenshots)
+- Implement AI-powered content analysis and filename generation
+- Add advanced CLI display with progress bars and messaging
+- Include cross-platform compatibility and error handling
+- Provide comprehensive content organization capabilities
+
+The project has evolved from basic PDF processing to a full-featured
+AI-powered document intelligence platform.
+
+See LICENSE file for full license terms.

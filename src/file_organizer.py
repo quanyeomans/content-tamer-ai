@@ -1,6 +1,10 @@
 """
 File organization and management utilities.
 
+Original PDF processing logic inspired by sort-rename-move-pdf
+by munir-abbasi. Substantially modified and extended to handle
+multiple content types with AI-powered analysis and organization.
+
 This module handles file operations, progress tracking, and provides
 the foundation for future domain-based organization features.
 """
