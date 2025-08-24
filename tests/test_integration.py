@@ -81,8 +81,8 @@ class TestIntegrationWorkflow(unittest.TestCase):
         """Clean up temporary directory."""
         shutil.rmtree(self.temp_dir)
 
-    @patch('main.get_api_details')
-    @patch('main.AIProviderFactory.create')
+    @patch('core.application.get_api_details')
+    @patch('core.application.AIProviderFactory.create')
     def test_organize_content_success(self, mock_create_ai, mock_get_api):
         """Test successful end-to-end processing."""
         # Mock AI client
@@ -124,7 +124,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
                 # Verify file operations were performed
                 self.assertTrue(mock_organizer.move_file_to_category.called)
 
-    @patch('main.get_api_details')
+    @patch('core.application.get_api_details')
     def test_organize_content_invalid_provider(self, mock_get_api):
         """Test handling of invalid AI provider."""
         mock_get_api.side_effect = ValueError("Unsupported provider")
@@ -138,8 +138,8 @@ class TestIntegrationWorkflow(unittest.TestCase):
         
         self.assertFalse(success)
 
-    @patch('main.get_api_details')
-    @patch('main.AIProviderFactory.create')
+    @patch('core.application.get_api_details')
+    @patch('core.application.AIProviderFactory.create')
     def test_process_file_success(self, mock_create_ai, mock_get_api):
         """Test successful individual file processing."""
         # Mock AI client

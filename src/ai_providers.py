@@ -203,17 +203,17 @@ class OpenAIProvider(AIProvider):
                 resp = client.responses.create(**base)
                 raw = (resp.output_text or "").strip()
             except Exception as e:
-                # Handle APIError if available, otherwise any exception
-                if (
+                # Handle image-related errors by checking message content
+                msg = str(e).lower()
+                if "image" in msg or "vision" in msg:  # Model doesn't support images, retry without
+                    raw = self._handle_image_error(base, parts, client)
+                elif (
                     HAVE_OPENAI
                     and hasattr(e, "__class__")
                     and "APIError" in str(type(e))
                 ):
-                    msg = str(e).lower()
-                    if "image" in msg:  # Model doesn't support images, retry without
-                        raw = self._handle_image_error(base, parts, client)
-                    else:
-                        raise
+                    # Handle other OpenAI API errors
+                    raise
                 else:
                     raise
 

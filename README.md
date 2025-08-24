@@ -311,6 +311,57 @@ python -m pytest   # Run tests
 
 ---
 
+## 🏗️ Architecture & Development
+
+### Code Architecture
+
+Content Tamer AI follows a modular architecture designed for maintainability and extensibility:
+
+```
+src/
+├── main.py                    # Entry point (80 lines)
+├── core/                      # Core application modules
+│   ├── cli_parser.py         # Command line argument parsing (216 lines)
+│   ├── directory_manager.py  # Directory setup & validation (88 lines)
+│   ├── file_processor.py     # File processing pipeline (448 lines)
+│   └── application.py        # Main orchestration logic (248 lines)
+├── ai_providers.py           # AI service integrations
+├── content_processors.py     # Content extraction (PDF, images, OCR)
+├── file_organizer.py         # File operations & organization
+└── utils/                    # Supporting utilities
+    ├── error_handling.py     # Retry logic & error classification
+    ├── display_manager.py    # Progress & message display
+    ├── expert_mode.py        # Interactive configuration
+    └── ...                   # Additional utilities
+```
+
+### Key Design Principles
+
+- **Separation of Concerns**: Each module has a focused responsibility
+- **Modular Architecture**: Components can be developed and tested independently
+- **Extensibility**: Easy to add new AI providers, content processors, or display modes
+- **Robust Error Handling**: Intelligent retry logic with exponential backoff
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+
+### For Developers
+
+```bash
+# Install development dependencies
+pip install -e .[dev]
+
+# Run tests
+pytest tests/ -v
+
+# Code quality checks
+flake8 src --max-line-length=88
+pylint src --score=y
+mypy src
+```
+
+Current code quality: **Pylint 9.0/10** ⭐
+
+---
+
 ## Acknowledgments
 
 Content Tamer AI was originally forked from [sort-rename-move-pdf](https://github.com/munir-abbasi/sort-rename-move-pdf) by munir-abbasi. We're grateful for that foundational work, though Content Tamer AI has since evolved significantly in scope and functionality to become a comprehensive AI-powered content intelligence platform.

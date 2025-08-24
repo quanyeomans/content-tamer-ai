@@ -38,8 +38,8 @@ class TestPhase2BackwardCompatibility(unittest.TestCase):
     def test_organize_content_without_display_options(self):
         """Test that organize_content works without display_options parameter."""
         # This tests the original API signature still works
-        with patch('main.AIProviderFactory') as mock_factory, \
-             patch('main.get_api_details') as mock_get_api, \
+        with patch('core.application.AIProviderFactory') as mock_factory, \
+             patch('core.application.get_api_details') as mock_get_api, \
              patch('os.listdir') as mock_listdir:
             
             mock_get_api.return_value = "test_key"
@@ -61,8 +61,8 @@ class TestPhase2BackwardCompatibility(unittest.TestCase):
             
     def test_organize_content_with_display_options(self):
         """Test that organize_content works with new display_options parameter."""
-        with patch('main.AIProviderFactory') as mock_factory, \
-             patch('main.get_api_details') as mock_get_api, \
+        with patch('core.application.AIProviderFactory') as mock_factory, \
+             patch('core.application.get_api_details') as mock_get_api, \
              patch('os.listdir') as mock_listdir:
             
             mock_get_api.return_value = "test_key"
@@ -91,8 +91,8 @@ class TestPhase2BackwardCompatibility(unittest.TestCase):
             
     def test_display_options_default_to_none(self):
         """Test that display_options defaults to None and works correctly."""
-        with patch('main.AIProviderFactory') as mock_factory, \
-             patch('main.get_api_details') as mock_get_api, \
+        with patch('core.application.AIProviderFactory') as mock_factory, \
+             patch('core.application.get_api_details') as mock_get_api, \
              patch('os.listdir') as mock_listdir:
             
             mock_get_api.return_value = "test_key"
@@ -278,8 +278,8 @@ class TestPhase2ErrorHandling(unittest.TestCase):
         input_dir = os.path.join(self.temp_dir, "input")  
         os.makedirs(input_dir)
         
-        with patch('main.AIProviderFactory') as mock_factory, \
-             patch('main.get_api_details') as mock_get_api, \
+        with patch('core.application.AIProviderFactory') as mock_factory, \
+             patch('core.application.get_api_details') as mock_get_api, \
              patch('os.listdir') as mock_listdir:
             
             mock_get_api.return_value = "test_key"

@@ -131,8 +131,8 @@ class FilenameHandler:
             .encode("ascii", "ignore")
             .decode("ascii")
         )
-        # Keep only alphanumeric, underscores, and hyphens
-        cleaned_filename = re.sub(r"[^a-zA-Z0-9_-]", "", normalized)
+        # Keep only alphanumeric and underscores
+        cleaned_filename = re.sub(r"[^a-zA-Z0-9_]", "", normalized)
 
         if not cleaned_filename:
             timestamp = time.strftime("%Y%m%d%H%M%S", time.gmtime())
