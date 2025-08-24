@@ -256,7 +256,7 @@ class ProgressDisplay:
 
     def _render_final_stats(self, message: str) -> None:
         """Render final completion statistics."""
-        self.file.write(f"\n\n{message}\n")
+        self.file.write(f"\n{message}\n")
 
         if self.stats.total > 0:
             # Summary statistics

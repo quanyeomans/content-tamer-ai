@@ -219,9 +219,14 @@ def process_file_enhanced_core(
     
     finally:
         # Record progress once at the end, regardless of success/failure
-        organizer.progress_tracker.record_progress(
-            progress_f, filename, organizer.file_manager
-        )
+        try:
+            organizer.progress_tracker.record_progress(
+                progress_f, filename, organizer.file_manager
+            )
+        except Exception as e:
+            # Don't let progress recording failure affect the overall success status
+            # The file may have been successfully processed and moved already
+            pass
     
     return success, result
 

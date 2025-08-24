@@ -61,38 +61,40 @@ class ProcessingContext:
     def complete_file(self, filename: str, new_filename: str = "") -> None:
         """Mark file as successfully completed."""
         self.display.progress.add_success()
-        self.display.progress.update(status="completed", increment=True)
         
-        # Always show success line for completed files (unless in quiet mode)
+        # Update progress display with renamed filename and success status
+        display_name = new_filename if new_filename and new_filename != "processed" else filename
+        self.display.progress.update(filename=display_name, status="completed", increment=True)
+        
+        # Show a permanent success line using appropriate formatting
         if not self.display.options.quiet:
-            # Check if we have a full progress display with stats
-            if hasattr(self.display.progress, 'stats'):
+            if hasattr(self.display.progress, 'formatter'):
+                # Full ProgressDisplay - use ANSI formatting
+                formatter = self.display.progress.formatter
                 percentage = self.display.progress.stats.progress_percentage
-                success_count = self.display.progress.stats.success_count
                 
-                # Create progress bar with correct length
-                bar_length = 40
-                filled_length = int(percentage / 100 * bar_length)
+                # Create a proper ANSI progress bar using the formatter
+                progress_bar = formatter.progress_bar(
+                    self.display.progress.stats.completed, 
+                    self.display.progress.stats.total, 
+                    width=40
+                )
                 
-                # Use ASCII characters for better compatibility
-                bar = '#' * filled_length + '.' * (bar_length - filled_length)
+                # Format the success line with proper ANSI colors
+                percentage_colored = formatter.colorize(f"{percentage:5.1f}%", "bright_white", bold=True)
+                filename_colored = formatter.highlight_filename(display_name)
+                status_colored = formatter.colorize("SUCCESS", "bright_green", bold=True)
                 
-                # Use actual new filename if available, otherwise show as processed
-                display_name = new_filename if new_filename and new_filename != "processed" else filename
-                success_line = f"[{bar}] {percentage:5.1f}% -> {display_name} SUCCESS"
-                
-                # Write to the display manager's output file
-                output_file = self.display.options.file or sys.stdout
-                output_file.write(success_line + '\n')
-                output_file.flush()
+                success_line = f"{progress_bar} {percentage_colored} → {filename_colored} {status_colored}"
             else:
-                # Fallback for SimpleProgressDisplay
-                display_name = new_filename if new_filename and new_filename != "processed" else filename
-                output_file = self.display.options.file or sys.stdout
-                # Use ASCII characters for better compatibility
-                success_line = f"SUCCESS {display_name} - Success"
-                output_file.write(success_line + '\n')
-                output_file.flush()
+                # SimpleProgressDisplay - use basic formatting
+                percentage = self.display.progress.stats.progress_percentage
+                success_line = f"[{percentage:5.1f}%] {display_name} - SUCCESS"
+            
+            # Write to output
+            output_file = self.display.options.file or sys.stdout
+            output_file.write(success_line + '\n')
+            output_file.flush()
 
     def fail_file(self, filename: str, error_details: str = "") -> None:
         """Mark file as failed."""
@@ -242,11 +244,7 @@ class DisplayManager:
                 f"✅ {stats['successful_retries']} files recovered after temporary issues"
             )
 
-        if stats.get("recoverable_errors", 0) > 0:
-            self.messages.info(
-                f"ℹ️  {stats['recoverable_errors']} files encountered temporary permission/access issues "
-                f"(typically antivirus scans or cloud sync) but processing continued"
-            )
+        # Note: Recoverable errors message is shown by retry handler summary to avoid duplication
 
         if stats.get("errors", 0) > 0:
             self.messages.error(f"{stats['errors']} files could not be processed")
