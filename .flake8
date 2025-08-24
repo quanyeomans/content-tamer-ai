@@ -1,0 +1,27 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203,E501,W503,E722,F401,F811
+    
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .pytest_cache,
+    .mypy_cache,
+    node_modules,
+    
+per-file-ignores =
+    __init__.py:F401,F403,
+    setup.py:E501,
+    */ai_providers.py:F401,
+    */content_processors.py:F401
+    
+select = E,W,F,C90
+    
+# Complexity settings
+max-complexity = 12

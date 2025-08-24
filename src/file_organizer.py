@@ -5,14 +5,14 @@ This module handles file operations, progress tracking, and provides
 the foundation for future domain-based organization features.
 """
 
+import datetime as dt
 import os
+import platform
+import re
 import shutil
 import time
 import unicodedata
-import re
-import datetime as dt
-import platform
-from typing import Set, Optional, List, Dict
+from typing import Any, Dict, List, Optional, Set, TextIO, Union
 
 # Cross-platform file locking imports
 if platform.system() == "Windows":
@@ -23,23 +23,25 @@ else:
 
 class FileManager:
     """Cross-platform file operations with locking and retry logic."""
-    
+
     @staticmethod
-    def lock_file(file_obj):
+    def lock_file(file_obj: TextIO) -> None:
         """Acquire exclusive file lock (cross-platform)."""
         if platform.system() == "Windows":
             msvcrt.locking(file_obj.fileno(), msvcrt.LK_LOCK, 1)
         else:
             import fcntl
+
             fcntl.flock(file_obj.fileno(), fcntl.LOCK_EX)
 
     @staticmethod
-    def unlock_file(file_obj):
+    def unlock_file(file_obj: TextIO) -> None:
         """Release file lock (cross-platform)."""
         if platform.system() == "Windows":
             msvcrt.locking(file_obj.fileno(), msvcrt.LK_UNLCK, 1)
         else:
             import fcntl
+
             fcntl.flock(file_obj.fileno(), fcntl.LOCK_UN)
 
     @staticmethod
@@ -58,14 +60,21 @@ class FileManager:
         try:
             os.remove(src)
         except OSError as e:
-            raise e if e else last_err
+            # Raise the current error, or the last error if current is None
+            raise (
+                e
+                if e is not None
+                else (last_err or OSError("Unknown file operation error"))
+            )
 
 
 class ProgressTracker:
     """Progress tracking for resumable batch processing."""
-    
+
     @staticmethod
-    def load_progress(progress_file: str, input_dir: str, reset_progress: bool = False) -> Set[str]:
+    def load_progress(
+        progress_file: str, input_dir: str, reset_progress: bool = False
+    ) -> Set[str]:
         """Load processed files list with optional reset."""
         if reset_progress and os.path.exists(progress_file):
             try:
@@ -81,7 +90,8 @@ class ProgressTracker:
                     processed_files = {line.strip() for line in f}
                 # Only skip files that have been moved out of input folder
                 processed_files = {
-                    name for name in processed_files
+                    name
+                    for name in processed_files
                     if not os.path.exists(os.path.join(input_dir, name))
                 }
             except (IOError, OSError) as e:
@@ -89,7 +99,9 @@ class ProgressTracker:
         return processed_files
 
     @staticmethod
-    def record_progress(progress_file_obj, filename: str, file_manager: FileManager):
+    def record_progress(
+        progress_file_obj: TextIO, filename: str, file_manager: FileManager
+    ) -> None:
         """Thread-safe progress recording with file locking."""
         try:
             file_manager.lock_file(progress_file_obj)
@@ -101,7 +113,7 @@ class ProgressTracker:
 
 class FilenameHandler:
     """Filename validation, sanitization, and collision resolution."""
-    
+
     @staticmethod
     def validate_and_trim_filename(initial_filename: str) -> str:
         """Clean filename for cross-platform filesystem compatibility."""
@@ -115,8 +127,8 @@ class FilenameHandler:
             .encode("ascii", "ignore")
             .decode("ascii")
         )
-        # Keep only alphanumeric and underscores
-        cleaned_filename = re.sub(r"[^a-zA-Z0-9_]", "", normalized)
+        # Keep only alphanumeric, underscores, and hyphens
+        cleaned_filename = re.sub(r"[^a-zA-Z0-9_-]", "", normalized)
 
         if not cleaned_filename:
             timestamp = time.strftime("%Y%m%d%H%M%S", time.gmtime())
@@ -125,7 +137,9 @@ class FilenameHandler:
         return cleaned_filename[:160]  # Limit length for filesystem compatibility
 
     @staticmethod
-    def handle_duplicate_filename(filename: str, folder: str, extension: str = ".pdf") -> str:
+    def handle_duplicate_filename(
+        filename: str, folder: str, extension: str = ".pdf"
+    ) -> str:
         """Resolve filename collisions by appending numeric suffix."""
         base_filename = filename
         counter = 1
@@ -137,83 +151,93 @@ class FilenameHandler:
 
 class FileOrganizer:
     """File organization with extensible domain-based categorization support."""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         self.file_manager = FileManager()
         self.progress_tracker = ProgressTracker()
         self.filename_handler = FilenameHandler()
-    
-    def create_directories(self, *directories):
+
+    def create_directories(self, *directories: str) -> None:
         """Ensures all specified directories exist."""
         for directory in directories:
             os.makedirs(directory, exist_ok=True)
-    
-    def move_file_to_category(self, src_path: str, filename: str, category_dir: str, 
-                            new_name: str, file_extension: str = ".pdf") -> str:
+
+    def move_file_to_category(
+        self,
+        src_path: str,
+        filename: str,
+        category_dir: str,
+        new_name: str,
+        file_extension: str = ".pdf",
+    ) -> str:
         """Move file to category with collision-safe naming."""
         final_name = self.filename_handler.handle_duplicate_filename(
             new_name, category_dir, file_extension
         )
-        
+
         # Auto-detect extension if default doesn't match source
-        if file_extension == ".pdf" and not src_path.lower().endswith('.pdf'):
+        if file_extension == ".pdf" and not src_path.lower().endswith(".pdf"):
             file_extension = os.path.splitext(src_path)[1]
-        
+
         dest_path = os.path.join(category_dir, final_name + file_extension)
         self.file_manager.safe_move(src_path, dest_path)
         return final_name
-    
-    def get_file_stats(self, directory: str) -> Dict[str, int]:
+
+    def get_file_stats(self, directory: str) -> Dict[str, Union[int, Dict[str, int]]]:
         """Get file statistics by type for directory analysis."""
         if not os.path.exists(directory):
             return {"total": 0, "by_extension": {}}
-        
-        stats = {"total": 0, "by_extension": {}}
-        
+
+        stats: Dict[str, Union[int, Dict[str, int]]] = {"total": 0, "by_extension": {}}
+        by_ext: Dict[str, int] = {}
+
         for filename in os.listdir(directory):
             file_path = os.path.join(directory, filename)
             if os.path.isfile(file_path):
-                stats["total"] += 1
+                stats["total"] = int(stats["total"]) + 1  # type: ignore
                 ext = os.path.splitext(filename)[1].lower()
-                stats["by_extension"][ext] = stats["by_extension"].get(ext, 0) + 1
-        
+                by_ext[ext] = by_ext.get(ext, 0) + 1
+
+        stats["by_extension"] = by_ext
         return stats
-    
+
     # Future domain organization features
-    
-    def organize_by_content_type(self, files: List[str], base_dir: str) -> Dict[str, List[str]]:
+
+    def organize_by_content_type(
+        self, files: List[str], base_dir: str
+    ) -> Dict[str, List[str]]:
         """Organize files by content type (placeholder for AI-powered categorization)."""
         # Future: AI analysis for document types (invoices, contracts, reports, etc.)
-        
-        organization_map = {
-            "documents": [],
-            "images": [],
-            "other": []
-        }
-        
+
+        organization_map = {"documents": [], "images": [], "other": []}
+
         for file_path in files:
             ext = os.path.splitext(file_path)[1].lower()
-            if ext in ['.pdf', '.doc', '.docx', '.txt']:
+            if ext in [".pdf", ".doc", ".docx", ".txt"]:
                 organization_map["documents"].append(file_path)
-            elif ext in ['.png', '.jpg', '.jpeg', '.gif', '.bmp']:
+            elif ext in [".png", ".jpg", ".jpeg", ".gif", ".bmp"]:
                 organization_map["images"].append(file_path)
             else:
                 organization_map["other"].append(file_path)
-        
+
         return organization_map
-    
-    def organize_by_date_pattern(self, files: List[str], base_dir: str) -> Dict[str, List[str]]:
+
+    def organize_by_date_pattern(
+        self, files: List[str], base_dir: str
+    ) -> Dict[str, List[str]]:
         """Organize files by temporal patterns (placeholder for date extraction)."""
         # Future: Extract dates from content/filenames for chronological organization
-        
+
         current_year = dt.datetime.now().year
         organization_map = {
             f"{current_year}": files,  # Simple fallback for now
         }
-        
+
         return organization_map
-    
-    def create_domain_folders(self, base_dir: str, domains: List[str]) -> Dict[str, str]:
+
+    def create_domain_folders(
+        self, base_dir: str, domains: List[str]
+    ) -> Dict[str, str]:
         """Create domain-specific folder structure."""
         domain_paths = {}
         for domain in domains:
@@ -221,16 +245,16 @@ class FileOrganizer:
             os.makedirs(domain_path, exist_ok=True)
             domain_paths[domain] = domain_path
         return domain_paths
-    
-    def suggest_organization_structure(self, files: List[str]) -> Dict[str, any]:
+
+    def suggest_organization_structure(self, files: List[str]) -> Dict[str, Any]:
         """AI-powered organization suggestions (placeholder for content analysis)."""
         # Future: Analyze content patterns to suggest optimal folder structures
         return {
             "suggested_structure": {
                 "by_type": ["Documents", "Images", "Spreadsheets"],
                 "by_date": ["2024", "2023", "Archive"],
-                "by_content": ["Financial", "Personal", "Work"]
+                "by_content": ["Financial", "Personal", "Work"],
             },
             "confidence": 0.8,
-            "reasoning": "Based on file types and content analysis"
+            "reasoning": "Based on file types and content analysis",
         }

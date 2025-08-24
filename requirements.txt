@@ -1,0 +1,16 @@
+# Core dependencies
+PyPDF2>=6.0.0
+tiktoken>=0.11.0
+tqdm>=4.67.1
+requests>=2.32.5
+pymupdf>=1.26.3
+pillow>=11.3.0
+pytesseract>=0.3.13
+
+# AI Provider dependencies (install based on your needs)
+# openai>=1.0.0              # For OpenAI models (recommended)
+# anthropic>=0.3.0           # For Claude models (needs testing)  
+# google-genai>=0.3.0        # For Gemini models (needs testing)
+
+# Development dependencies (optional)
+# pytest>=8.4.1              # For running tests

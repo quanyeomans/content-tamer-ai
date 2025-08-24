@@ -5,12 +5,13 @@ This module contains file type processors that extract content and metadata
 for AI-based filename generation. Designed for easy extension to new file types.
 """
 
-import os
-import re
 import base64
 import io
+import os
+import re
 from abc import ABC, abstractmethod
-from typing import Tuple, Optional, List
+from typing import Any, List, Optional, Tuple
+
 import PyPDF2
 from PyPDF2.errors import PdfReadError
 
@@ -19,13 +20,15 @@ HAVE_PYMUPDF = False
 HAVE_TESSERACT = False
 try:
     import fitz  # PyMuPDF
+
     HAVE_PYMUPDF = True
 except ImportError:
     HAVE_PYMUPDF = False
 
 try:
-    from PIL import Image
     import pytesseract
+    from PIL import Image
+
     HAVE_TESSERACT = True
 except ImportError:
     HAVE_TESSERACT = False
@@ -39,21 +42,21 @@ OCR_USE_OSD = True  # Enable Tesseract orientation/script detection
 
 class ContentProcessor(ABC):
     """Abstract base class for content processors."""
-    
+
     @abstractmethod
     def can_process(self, file_path: str) -> bool:
         """Return True if this processor can handle the given file."""
         pass
-    
+
     @abstractmethod
     def extract_content(self, file_path: str) -> Tuple[str, Optional[str]]:
         """Extract text content and optional image from file.
-        
+
         Returns:
             Tuple of (text_content, base64_encoded_image)
         """
         pass
-    
+
     @abstractmethod
     def get_file_extension(self) -> str:
         """Return the file extension this processor handles."""
@@ -62,22 +65,24 @@ class ContentProcessor(ABC):
 
 class PDFProcessor(ContentProcessor):
     """Processes PDF files with multiple extraction methods."""
-    
-    def __init__(self, ocr_lang: str = OCR_LANG):
+
+    def __init__(self, ocr_lang: str = OCR_LANG) -> None:
         self.ocr_lang = ocr_lang
-    
+
     def can_process(self, file_path: str) -> bool:
         """Check if file is a PDF."""
-        return file_path.lower().endswith('.pdf')
-    
+        return file_path.lower().endswith(".pdf")
+
     def get_file_extension(self) -> str:
         """Return PDF extension."""
         return ".pdf"
-    
+
     def extract_content(self, file_path: str) -> Tuple[str, Optional[str]]:
         """Extract all possible content from a PDF."""
-        return self._extract_text_and_image(file_path, min_len=40, ocr_lang=self.ocr_lang)
-    
+        return self._extract_text_and_image(
+            file_path, min_len=40, ocr_lang=self.ocr_lang
+        )
+
     def _extract_text_and_image(
         self, pdf_path: str, min_len: int = 40, ocr_lang: str = OCR_LANG
     ) -> Tuple[str, Optional[str]]:
@@ -111,7 +116,7 @@ class PDFProcessor(ContentProcessor):
                 text = ocr_text
 
         return text.strip(), img_b64
-    
+
     def _fitz_text(self, pdf_path: str, max_pages: int = 5) -> str:
         """Extracts text from a PDF using the PyMuPDF library (fitz), which is fast and efficient."""
         if not HAVE_PYMUPDF:
@@ -129,7 +134,11 @@ class PDFProcessor(ContentProcessor):
             return ""
 
     def _fitz_render_png_b64(
-        self, pdf_path: str, page_index: int = 0, zoom: float = OCR_ZOOM, auto_orient: bool = True
+        self,
+        pdf_path: str,
+        page_index: int = 0,
+        zoom: float = OCR_ZOOM,
+        auto_orient: bool = True,
     ) -> Optional[str]:
         if not HAVE_PYMUPDF:
             return None
@@ -159,7 +168,11 @@ class PDFProcessor(ContentProcessor):
             return None
 
     def _ocr_tesseract_from_pdf(
-        self, pdf_path: str, pages: int = OCR_PAGES, zoom: float = OCR_ZOOM, lang: str = OCR_LANG
+        self,
+        pdf_path: str,
+        pages: int = OCR_PAGES,
+        zoom: float = OCR_ZOOM,
+        lang: str = OCR_LANG,
     ) -> str:
         if not (HAVE_PYMUPDF and HAVE_TESSERACT):
             return ""
@@ -176,7 +189,9 @@ class PDFProcessor(ContentProcessor):
                 img = Image.open(io.BytesIO(pix.tobytes("png")))
                 angle = self._detect_osd_angle(img)
                 img = self._rotate_image(img, angle)
-                text = pytesseract.image_to_string(img, lang=lang, config="--psm 6 --oem 1")
+                text = pytesseract.image_to_string(
+                    img, lang=lang, config="--psm 6 --oem 1"
+                )
                 out.append(text or "")
             except (RuntimeError, IOError, ValueError, pytesseract.TesseractError):
                 continue
@@ -216,14 +231,19 @@ class PDFProcessor(ContentProcessor):
                 joined = (" ".join(content)).strip()
                 if not joined:
                     return ""
-                from utils.text_utils import truncate_content_to_token_limit  # Import here to avoid circular import
-                return truncate_content_to_token_limit(joined, 15000)  # MAX_LENGTH
+                from utils.text_utils import (  # Import here to avoid circular import
+                    truncate_content_to_token_limit,
+                )
+
+                return truncate_content_to_token_limit(
+                    joined, 20000
+                )  # Increased for better context
         except (IOError, OSError) as e:
             return f"Error opening PDF: {str(e)}"
         except PdfReadError as e:
             return f"Error reading PDF: {str(e)}"
 
-    def _detect_osd_angle(self, img):
+    def _detect_osd_angle(self, img: Any) -> int:
         """Uses Tesseract's Orientation and Script Detection (OSD) to find out if an image is rotated."""
         if not HAVE_TESSERACT or not OCR_USE_OSD:
             return 0
@@ -234,7 +254,7 @@ class PDFProcessor(ContentProcessor):
         except pytesseract.TesseractError:
             return 0
 
-    def _rotate_image(self, img, angle):
+    def _rotate_image(self, img: Any, angle: int) -> Any:
         if not angle:
             return img
         # Tesseract's angle is clockwise, but the Python Imaging Library (PIL) rotates counter-clockwise, so we invert the angle.
@@ -243,67 +263,67 @@ class PDFProcessor(ContentProcessor):
 
 class ImageProcessor(ContentProcessor):
     """Processes image files (screenshots, photos, etc.)."""
-    
-    def __init__(self, ocr_lang: str = OCR_LANG):
+
+    def __init__(self, ocr_lang: str = OCR_LANG) -> None:
         self.ocr_lang = ocr_lang
-        self.supported_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.gif'}
-    
+        self.supported_extensions = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".gif"}
+
     def can_process(self, file_path: str) -> bool:
         """Check if file is a supported image format."""
         ext = os.path.splitext(file_path)[1].lower()
         return ext in self.supported_extensions
-    
+
     def get_file_extension(self) -> str:
         """Return primary image extension."""
         return ".png"
-    
+
     def extract_content(self, file_path: str) -> Tuple[str, Optional[str]]:
         """Extract text from image via OCR and return image as base64."""
         text = ""
         img_b64 = None
-        
+
         try:
             # Convert image to base64
             with open(file_path, "rb") as img_file:
                 img_bytes = img_file.read()
                 img_b64 = f"data:image/png;base64,{base64.b64encode(img_bytes).decode('utf-8')}"
-            
+
             # Extract text via OCR if available
             if HAVE_TESSERACT:
                 try:
                     text = pytesseract.image_to_string(file_path, lang=self.ocr_lang)
                 except (pytesseract.TesseractError, Exception):
                     text = ""
-            
+
             return text.strip(), img_b64
-            
+
         except (IOError, OSError) as e:
             return f"Error reading image: {str(e)}", None
 
 
 class ContentProcessorFactory:
     """Factory for creating appropriate content processors based on file type."""
-    
-    def __init__(self, ocr_lang: str = OCR_LANG):
+
+    def __init__(self, ocr_lang: str = OCR_LANG) -> None:
         self.ocr_lang = ocr_lang
         self.processors = [
             PDFProcessor(ocr_lang),
             ImageProcessor(ocr_lang),
             # Future: OfficeProcessor, TextProcessor, etc.
         ]
-    
+
     def get_processor(self, file_path: str) -> Optional[ContentProcessor]:
         """Return appropriate processor for the given file, or None if unsupported."""
         for processor in self.processors:
             if processor.can_process(file_path):
                 return processor
         return None
-    
+
     def get_supported_extensions(self) -> List[str]:
         """Return list of all supported file extensions."""
         extensions = []
         for processor in self.processors:
-            if hasattr(processor, 'supported_extensions'):
+            if hasattr(processor, "supported_extensions"):
                 extensions.extend(processor.supported_extensions)
             else:
                 extensions.append(processor.get_file_extension())

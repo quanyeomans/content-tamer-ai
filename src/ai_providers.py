@@ -6,27 +6,42 @@ interface for adding new providers, including local LLM support.
 """
 
 import json
-import requests
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
+
+import requests
 
 # Import API clients conditionally to avoid hard dependencies
+# Use TYPE_CHECKING to prevent Pyright "possibly unbound" errors
+if TYPE_CHECKING:
+    import anthropic
+    import google.genai as genai
+    from openai import APIError, OpenAI
+
+# Initialize flags and imports
 try:
     import google.genai as genai
+
     HAVE_GEMINI = True
 except ImportError:
+    genai = None  # type: ignore
     HAVE_GEMINI = False
 
 try:
     import anthropic
+
     HAVE_CLAUDE = True
 except ImportError:
+    anthropic = None  # type: ignore
     HAVE_CLAUDE = False
 
 try:
-    from openai import OpenAI, APIError
+    from openai import APIError, OpenAI
+
     HAVE_OPENAI = True
 except ImportError:
+    OpenAI = None  # type: ignore
+    APIError = Exception  # Fallback for error handling
     HAVE_OPENAI = False
 
 # No need for try/except for Deepseek since we're using requests
@@ -35,9 +50,14 @@ HAVE_DEEPSEEK = True
 # Supported AI providers and their available models
 AI_PROVIDERS = {
     "openai": [
-        "gpt-5", "gpt-5-mini", "gpt-4.1-mini", "gpt-4o", "gpt-4-turbo",
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-4.1-mini",
+        "gpt-4o",
+        "gpt-4-turbo",
         "gpt-3.5-turbo",  # Legacy support
-        "gpt-4-vision-preview", "gpt-4o-vision",  # Vision-capable models
+        "gpt-4-vision-preview",
+        "gpt-4o-vision",  # Vision-capable models
     ],
     "gemini": ["gemini-pro"],
     "claude": ["claude-3-haiku", "claude-3-sonnet", "claude-3-opus"],
@@ -47,13 +67,15 @@ AI_PROVIDERS = {
 # Provider-specific system prompts for filename generation
 DEFAULT_SYSTEM_PROMPTS = {
     "openai": (
-        "Generate a descriptive filename based on the document content. "
+        "Generate a descriptive, detailed filename based on the document content. "
         "Return ONLY the filename text, no quotes or code blocks. "
-        "Use English letters, numbers, and underscores only. 50 characters max."
+        "Use English letters, numbers, underscores, and hyphens only. "
+        "Make it specific and informative, up to 160 characters. "
+        "Include key topics, dates, document type when relevant."
     ),
-    "gemini": "Generate a descriptive filename based on the document content. Use only English letters, numbers, and underscores. Keep it under 50 characters.",
-    "claude": "Generate a descriptive filename based on the document content. Use only English letters, numbers, and underscores. Keep it under 50 characters.",
-    "deepseek": "Generate a descriptive filename based on the document content. Use only English letters, numbers, and underscores. Keep it under 50 characters.",
+    "gemini": "Generate a detailed, descriptive filename based on the document content. Use only English letters, numbers, underscores, and hyphens. Be specific and informative, up to 160 characters maximum.",
+    "claude": "Generate a comprehensive, descriptive filename based on the document content. Use only English letters, numbers, underscores, and hyphens. Include key details and context, up to 160 characters maximum.",
+    "deepseek": "Generate a detailed, informative filename based on the document content. Use only English letters, numbers, underscores, and hyphens. Make it comprehensive yet concise, up to 160 characters maximum.",
 }
 
 # Runtime prompt configuration (can be overridden)
@@ -80,16 +102,16 @@ def get_system_prompt(provider: str) -> str:
 
 class AIProvider(ABC):
     """Abstract base class for all AI providers."""
-    
-    def __init__(self, api_key: str, model: str):
+
+    def __init__(self, api_key: str, model: str) -> None:
         self.api_key = api_key
         self.model = model
-    
+
     @abstractmethod
     def generate_filename(self, content: str, image_b64: Optional[str] = None) -> str:
         """Generate filename from document content and optional image data."""
         pass
-    
+
     def is_local(self) -> bool:
         """Return True if provider runs locally without API calls."""
         return False
@@ -98,9 +120,9 @@ class AIProvider(ABC):
 class OpenAIProvider(AIProvider):
     """OpenAI API provider with support for text and vision models."""
 
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str, model: str) -> None:
         super().__init__(api_key, model)
-        if not HAVE_OPENAI:
+        if not HAVE_OPENAI or OpenAI is None:
             raise ImportError("Please install OpenAI: pip install openai")
         self.client = OpenAI(api_key=api_key)
 
@@ -128,7 +150,7 @@ class OpenAIProvider(AIProvider):
                 "model": self.model,
                 "instructions": get_system_prompt("openai"),
                 "input": [{"role": "user", "content": parts}],
-                "max_output_tokens": 64,
+                "max_output_tokens": 50,
             }
             model_lc = (self.model or "").lower()
             if "gpt-5" in model_lc:
@@ -143,21 +165,31 @@ class OpenAIProvider(AIProvider):
             try:
                 resp = _call(base)
                 raw = (resp.output_text or "").strip()
-            except APIError as e:
-                msg = str(e).lower()
-                if "image" in msg:  # Model doesn't support images, retry without
-                    noimg = dict(base)
-                    noimg["input"] = [
-                        {
-                            "role": "user",
-                            "content": [c for c in parts if c.get("type") != "input_image"],
-                        }
-                    ]
-                    noimg.pop("reasoning", None)
-                    noimg["temperature"] = 0.1
-                    noimg["top_p"] = 0.9
-                    resp = _call(noimg)
-                    raw = (resp.output_text or "").strip()
+            except Exception as e:
+                # Handle APIError if available, otherwise any exception
+                if (
+                    HAVE_OPENAI
+                    and hasattr(e, "__class__")
+                    and "APIError" in str(type(e))
+                ):
+                    msg = str(e).lower()
+                    if "image" in msg:  # Model doesn't support images, retry without
+                        noimg = dict(base)
+                        noimg["input"] = [
+                            {
+                                "role": "user",
+                                "content": [
+                                    c for c in parts if c.get("type") != "input_image"
+                                ],
+                            }
+                        ]
+                        noimg.pop("reasoning", None)
+                        noimg["temperature"] = 0.1
+                        noimg["top_p"] = 0.9
+                        resp = _call(noimg)
+                        raw = (resp.output_text or "").strip()
+                    else:
+                        raise
                 else:
                     raise
 
@@ -183,20 +215,24 @@ class OpenAIProvider(AIProvider):
 class GeminiProvider(AIProvider):
     """Google Gemini API provider (text-only support)."""
 
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str, model: str) -> None:
         super().__init__(api_key, model)
-        if not HAVE_GEMINI:
-            raise ImportError("Please install Google Generative AI: pip install google-genai")
-        genai.configure(api_key=api_key)
-        self.client = genai.GenerativeModel(model)
+        if not HAVE_GEMINI or genai is None:
+            raise ImportError(
+                "Please install Google Generative AI: pip install google-genai"
+            )
+        genai.configure(api_key=api_key)  # type: ignore
+        self.client = genai.GenerativeModel(model)  # type: ignore
 
     def generate_filename(self, content: str, image_b64: Optional[str] = None) -> str:
         """Generate filename using Gemini API (image parameter ignored)."""
         try:
+            if genai is None:
+                raise RuntimeError("Gemini not available")
             response = self.client.generate_content(
                 [get_system_prompt("gemini"), content or ""],
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=60,
+                generation_config=genai.types.GenerationConfig(  # type: ignore
+                    max_output_tokens=50,
                     temperature=0.2,
                 ),
             )
@@ -210,34 +246,40 @@ class GeminiProvider(AIProvider):
 class ClaudeProvider(AIProvider):
     """Anthropic Claude API provider (text-only support)."""
 
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str, model: str) -> None:
         super().__init__(api_key, model)
-        if not HAVE_CLAUDE:
+        if not HAVE_CLAUDE or anthropic is None:
             raise ImportError("Please install Anthropic: pip install anthropic")
         self.client = anthropic.Anthropic(api_key=api_key)
 
     def generate_filename(self, content: str, image_b64: Optional[str] = None) -> str:
         """Generate filename using Claude API (image parameter ignored)."""
         try:
+            if anthropic is None:
+                raise RuntimeError("Anthropic not available")
             message = self.client.messages.create(
                 model=self.model,
                 system=get_system_prompt("claude"),
-                max_tokens=60,
+                max_tokens=50,
                 messages=[{"role": "user", "content": content or ""}],
             )
-            if (
-                hasattr(message, "content")
-                and isinstance(message.content, list)
-                and len(message.content) > 0
-            ):
-                first = message.content[0]
-                if hasattr(first, "text"):
-                    return first.text
+            # Handle new Anthropic API response format
+            if hasattr(message, "content") and isinstance(message.content, list):
+                for block in message.content:
+                    if hasattr(block, "text"):
+                        return block.text  # type: ignore
+                    elif (
+                        hasattr(block, "type")
+                        and getattr(block, "type", None) == "text"
+                        and hasattr(block, "text")
+                    ):
+                        return block.text  # type: ignore
+            # Fallback for older response formats
             if hasattr(message, "content"):
                 if isinstance(message.content, str):
                     return message.content
                 elif isinstance(message.content, dict) and "text" in message.content:
-                    return message.content["text"]
+                    return message.content["text"]  # type: ignore
             raise ValueError("Unable to extract text from Claude API response")
         except Exception as e:
             raise RuntimeError(f"Claude API error: {str(e)}") from e
@@ -246,7 +288,7 @@ class ClaudeProvider(AIProvider):
 class DeepseekProvider(AIProvider):
     """Deepseek API provider using direct HTTP requests."""
 
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str, model: str) -> None:
         super().__init__(api_key, model)
         self.base_url = "https://api.deepseek.com/v1/chat/completions"
 
@@ -261,7 +303,7 @@ class DeepseekProvider(AIProvider):
                 {"role": "system", "content": get_system_prompt("deepseek")},
                 {"role": "user", "content": content or ""},
             ],
-            "max_tokens": 60,
+            "max_tokens": 50,
             "temperature": 0.2,
         }
         try:
@@ -284,7 +326,7 @@ class DeepseekProvider(AIProvider):
 
 class AIProviderFactory:
     """Factory for creating and managing AI provider instances."""
-    
+
     @staticmethod
     def create(provider: str, model: str, api_key: str) -> AIProvider:
         """Create AI provider instance for specified provider and model."""
@@ -298,13 +340,15 @@ class AIProviderFactory:
             return DeepseekProvider(api_key, model)
         else:
             raise ValueError(f"Unsupported AI provider: {provider}")
-    
+
     @staticmethod
     def list_providers():
         """Get dictionary of available providers and their models."""
         return AI_PROVIDERS
-    
+
     @staticmethod
     def get_default_model(provider: str) -> str:
         """Get recommended default model for specified provider."""
+        if provider not in AI_PROVIDERS:
+            raise ValueError(f"Unsupported provider: {provider}")
         return DEFAULT_MODELS.get(provider, AI_PROVIDERS[provider][0])
