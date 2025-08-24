@@ -313,9 +313,9 @@ class TestCLIIntegration(unittest.TestCase):
 
     def test_get_api_details_from_env(self):
         """Test API key retrieval from environment."""
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'sk-test1234567890abcdef'}):
             api_key = get_api_details("openai", "gpt-4o")
-            self.assertEqual(api_key, "test-key")
+            self.assertEqual(api_key, "sk-test1234567890abcdef")
 
     def test_get_api_details_invalid_provider(self):
         """Test error handling for invalid provider."""
@@ -330,15 +330,15 @@ class TestCLIIntegration(unittest.TestCase):
                 get_api_details("openai", "invalid_model")
             self.assertIn("Invalid model", str(context.exception))
 
-    @patch('builtins.input')
-    def test_get_api_details_user_input(self, mock_input):
+    @patch('getpass.getpass')
+    def test_get_api_details_user_input(self, mock_getpass):
         """Test API key input from user."""
-        mock_input.return_value = "user-provided-key"
+        mock_getpass.return_value = "sk-user1234567890abcdef"
         
         with patch.dict(os.environ, {}, clear=True):
             api_key = get_api_details("openai", "gpt-4o")
-            self.assertEqual(api_key, "user-provided-key")
-            mock_input.assert_called_once_with("Please enter your Openai API key: ")
+            self.assertEqual(api_key, "sk-user1234567890abcdef")
+            mock_getpass.assert_called_once_with("Please enter your Openai API key (input will be hidden): ")
 
 
 if __name__ == "__main__":

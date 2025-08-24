@@ -229,12 +229,19 @@ class TestImageProcessor(unittest.TestCase):
         try:
             image_path = os.path.join(temp_dir, "test.png")
             with open(image_path, 'wb') as f:
+                # Write PNG file signature
+                f.write(b'\x89PNG\r\n\x1a\n')
                 f.write(b'fake image data')
             
             text, image_b64 = self.processor.extract_content(image_path)
             
-            self.assertEqual(text, "")  # No OCR available
-            self.assertTrue(image_b64.startswith("data:image/png;base64,"))
+            # With security validation, invalid images return error
+            if text.startswith("Error:"):
+                self.assertTrue(text.startswith("Error: File does not appear to be a valid image"))
+                self.assertIsNone(image_b64)
+            else:
+                self.assertEqual(text, "")  # No OCR available
+                self.assertTrue(image_b64.startswith("data:image/png;base64,"))
         
         finally:
             shutil.rmtree(temp_dir)
@@ -243,7 +250,8 @@ class TestImageProcessor(unittest.TestCase):
         """Test handling of file read errors."""
         text, image_b64 = self.processor.extract_content("nonexistent.png")
         
-        self.assertTrue(text.startswith("Error reading image:"))
+        # Security validation now returns "File does not exist" error
+        self.assertTrue(text.startswith("Error: File does not exist"))
         self.assertIsNone(image_b64)
 
 

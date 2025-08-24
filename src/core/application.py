@@ -5,7 +5,7 @@ Main application logic coordinating all components for document processing.
 """
 
 import os
-from typing import Optional
+from typing import Optional, Set
 
 from .directory_manager import get_api_details, DEFAULT_PROCESSED_DIR, DEFAULT_PROCESSING_DIR
 from .file_processor import process_file_enhanced
@@ -162,10 +162,34 @@ def organize_content(
     Processes any content type - PDFs, images, screenshots - and generates
     meaningful, descriptive filenames based on document content.
     """
-    # Initialize display system
+    # Initialize display system  
     display_manager = _setup_display_manager(display_options)
 
-    # Validate input directory
+    # Security validation for paths
+    try:
+        from utils.security import PathValidator, SecurityError
+    except ImportError:
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+        from utils.security import PathValidator, SecurityError
+    
+    try:
+        # Validate all directory paths for security
+        safe_input_dir = PathValidator.validate_directory(input_dir)
+        safe_unprocessed_dir = PathValidator.validate_directory(unprocessed_dir)
+        safe_renamed_dir = PathValidator.validate_directory(renamed_dir)
+        
+        # Create allowed base directories set for file validation
+        allowed_dirs = {safe_input_dir, safe_unprocessed_dir, safe_renamed_dir}
+        
+        # Update paths to use validated versions
+        input_dir, unprocessed_dir, renamed_dir = safe_input_dir, safe_unprocessed_dir, safe_renamed_dir
+        
+    except SecurityError as e:
+        display_manager.critical(f"Security error in directory paths: {e}")
+        return False
+
+    # Validate input directory exists
     if not os.path.exists(input_dir):
         display_manager.critical(f"Input folder '{input_dir}' does not exist.")
         return False

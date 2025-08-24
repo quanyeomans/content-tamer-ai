@@ -5,6 +5,8 @@ Handles directory setup, validation, and default structure creation.
 """
 
 import os
+import re
+import getpass
 from typing import Tuple
 
 # Directory structure constants
@@ -59,7 +61,19 @@ def setup_directories(args) -> Tuple[str, str, str]:
 
 
 def get_api_details(provider: str, model: str) -> str:
-    """Gets the API key from environment variables or prompts the user for it."""
+    """
+    Gets the API key from environment variables or prompts the user securely.
+    
+    Args:
+        provider: AI provider name (openai, claude, etc.)
+        model: Model name to validate
+        
+    Returns:
+        Validated API key
+        
+    Raises:
+        ValueError: If provider/model invalid or API key invalid
+    """
     # Import here to avoid circular imports
     try:
         from ai_providers import AI_PROVIDERS
@@ -83,13 +97,73 @@ def get_api_details(provider: str, model: str) -> str:
 
     env_var_name = f"{provider.upper()}_API_KEY"
     api_key = os.environ.get(env_var_name)
+    
     if not api_key:
-        api_key = input(f"Please enter your {provider.capitalize()} API key: ").strip()
+        # Use secure masked input for API key entry
+        try:
+            api_key = getpass.getpass(
+                f"Please enter your {provider.capitalize()} API key (input will be hidden): "
+            ).strip()
+        except (KeyboardInterrupt, EOFError):
+            raise ValueError("API key entry cancelled by user.")
+        
         if not api_key:
             raise ValueError(f"{provider.capitalize()} API key is required.")
 
-    # Basic validation - allow test keys to be shorter
-    if len(api_key) < 5:
-        raise ValueError(f"{provider.capitalize()} API key appears to be too short.")
+    # Enhanced API key validation
+    api_key = _validate_api_key(api_key, provider)
+    
+    return api_key
 
+
+def _validate_api_key(api_key: str, provider: str) -> str:
+    """
+    Validate API key format and security.
+    
+    Args:
+        api_key: API key to validate
+        provider: Provider name for validation rules
+        
+    Returns:
+        Validated API key
+        
+    Raises:
+        ValueError: If API key is invalid or insecure
+    """
+    # Basic security checks
+    if len(api_key) < 10:
+        raise ValueError(f"{provider.capitalize()} API key appears to be too short.")
+    
+    if len(api_key) > 512:
+        raise ValueError(f"{provider.capitalize()} API key appears to be too long.")
+    
+    # Check for obviously fake or test keys
+    test_patterns = [
+        r'^(test|fake|dummy|placeholder)',
+        r'^(sk-)?1{10,}',  # All 1s
+        r'^(sk-)?0{10,}',  # All 0s
+        r'password|secret|key|token',  # Contains obvious words
+    ]
+    
+    for pattern in test_patterns:
+        if re.match(pattern, api_key, re.IGNORECASE):
+            raise ValueError(
+                f"API key appears to be a placeholder or test value. Please use a real {provider.capitalize()} API key."
+            )
+    
+    # Provider-specific validation
+    if provider == "openai":
+        if not api_key.startswith('sk-'):
+            raise ValueError("OpenAI API keys must start with 'sk-'")
+        if len(api_key) < 20:
+            raise ValueError("OpenAI API key format appears invalid")
+    
+    elif provider == "claude":
+        if not api_key.startswith('sk-ant-'):
+            raise ValueError("Claude API keys must start with 'sk-ant-'")
+    
+    # Check for suspicious characters that might indicate injection attempts
+    if not re.match(r'^[a-zA-Z0-9\-_]+$', api_key):
+        raise ValueError("API key contains invalid characters")
+    
     return api_key

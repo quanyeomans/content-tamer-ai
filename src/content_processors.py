@@ -78,10 +78,43 @@ class PDFProcessor(ContentProcessor):
         return ".pdf"
 
     def extract_content(self, file_path: str) -> Tuple[str, Optional[str]]:
-        """Extract all possible content from a PDF."""
-        return self._extract_text_and_image(
-            file_path, min_len=40, ocr_lang=self.ocr_lang
-        )
+        """Extract all possible content from a PDF with security validation."""
+        # Validate file path and content
+        try:
+            from utils.security import PathValidator, ContentValidator, SecurityError
+        except ImportError:
+            import sys
+            sys.path.insert(0, os.path.dirname(__file__))
+            from utils.security import PathValidator, ContentValidator, SecurityError
+        
+        try:
+            # Basic file validation - check it's actually a file and reasonable size
+            if not os.path.isfile(file_path):
+                return "Error: File does not exist or is not a regular file", None
+            
+            # Check file size (50MB limit for security)
+            file_size = os.path.getsize(file_path)
+            if file_size > 50 * 1024 * 1024:  # 50MB
+                return "Error: File too large for processing (50MB limit)", None
+                
+            if file_size == 0:
+                return "Error: File is empty", None
+            
+            # Extract content using existing method
+            content, image_b64 = self._extract_text_and_image(
+                file_path, min_len=40, ocr_lang=self.ocr_lang
+            )
+            
+            # Validate extracted content for security
+            if content and not content.startswith("Error:"):
+                content = ContentValidator.validate_extracted_content(content, file_path)
+            
+            return content, image_b64
+            
+        except SecurityError as e:
+            return f"Security error: {e}", None
+        except Exception as e:
+            return f"Error processing file: {str(e)}", None
 
     def _extract_text_and_image(
         self, pdf_path: str, min_len: int = 40, ocr_lang: str = OCR_LANG
@@ -278,14 +311,39 @@ class ImageProcessor(ContentProcessor):
         return ".png"
 
     def extract_content(self, file_path: str) -> Tuple[str, Optional[str]]:
-        """Extract text from image via OCR and return image as base64."""
+        """Extract text from image via OCR and return image as base64 with security validation."""
+        # Security validation
+        try:
+            from utils.security import SecurityError
+        except ImportError:
+            import sys
+            sys.path.insert(0, os.path.dirname(__file__))
+            from utils.security import SecurityError
+        
         text = ""
         img_b64 = None
 
         try:
+            # Basic file validation
+            if not os.path.isfile(file_path):
+                return "Error: File does not exist or is not a regular file", None
+            
+            # Check file size (10MB limit for images)
+            file_size = os.path.getsize(file_path)
+            if file_size > 10 * 1024 * 1024:  # 10MB
+                return "Error: Image file too large for processing (10MB limit)", None
+                
+            if file_size == 0:
+                return "Error: Image file is empty", None
+
             # Convert image to base64
             with open(file_path, "rb") as img_file:
                 img_bytes = img_file.read()
+                
+                # Validate image header (magic bytes) for security
+                if not self._is_valid_image(img_bytes):
+                    return "Error: File does not appear to be a valid image", None
+                
                 img_b64 = f"data:image/png;base64,{base64.b64encode(img_bytes).decode('utf-8')}"
 
             # Extract text via OCR if available
@@ -299,6 +357,35 @@ class ImageProcessor(ContentProcessor):
 
         except (IOError, OSError) as e:
             return f"Error reading image: {str(e)}", None
+    
+    def _is_valid_image(self, img_bytes: bytes) -> bool:
+        """Validate image file by checking magic bytes."""
+        if not img_bytes or len(img_bytes) < 8:
+            return False
+        
+        # Check common image format magic bytes
+        magic_bytes = {
+            b'\xFF\xD8\xFF': 'JPEG',
+            b'\x89PNG\r\n\x1a\n': 'PNG',
+            b'GIF87a': 'GIF87a',
+            b'GIF89a': 'GIF89a', 
+            b'BM': 'BMP',
+            b'II*\x00': 'TIFF (little endian)',
+            b'MM\x00*': 'TIFF (big endian)',
+            b'RIFF': 'WebP (needs further check)',
+        }
+        
+        for magic, format_name in magic_bytes.items():
+            if img_bytes.startswith(magic):
+                # Special case for WebP - needs to check for WEBP signature
+                if magic == b'RIFF' and len(img_bytes) >= 12:
+                    if img_bytes[8:12] == b'WEBP':
+                        return True
+                    else:
+                        continue
+                return True
+                
+        return False
 
 
 class ContentProcessorFactory:
