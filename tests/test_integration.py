@@ -330,15 +330,17 @@ class TestCLIIntegration(unittest.TestCase):
                 get_api_details("openai", "invalid_model")
             self.assertIn("Invalid model", str(context.exception))
 
-    @patch('getpass.getpass')
-    def test_get_api_details_user_input(self, mock_getpass):
+    @patch('builtins.input')
+    def test_get_api_details_user_input(self, mock_input):
         """Test API key input from user."""
-        mock_getpass.return_value = "sk-user1234567890abcdef"
+        mock_input.return_value = "sk-user1234567890abcdef"
         
         with patch.dict(os.environ, {}, clear=True):
-            api_key = get_api_details("openai", "gpt-4o")
-            self.assertEqual(api_key, "sk-user1234567890abcdef")
-            mock_getpass.assert_called_once_with("Please enter your Openai API key (input will be hidden): ")
+            # Mock os.system to prevent screen clearing during tests
+            with patch('os.system'):
+                api_key = get_api_details("openai", "gpt-4o")
+                self.assertEqual(api_key, "sk-user1234567890abcdef")
+                mock_input.assert_called_once_with("\nEnter your Openai API key: ")
 
 
 if __name__ == "__main__":

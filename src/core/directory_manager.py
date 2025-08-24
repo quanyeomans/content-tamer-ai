@@ -6,7 +6,6 @@ Handles directory setup, validation, and default structure creation.
 
 import os
 import re
-import getpass
 from typing import Tuple
 
 # Directory structure constants
@@ -99,12 +98,12 @@ def get_api_details(provider: str, model: str) -> str:
     api_key = os.environ.get(env_var_name)
     
     if not api_key:
-        # Use secure masked input for API key entry with retry logic
+        # Use regular input with immediate feedback
         print(f"\nAPI Key Input:")
-        print(f"• Your input will be hidden for security")
-        print(f"• After pasting, you'll see partial key for confirmation (e.g., sk-1234***xyz)")
+        print(f"• Type or paste your API key (you'll see it as you type)")
         print(f"• {provider.capitalize()} keys start with '{'sk-ant-' if provider == 'claude' else 'sk-'}' and are typically 40-60 characters")
         print(f"• You can set {provider.upper()}_API_KEY environment variable to skip this step")
+        print(f"• Your key will be validated and cleared from display after entry")
         
         max_attempts = 3
         for attempt in range(max_attempts):
@@ -112,8 +111,8 @@ def get_api_details(provider: str, model: str) -> str:
                 if attempt > 0:
                     print(f"\nAttempt {attempt + 1} of {max_attempts}")
                 
-                api_key = getpass.getpass(
-                    f"Please enter your {provider.capitalize()} API key (input will be hidden): "
+                api_key = input(
+                    f"\nEnter your {provider.capitalize()} API key: "
                 ).strip()
                 
                 # Clean up common paste issues
@@ -139,6 +138,11 @@ def get_api_details(provider: str, model: str) -> str:
                     try:
                         validated_key = _validate_api_key(api_key, provider)
                         print("[OK] API key format validated successfully")
+                        
+                        # Clear the screen to remove visible API key
+                        os.system('cls' if os.name == 'nt' else 'clear')
+                        print(f"[OK] {provider.capitalize()} API key accepted and secured.")
+                        
                         return validated_key
                     except ValueError as e:
                         print(f"[ERROR] Validation failed: {e}")
@@ -214,6 +218,8 @@ def _validate_api_key(api_key: str, provider: str) -> str:
     elif provider == "claude":
         if not api_key.startswith('sk-ant-'):
             raise ValueError("Claude API keys must start with 'sk-ant-'")
+        if len(api_key) < 20:
+            raise ValueError("Claude API key format appears invalid")
     
     # Check for suspicious characters that might indicate injection attempts
     # Allow common API key characters: letters, numbers, hyphens, underscores, dots, plus signs

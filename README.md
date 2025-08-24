@@ -296,7 +296,7 @@ python install.py  # Get set up
 # Configure your IDE (optional but recommended)
 cp .vscode/settings.json.example .vscode/settings.json  # VS Code
 cp .claude/settings.json.example .claude/settings.local.json  # Claude Code
-# See docs/IDE_SETUP.md for other IDEs
+# See documentation/IDE_SETUP.md for other IDEs
 
 # Make your changes
 python -m pytest   # Run tests

@@ -164,14 +164,11 @@ cython_debug/
 # ===== IDE and Editor Configuration Files =====
 # Visual Studio Code
 .vscode/
-!.vscode/extensions.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/settings.json.example
+.vscode/*
 
 # Claude Code IDE
 .claude/
-!.claude/settings.json.example
+.claude/*
 
 # JetBrains IDEs (IntelliJ, PyCharm, etc.)
 .idea/
