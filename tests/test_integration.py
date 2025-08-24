@@ -9,7 +9,27 @@ from unittest.mock import patch, MagicMock, mock_open
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
-import main
+from core.application import organize_content
+from core.cli_parser import parse_arguments, list_available_models, _print_capabilities
+from core.directory_manager import (
+    ensure_default_directories, 
+    get_api_details,
+    DEFAULT_DOCUMENTS_DIR,
+    DEFAULT_INPUT_DIR,
+    DEFAULT_PROCESSED_DIR,
+    DEFAULT_UNPROCESSED_DIR,
+    DEFAULT_PROCESSING_DIR,
+)
+from core.file_processor import (
+    process_file,
+    get_new_filename_with_retry,
+    get_filename_from_ai,
+    pdfs_to_text_string,
+)
+from ai_providers import AIProviderFactory
+from content_processors import ContentProcessorFactory
+from file_organizer import FileOrganizer
+from main import main
 
 
 class TestDefaultDirectories(unittest.TestCase):
@@ -17,13 +37,13 @@ class TestDefaultDirectories(unittest.TestCase):
 
     def test_ensure_default_directories(self):
         """Test that default directories are created correctly."""
-        with patch('main.DEFAULT_DOCUMENTS_DIR', tempfile.mkdtemp()) as temp_docs_dir:
-            with patch('main.DEFAULT_INPUT_DIR', os.path.join(temp_docs_dir, 'input')), \
-                 patch('main.DEFAULT_PROCESSED_DIR', os.path.join(temp_docs_dir, 'processed')), \
-                 patch('main.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_docs_dir, 'processed', 'unprocessed')), \
-                 patch('main.DEFAULT_PROCESSING_DIR', os.path.join(temp_docs_dir, '.processing')):
+        with patch('core.directory_manager.DEFAULT_DOCUMENTS_DIR', tempfile.mkdtemp()) as temp_docs_dir:
+            with patch('core.directory_manager.DEFAULT_INPUT_DIR', os.path.join(temp_docs_dir, 'input')), \
+                 patch('core.directory_manager.DEFAULT_PROCESSED_DIR', os.path.join(temp_docs_dir, 'processed')), \
+                 patch('core.directory_manager.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_docs_dir, 'processed', 'unprocessed')), \
+                 patch('core.directory_manager.DEFAULT_PROCESSING_DIR', os.path.join(temp_docs_dir, '.processing')):
                 
-                input_dir, processed_dir, unprocessed_dir = main.ensure_default_directories()
+                input_dir, processed_dir, unprocessed_dir = ensure_default_directories()
                 
                 # Verify directories were created
                 self.assertTrue(os.path.exists(input_dir))
@@ -38,11 +58,11 @@ class TestDefaultDirectories(unittest.TestCase):
 
     def test_subfolder_structure(self):
         """Test that unprocessed folder is correctly nested under processed."""
-        with patch('main.DEFAULT_DOCUMENTS_DIR', tempfile.mkdtemp()) as temp_docs_dir:
-            with patch('main.DEFAULT_PROCESSED_DIR', os.path.join(temp_docs_dir, 'processed')), \
-                 patch('main.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_docs_dir, 'processed', 'unprocessed')):
+        with patch('core.directory_manager.DEFAULT_DOCUMENTS_DIR', tempfile.mkdtemp()) as temp_docs_dir:
+            with patch('core.directory_manager.DEFAULT_PROCESSED_DIR', os.path.join(temp_docs_dir, 'processed')), \
+                 patch('core.directory_manager.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_docs_dir, 'processed', 'unprocessed')):
                 
-                input_dir, processed_dir, unprocessed_dir = main.ensure_default_directories()
+                input_dir, processed_dir, unprocessed_dir = ensure_default_directories()
                 
                 # Test that unprocessed is inside processed
                 self.assertEqual(os.path.dirname(unprocessed_dir), processed_dir)
@@ -92,7 +112,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_get_api.return_value = "fake-api-key"
         
         # Mock content extraction
-        with patch('main.ContentProcessorFactory') as mock_factory_class:
+        with patch('content_processors.ContentProcessorFactory') as mock_factory_class:
             mock_factory = MagicMock()
             mock_processor = MagicMock()
             mock_processor.extract_content.return_value = ("extracted text", None)
@@ -101,14 +121,14 @@ class TestIntegrationWorkflow(unittest.TestCase):
             mock_factory_class.return_value = mock_factory
             
             # Mock file organizer
-            with patch('main.FileOrganizer') as mock_organizer_class:
+            with patch('file_organizer.FileOrganizer') as mock_organizer_class:
                 mock_organizer = MagicMock()
                 mock_organizer.filename_handler.validate_and_trim_filename.return_value = "cleaned_name"
                 mock_organizer.move_file_to_category.return_value = "final_name"
                 mock_organizer_class.return_value = mock_organizer
                 
                 # Run the main function
-                success = main.organize_content(
+                success = organize_content(
                     self.input_dir,
                     self.unprocessed_dir, 
                     self.renamed_dir,
@@ -129,7 +149,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         """Test handling of invalid AI provider."""
         mock_get_api.side_effect = ValueError("Unsupported provider")
         
-        success = main.organize_content(
+        success = organize_content(
             self.input_dir,
             self.unprocessed_dir,
             self.renamed_dir,
@@ -157,7 +177,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_organizer.filename_handler.validate_and_trim_filename.return_value = "clean_name"
         mock_organizer.move_file_to_category.return_value = "final_name"
         
-        with patch('main.ContentProcessorFactory') as mock_factory_class:
+        with patch('content_processors.ContentProcessorFactory') as mock_factory_class:
             mock_factory = MagicMock()
             mock_processor = MagicMock()
             mock_processor.extract_content.return_value = ("extracted text", None)
@@ -167,7 +187,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
             with patch('builtins.open', mock_progress_file):
                 progress_f = mock_progress_file()
                 
-                main.process_file(
+                process_file(
                     self.test_pdf,
                     "test.pdf",
                     self.unprocessed_dir,
@@ -192,7 +212,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_ai_client = MagicMock()
         mock_organizer = MagicMock()
         
-        with patch('main.ContentProcessorFactory') as mock_factory_class:
+        with patch('content_processors.ContentProcessorFactory') as mock_factory_class:
             mock_factory = MagicMock()
             mock_processor = MagicMock()
             mock_processor.extract_content.return_value = ("Error: Unprocessable file", None)
@@ -202,7 +222,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
             with patch('builtins.open', mock_progress_file):
                 progress_f = mock_progress_file()
                 
-                main.process_file(
+                process_file(
                     self.test_pdf,
                     "test.pdf", 
                     self.unprocessed_dir,
@@ -223,7 +243,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_ai_client = MagicMock()
         mock_ai_client.generate_filename.return_value = "successful_name"
         
-        result = main.get_new_filename_with_retry(
+        result = get_new_filename_with_retry(
             mock_ai_client, 
             "test content", 
             None,
@@ -239,7 +259,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_ai_client = MagicMock()
         mock_ai_client.generate_filename.side_effect = RuntimeError("API Error")
         
-        result = main.get_new_filename_with_retry(
+        result = get_new_filename_with_retry(
             mock_ai_client,
             "test content",
             None, 
@@ -258,7 +278,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_ai_client = MagicMock()
         mock_ai_client.generate_filename.side_effect = RuntimeError("timeout error")
         
-        result = main.get_new_filename_with_retry(
+        result = get_new_filename_with_retry(
             mock_ai_client,
             "test content", 
             None,
@@ -281,7 +301,7 @@ class TestCLIIntegration(unittest.TestCase):
             }
             
             # Test that the mocked function was called and returned expected data
-            main.list_available_models()
+            list_available_models()
             
             # Verify the mock was called
             mock_list.assert_called_once()
@@ -294,20 +314,20 @@ class TestCLIIntegration(unittest.TestCase):
     def test_get_api_details_from_env(self):
         """Test API key retrieval from environment."""
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
-            api_key = main.get_api_details("openai", "gpt-4o")
+            api_key = get_api_details("openai", "gpt-4o")
             self.assertEqual(api_key, "test-key")
 
     def test_get_api_details_invalid_provider(self):
         """Test error handling for invalid provider."""
         with self.assertRaises(ValueError) as context:
-            main.get_api_details("invalid_provider", "model")
+            get_api_details("invalid_provider", "model")
         self.assertIn("Unsupported provider", str(context.exception))
 
     def test_get_api_details_invalid_model(self):
         """Test error handling for invalid model."""
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
             with self.assertRaises(ValueError) as context:
-                main.get_api_details("openai", "invalid_model")
+                get_api_details("openai", "invalid_model")
             self.assertIn("Invalid model", str(context.exception))
 
     @patch('builtins.input')
@@ -316,7 +336,7 @@ class TestCLIIntegration(unittest.TestCase):
         mock_input.return_value = "user-provided-key"
         
         with patch.dict(os.environ, {}, clear=True):
-            api_key = main.get_api_details("openai", "gpt-4o")
+            api_key = get_api_details("openai", "gpt-4o")
             self.assertEqual(api_key, "user-provided-key")
             mock_input.assert_called_once_with("Please enter your Openai API key: ")
 

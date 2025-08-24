@@ -13,7 +13,13 @@ from io import StringIO
 # Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
-from main import organize_content, main, parse_arguments
+from core.application import organize_content
+from core.cli_parser import parse_arguments, _print_capabilities  
+from core.directory_manager import ensure_default_directories
+from core.file_processor import process_file_enhanced, get_new_filename_with_retry_enhanced
+from utils.display_manager import DisplayManager
+from ai_providers import AIProviderFactory
+from main import main
 
 
 class TestPhase2BackwardCompatibility(unittest.TestCase):
@@ -170,9 +176,9 @@ class TestPhase2MainFunction(unittest.TestCase):
         """Clean up test environment."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
         
-    @patch('main.organize_content')
-    @patch('main.ensure_default_directories')
-    @patch('main._print_capabilities')
+    @patch('core.application.organize_content')
+    @patch('core.directory_manager.ensure_default_directories')
+    @patch('core.cli_parser._print_capabilities')
     def test_main_function_quiet_mode(self, mock_print_caps, mock_ensure_dirs, mock_organize):
         """Test main function respects quiet mode."""
         mock_ensure_dirs.return_value = ("input", "processed", "unprocessed")
@@ -194,9 +200,9 @@ class TestPhase2MainFunction(unittest.TestCase):
                 self.assertIn('display_options', call_args.kwargs)
                 self.assertTrue(call_args.kwargs['display_options']['quiet'])
                 
-    @patch('main.organize_content')
-    @patch('main.ensure_default_directories')
-    @patch('main._print_capabilities')
+    @patch('core.application.organize_content')
+    @patch('core.directory_manager.ensure_default_directories')
+    @patch('core.cli_parser._print_capabilities')
     def test_main_function_verbose_mode(self, mock_print_caps, mock_ensure_dirs, mock_organize):
         """Test main function respects verbose mode."""
         mock_ensure_dirs.return_value = ("input", "processed", "unprocessed")
@@ -214,8 +220,8 @@ class TestPhase2MainFunction(unittest.TestCase):
             call_args = mock_organize.call_args
             self.assertTrue(call_args.kwargs['display_options']['verbose'])
             
-    @patch('main.organize_content')
-    @patch('main.ensure_default_directories') 
+    @patch('core.application.organize_content')
+    @patch('core.directory_manager.ensure_default_directories') 
     def test_main_function_no_color_mode(self, mock_ensure_dirs, mock_organize):
         """Test main function handles no-color option."""
         mock_ensure_dirs.return_value = ("input", "processed", "unprocessed")
@@ -230,8 +236,8 @@ class TestPhase2MainFunction(unittest.TestCase):
             call_args = mock_organize.call_args
             self.assertTrue(call_args.kwargs['display_options']['no_color'])
             
-    @patch('main.organize_content')
-    @patch('main.ensure_default_directories')
+    @patch('core.application.organize_content')
+    @patch('core.directory_manager.ensure_default_directories')
     def test_main_function_no_stats_mode(self, mock_ensure_dirs, mock_organize):
         """Test main function handles no-stats option."""
         mock_ensure_dirs.return_value = ("input", "processed", "unprocessed")
@@ -261,7 +267,7 @@ class TestPhase2ErrorHandling(unittest.TestCase):
         input_dir = os.path.join(self.temp_dir, "input")
         os.makedirs(input_dir)
         
-        with patch('main.DisplayManager') as mock_display_manager:
+        with patch('utils.display_manager.DisplayManager') as mock_display_manager:
             # Make DisplayManager constructor raise an exception
             mock_display_manager.side_effect = Exception("Display error")
             

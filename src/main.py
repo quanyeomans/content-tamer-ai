@@ -39,47 +39,8 @@ from core.file_processor import (
     pdfs_to_text_string,
 )
 
-# Additional imports for test compatibility
-try:
-    from utils.display_manager import DisplayManager
-    from ai_providers import AIProviderFactory
-    from content_processors import ContentProcessorFactory
-    from file_organizer import FileOrganizer
-except ImportError:
-    import sys
-    import os
-
-    sys.path.insert(0, os.path.dirname(__file__))
-    from utils.display_manager import DisplayManager
-    from ai_providers import AIProviderFactory
-    from content_processors import ContentProcessorFactory
-    from file_organizer import FileOrganizer
-
-# Backward compatibility exports - all functions tests expect from main
-__all__ = [
-    "main",
-    "organize_content",
-    "parse_arguments",
-    "list_available_models",
-    "_print_capabilities",
-    "ensure_default_directories",
-    "get_api_details",
-    "process_file",
-    "process_file_enhanced",
-    "get_new_filename_with_retry",
-    "get_new_filename_with_retry_enhanced",
-    "get_filename_from_ai",
-    "pdfs_to_text_string",
-    "DisplayManager",
-    "AIProviderFactory",
-    "ContentProcessorFactory",
-    "FileOrganizer",
-    "DEFAULT_DOCUMENTS_DIR",
-    "DEFAULT_INPUT_DIR",
-    "DEFAULT_PROCESSED_DIR",
-    "DEFAULT_UNPROCESSED_DIR",
-    "DEFAULT_PROCESSING_DIR",
-]
+# Public API - only main function is exported
+__all__ = ["main"]
 
 
 def main() -> int:
@@ -141,7 +102,7 @@ def main() -> int:
     except PermissionError as e:
         print(f"\nPermission error: {e}")
         return 1
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"\nUnexpected error: {e}")
         return 1
 
