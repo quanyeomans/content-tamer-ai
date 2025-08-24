@@ -100,11 +100,11 @@ def get_api_details(provider: str, model: str) -> str:
     
     if not api_key:
         # Use secure masked input for API key entry with retry logic
-        print(f"\nAPI Key Input Help:")
+        print(f"\nAPI Key Input:")
         print(f"• Your input will be hidden for security")
-        print(f"• You'll see confirmation with character count after pasting")
-        print(f"• OpenAI keys start with 'sk-' and are ~51 characters long")
-        print(f"• You can set OPENAI_API_KEY environment variable to skip this step")
+        print(f"• After pasting, you'll see partial key for confirmation (e.g., sk-1234***xyz)")
+        print(f"• {provider.capitalize()} keys start with '{'sk-ant-' if provider == 'claude' else 'sk-'}' and are typically 40-60 characters")
+        print(f"• You can set {provider.upper()}_API_KEY environment variable to skip this step")
         
         max_attempts = 3
         for attempt in range(max_attempts):
@@ -116,9 +116,22 @@ def get_api_details(provider: str, model: str) -> str:
                     f"Please enter your {provider.capitalize()} API key (input will be hidden): "
                 ).strip()
                 
+                # Clean up common paste issues
+                if api_key:
+                    # Remove all whitespace, newlines, and common paste artifacts
+                    api_key = ''.join(api_key.split())
+                    # Remove common quotes that might get copied
+                    api_key = api_key.strip('"\'`')
+                
                 # Provide user feedback about the input received
                 if api_key:
-                    print(f"[OK] Received API key ({len(api_key)} characters)")
+                    # Show partial key for user verification (first 10, last 4 characters)
+                    if len(api_key) >= 14:
+                        partial_display = f"{api_key[:10]}{'*' * max(0, len(api_key) - 14)}{api_key[-4:]}"
+                    else:
+                        partial_display = f"{api_key[:min(6, len(api_key))]}{'*' * max(0, len(api_key) - 6)}"
+                    
+                    print(f"[OK] Received API key: {partial_display} ({len(api_key)} characters)")
                     if len(api_key) < 20:
                         print(f"[WARNING] Key seems short for {provider.capitalize()} (got {len(api_key)} chars, expected 40+)")
                     
@@ -203,7 +216,10 @@ def _validate_api_key(api_key: str, provider: str) -> str:
             raise ValueError("Claude API keys must start with 'sk-ant-'")
     
     # Check for suspicious characters that might indicate injection attempts
-    if not re.match(r'^[a-zA-Z0-9\-_]+$', api_key):
-        raise ValueError("API key contains invalid characters")
+    # Allow common API key characters: letters, numbers, hyphens, underscores, dots, plus signs
+    if not re.match(r'^[a-zA-Z0-9\-_.+]+$', api_key):
+        # Show what characters were found for debugging
+        invalid_chars = set(re.findall(r'[^a-zA-Z0-9\-_.+]', api_key))
+        raise ValueError(f"API key contains invalid characters: {sorted(invalid_chars)}")
     
     return api_key
