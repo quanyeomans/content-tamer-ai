@@ -59,22 +59,27 @@ def _extract_file_content(input_path: str, ocr_lang: str, display_context) -> tu
 
 
 def _generate_filename(
-    text: str, img_b64: str, ai_client, organizer, display_context
+    text: str, img_b64: str, ai_client, organizer, display_context, filename: str = ""
 ) -> str:
     """Generate appropriate filename based on content."""
     display_context.set_status("generating_filename")
 
     # If the file is empty (no text or image), give it a generic name.
     if not text and not img_b64:
-        display_context.show_warning("File appears to be empty")
+        display_context.show_warning("File appears to be empty", filename=filename)
         timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
         return f"empty_file_{timestamp}"
 
     # Get a new filename from the AI, with retries in case of network issues.
     new_file_name = get_new_filename_with_retry_enhanced(
-        ai_client, text, img_b64, display_context
+        ai_client, text, img_b64, display_context, filename=filename
     )
-    return organizer.filename_handler.validate_and_trim_filename(new_file_name)
+    validated_filename = organizer.filename_handler.validate_and_trim_filename(new_file_name)
+    
+    # Update progress display with the generated target filename
+    display_context.set_status("ai_processing_complete", target_filename=validated_filename)
+    
+    return validated_filename
 
 
 def _move_file_only(
@@ -86,7 +91,7 @@ def _move_file_only(
     display_context,
 ) -> str:
     """Move file to renamed folder (progress recording handled separately)."""
-    display_context.set_status("moving_file")
+    display_context.set_status("moving_file", target_filename=new_file_name)
     file_extension = os.path.splitext(input_path)[1]
     final_file_name = organizer.move_file_to_category(
         input_path, filename, renamed_folder, new_file_name, file_extension
@@ -181,47 +186,69 @@ def process_file_enhanced_core(
     organizer: Any,
     display_context: Any,
 ) -> Tuple[bool, Optional[str]]:
-    """Core file processing logic (called by retry wrapper)."""
-    success = False
+    """Core file processing logic with robust success determination."""
     result = None
+    original_file_existed = os.path.exists(input_path)
     
     try:
-        if not os.path.isfile(input_path):
-            success, result = False, None
-        else:
-            # Extract content
-            text, img_b64 = _extract_file_content(input_path, ocr_lang, display_context)
+        if not original_file_existed:
+            return False, None
+            
+        # Extract content
+        text, img_b64 = _extract_file_content(input_path, ocr_lang, display_context)
 
-            # Generate filename
-            new_file_name = _generate_filename(
-                text, img_b64, ai_client, organizer, display_context
-            )
+        # Generate filename
+        new_file_name = _generate_filename(
+            text, img_b64, ai_client, organizer, display_context, filename=filename
+        )
 
-            # Move file (without recording progress)
-            final_file_name = _move_file_only(
-                input_path,
-                filename,
-                renamed_folder,
-                new_file_name,
-                organizer,
-                display_context,
-            )
-
-            success, result = True, final_file_name
+        # Move file (without recording progress)
+        final_file_name = _move_file_only(
+            input_path,
+            filename,
+            renamed_folder,
+            new_file_name,
+            organizer,
+            display_context,
+        )
+        
+        result = final_file_name
 
     except (ValueError, OSError, FileNotFoundError) as e:
-        # Don't move files or do error handling during retries - let the retry system handle it
-        # The retry handler will determine if this is a recoverable error
-        success, result = False, None
+        # Let retry handler determine if this is recoverable
+        return False, None
 
     except RuntimeError as e:
-        success, result = _handle_runtime_error(e, filename, display_context)
+        return _handle_runtime_error(e, filename, display_context)
     
     finally:
-        # Record progress once at the end, regardless of success/failure
-        organizer.progress_tracker.record_progress(
-            progress_f, filename, organizer.file_manager
-        )
+        # Record progress - don't let this affect success determination
+        try:
+            organizer.progress_tracker.record_progress(
+                progress_f, filename, organizer.file_manager
+            )
+        except Exception as progress_error:
+            print(f"Warning: Progress recording failed for {filename}: {progress_error}")
+    
+    # Determine success based on actual file system state - most robust approach
+    original_file_gone = not os.path.exists(input_path)
+    
+    # Check if processed file exists (with proper extension)
+    if result:
+        file_extension = os.path.splitext(input_path)[1]
+        final_processed_path = os.path.join(renamed_folder, result + file_extension)
+        processed_file_exists = os.path.exists(final_processed_path)
+    else:
+        processed_file_exists = False
+    
+    # Success = original file moved AND processed file exists
+    success = original_file_gone and processed_file_exists
+    
+    # Optional debug logging (remove in production)
+    # if success:
+    #     print(f"[SUCCESS] Successfully processed {filename} -> {result}")
+    # else:
+    #     print(f"[FAILED] Processing failed for {filename}: original_gone={original_file_gone}, processed_exists={processed_file_exists}")
     
     return success, result
 
@@ -305,6 +332,7 @@ def get_new_filename_with_retry_enhanced(
     image_b64: Optional[str] = None,
     display_context=None,
     max_attempts: int = MAX_RETRIES,
+    filename: str = "",
 ) -> str:
     """
     Get a new filename from the AI, with enhanced retry logic and display integration.
@@ -326,11 +354,11 @@ def get_new_filename_with_retry_enhanced(
                 wait_time = RETRY_DELAY * (2**timeout_count)  # Exponential backoff
                 if display_context:
                     display_context.show_warning(
-                        f"API timeout/network error. Retrying in {wait_time} seconds..."
+                        f"API timeout/network error. Retrying in {wait_time} seconds...", filename=filename
                     )
             else:
                 if display_context:
-                    display_context.show_warning(f"AI API error: {str(e)}")
+                    display_context.show_warning(f"AI API error: {str(e)}", filename=filename)
 
             if attempt < max_attempts - 1:  # Don't wait after the last attempt
                 if display_context:
@@ -340,7 +368,7 @@ def get_new_filename_with_retry_enhanced(
     # If all retries failed, return a timestamped fallback name
     if display_context:
         display_context.show_warning(
-            f"AI filename generation failed after {max_attempts} attempts. Using fallback naming."
+            f"AI filename generation failed after {max_attempts} attempts. Using fallback naming.", filename=filename
         )
     timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
     return f"failed_ai_generation_{timestamp}"

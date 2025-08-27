@@ -326,7 +326,7 @@ python -m pytest   # Run tests
 ### Known Test Issues (Errata)
 The following test failures are known environment/mocking issues, not application bugs:
 - `test_organize_content_success` - File system permission constraints in temp directories
-- `test_process_file_success` - PyPDF2/mock interaction limitations  
+- `test_process_file_success` - pypdf/mock interaction limitations  
 - `test_process_file_unprocessed` - Test environment mocking edge cases
 - `test_main_function_*_mode` (4 tests) - CLI integration test setup needs directory mocking improvements
 

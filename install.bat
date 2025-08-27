@@ -152,7 +152,7 @@ exit /b 0
 :skip_venv
 
 REM Core dependencies
-set CORE_PACKAGES=PyPDF2^>=6.0.0 tiktoken^>=0.11.0 tqdm^>=4.67.1 requests^>=2.32.5 pymupdf^>=1.26.3 pillow^>=11.3.0 pytesseract^>=0.3.13
+set CORE_PACKAGES=pypdf^>=6.0.0 tiktoken^>=0.11.0 tqdm^>=4.67.1 requests^>=2.32.5 pymupdf^>=1.26.3 pillow^>=11.3.0 pytesseract^>=0.3.13
 
 REM Request consent for core packages
 echo.
@@ -220,7 +220,7 @@ REM Step 6: Verify installation
 echo.
 echo [Step 6] Verifying Installation
 
-python -c "import PyPDF2" 2>nul && echo [OK] PyPDF2 imported successfully || echo [X] Failed to import PyPDF2
+python -c "import pypdf" 2>nul && echo [OK] pypdf imported successfully || echo [X] Failed to import pypdf
 python -c "import tiktoken" 2>nul && echo [OK] tiktoken imported successfully || echo [X] Failed to import tiktoken
 python -c "import tqdm" 2>nul && echo [OK] tqdm imported successfully || echo [X] Failed to import tqdm
 python -c "import requests" 2>nul && echo [OK] requests imported successfully || echo [X] Failed to import requests

@@ -67,10 +67,11 @@ class Colors:
 class TerminalCapabilities:
     """Detects and manages terminal display capabilities."""
 
-    def __init__(self):
+    def __init__(self, force_no_unicode: bool = False):
         self._supports_color = None
         self._supports_unicode = None
         self._terminal_width = None
+        self._force_no_unicode = force_no_unicode
 
     @property
     def supports_color(self) -> bool:
@@ -133,9 +134,13 @@ class TerminalCapabilities:
 
     def _detect_unicode_support(self) -> bool:
         """Detect Unicode support."""
+        # If forced to disable Unicode, return False
+        if self._force_no_unicode:
+            return False
+            
         try:
             # Try encoding Unicode box-drawing characters
-            "█▓▒░".encode(sys.stdout.encoding or "utf-8")
+            "█▓▒░→".encode(sys.stdout.encoding or "utf-8")
             return True
         except (UnicodeEncodeError, LookupError):
             return False
@@ -164,7 +169,7 @@ class ColorFormatter:
     """Format text with colors and styling."""
 
     def __init__(self, no_color: bool = False):
-        self.capabilities = TerminalCapabilities()
+        self.capabilities = TerminalCapabilities(force_no_unicode=no_color)
         self.no_color = no_color or not self.capabilities.supports_color
 
     def colorize(self, text: str, color: str, bold: bool = False) -> str:

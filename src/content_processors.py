@@ -12,8 +12,8 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Tuple
 
-import PyPDF2
-from PyPDF2.errors import PdfReadError
+import pypdf
+from pypdf.errors import PdfReadError
 
 # Optional dependencies for OCR / rendering
 HAVE_PYMUPDF = False
@@ -137,13 +137,13 @@ class PDFProcessor(ContentProcessor):
         # 1. Try to get text using PyMuPDF, which is fast.
         text = self._fitz_text(pdf_path) if HAVE_PYMUPDF else ""
 
-        # 2. If PyMuPDF fails, try PyPDF2 as a fallback.
+        # 2. If PyMuPDF fails, try pypdf as a fallback.
         if not text:
-            pypdf2_text = self._pypdf2_text(pdf_path)
-            # If PyPDF2 returns an error (e.g., encrypted PDF), stop and return the error.
-            if pypdf2_text.startswith("Error"):
-                return pypdf2_text, None
-            text = pypdf2_text or ""
+            pypdf_text = self._pypdf_text(pdf_path)
+            # If pypdf returns an error (e.g., encrypted PDF), stop and return the error.
+            if pypdf_text.startswith("Error"):
+                return pypdf_text, None
+            text = pypdf_text or ""
 
         # 3. Render the first page as an image, to be used by vision-capable AI models.
         img_b64 = (
@@ -240,11 +240,11 @@ class PDFProcessor(ContentProcessor):
                 continue
         return "\n".join(out).strip()
 
-    def _pypdf2_text(self, pdf_path: str, max_pages: Optional[int] = None) -> str:
-        """Extracts text from a PDF's text layer using the PyPDF2 library. This is a fallback method."""
+    def _pypdf_text(self, pdf_path: str, max_pages: Optional[int] = None) -> str:
+        """Extracts text from a PDF's text layer using the pypdf library. This is a fallback method."""
         try:
             with open(pdf_path, "rb") as file:
-                reader = PyPDF2.PdfReader(file)
+                reader = pypdf.PdfReader(file)
                 if reader.is_encrypted:
                     return "Error: PDF is encrypted and cannot be processed without a password."
 

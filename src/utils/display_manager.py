@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from .cli_display import ColorFormatter, MessageLevel
-from .progress_display import ProgressDisplay, SimpleProgressDisplay
+from .progress_display import ProgressDisplay
 from .message_handler import (
     MessageHandler,
     MessageConfig,
@@ -39,16 +39,16 @@ class ProcessingContext:
         self.current_file = ""
         self.file_count = 0
 
-    def start_file(self, filename: str) -> None:
+    def start_file(self, filename: str, target_filename: str = "") -> None:
         """Start processing a new file."""
         self.current_file = filename
         self.display.progress.update(
-            filename=filename, status="processing", increment=False
+            filename=filename, target_filename=target_filename, status="processing", increment=False
         )
 
-    def set_status(self, status: str) -> None:
+    def set_status(self, status: str, target_filename: str = "") -> None:
         """Update current file processing status."""
-        self.display.progress.update(status=status, increment=False)
+        self.display.progress.update(status=status, target_filename=target_filename, increment=False)
 
     def skip_file(self, filename: str) -> None:
         """Mark file as skipped."""
@@ -60,44 +60,31 @@ class ProcessingContext:
 
     def complete_file(self, filename: str, new_filename: str = "") -> None:
         """Mark file as successfully completed."""
+        # Single source of truth: update progress stats and display
         self.display.progress.add_success()
         self.display.progress.update(status="completed", increment=True)
         
         # Always show success line for completed files (unless in quiet mode)
         if not self.display.options.quiet:
-            # Check if we have a full progress display with stats
-            if hasattr(self.display.progress, 'stats'):
-                percentage = self.display.progress.stats.progress_percentage
-                success_count = self.display.progress.stats.success_count
-                
-                # Create progress bar with correct length
-                bar_length = 40
-                filled_length = int(percentage / 100 * bar_length)
-                
-                # Use ASCII characters for better compatibility
-                bar = '#' * filled_length + '.' * (bar_length - filled_length)
-                
-                # Use actual new filename if available, otherwise show as processed
-                display_name = new_filename if new_filename and new_filename != "processed" else filename
-                success_line = f"[{bar}] {percentage:5.1f}% -> {display_name} SUCCESS"
-                
-                # Write to the display manager's output file
-                output_file = self.display.options.file or sys.stdout
-                output_file.write(success_line + '\n')
-                output_file.flush()
-            else:
-                # Fallback for SimpleProgressDisplay
-                display_name = new_filename if new_filename and new_filename != "processed" else filename
-                output_file = self.display.options.file or sys.stdout
-                # Use ASCII characters for better compatibility
-                success_line = f"SUCCESS {display_name} - Success"
-                output_file.write(success_line + '\n')
-                output_file.flush()
+            self.display.progress.complete_file_display(
+                source_filename=filename,
+                target_filename=new_filename,
+                status="SUCCESS"
+            )
 
     def fail_file(self, filename: str, error_details: str = "") -> None:
         """Mark file as failed."""
+        # Single source of truth: update progress stats and display
         self.display.progress.add_error()
         self.display.progress.update(status="failed", increment=True)
+        
+        # Show failure line for failed files (unless in quiet mode)
+        if not self.display.options.quiet:
+            self.display.progress.complete_file_display(
+                source_filename=filename,
+                target_filename="",
+                status="FAILED"
+            )
         # Error details will be shown in final summary instead of during processing
 
     def show_success(self, message: str) -> None:
@@ -108,9 +95,9 @@ class ProcessingContext:
         self.display.messages.success(message, location=DisplayLocation.INLINE)
         self.display.messages.set_progress_active(was_active)
 
-    def show_warning(self, message: str) -> None:
-        """Show warning message."""
-        self.display.progress.add_warning()
+    def show_warning(self, message: str, filename: str = None) -> None:
+        """Show warning message and track unique files with warnings."""
+        self.display.progress.add_warning(filename)
         self.display.messages.warning(message, location=DisplayLocation.BELOW_PROGRESS)
 
     def show_error(self, message: str) -> None:
@@ -141,15 +128,12 @@ class DisplayManager:
 
     def _init_components(self) -> None:
         """Initialize display components based on options."""
-        # Choose progress display implementation
-        if self.options.quiet or not sys.stdout.isatty():
-            self.progress = SimpleProgressDisplay(file=self.options.file)
-        else:
-            self.progress = ProgressDisplay(
-                no_color=self.options.no_color,
-                show_stats=self.options.show_stats,
-                file=self.options.file,
-            )
+        # Always use ProgressDisplay for consistent UI experience
+        self.progress = ProgressDisplay(
+            no_color=self.options.no_color or self.options.quiet,
+            show_stats=self.options.show_stats and not self.options.quiet,
+            file=self.options.file,
+        )
 
         # Choose message handler implementation
         if self.options.quiet or not sys.stdout.isatty():
@@ -236,16 +220,13 @@ class DisplayManager:
                 f"Processing complete: {success_rate:.1f}% success rate"
             )
 
-        # Show enhanced retry/recovery statistics
-        if stats.get("successful_retries", 0) > 0:
-            self.messages.info(
-                f"✅ {stats['successful_retries']} files recovered after temporary issues"
-            )
+        # Note: Retry/recovery statistics are shown by the retry handler summary
+        # to avoid duplicate reporting
 
-        if stats.get("recoverable_errors", 0) > 0:
-            self.messages.info(
-                f"ℹ️  {stats['recoverable_errors']} files encountered temporary permission/access issues "
-                f"(typically antivirus scans or cloud sync) but processing continued"
+        # Show warning count if any warnings occurred
+        if stats.get("warnings", 0) > 0:
+            self.messages.warning(
+                f"⚠️ {stats['warnings']} warnings were issued during processing"
             )
 
         if stats.get("errors", 0) > 0:

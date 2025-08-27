@@ -149,7 +149,7 @@ def check_tesseract_binary():
 def get_core_requirements():
     """Get list of core Python dependencies."""
     return [
-        "PyPDF2>=6.0.0",
+        "pypdf>=6.0.0",
         "tiktoken>=0.11.0", 
         "tqdm>=4.67.1",
         "requests>=2.32.5",
@@ -357,7 +357,7 @@ def verify_installation():
     print_step(6, "Verifying Installation")
     
     core_imports = [
-        ("PyPDF2", "PyPDF2"),
+        ("pypdf", "pypdf"),
         ("tiktoken", "tiktoken"),
         ("tqdm", "tqdm"),
         ("requests", "requests"),

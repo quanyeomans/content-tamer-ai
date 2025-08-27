@@ -132,8 +132,15 @@ class RetryStats:
     total_attempts: int = 0
     successful_retries: int = 0
     failed_retries: int = 0
-    recoverable_errors_encountered: int = 0
+    files_with_recoverable_issues: int = 0  # Unique files that had warnings
     permanent_errors: int = 0
+    
+    # Track which files have already been counted for warnings
+    _files_with_warnings: set = None
+
+    def __post_init__(self):
+        if self._files_with_warnings is None:
+            self._files_with_warnings = set()
 
     def add_attempt(self, success: bool, was_retry: bool = False):
         """Record an attempt result."""
@@ -144,9 +151,11 @@ class RetryStats:
             else:
                 self.failed_retries += 1
 
-    def add_recoverable_error(self):
-        """Record a recoverable error encounter."""
-        self.recoverable_errors_encountered += 1
+    def add_recoverable_error(self, filename: str = None):
+        """Record a recoverable error encounter for a specific file."""
+        if filename and filename not in self._files_with_warnings:
+            self.files_with_recoverable_issues += 1
+            self._files_with_warnings.add(filename)
 
     def add_permanent_error(self):
         """Record a permanent error."""
@@ -204,7 +213,7 @@ class RetryHandler:
                 ):
 
                     # This is a recoverable error, and we have attempts left
-                    self.stats.add_recoverable_error()
+                    self.stats.add_recoverable_error(filename)
 
                     # Calculate wait time with exponential backoff
                     wait_time = error_classification.suggested_wait_time * (2**attempt)
@@ -238,19 +247,19 @@ class RetryHandler:
 
     def format_session_summary(self) -> str:
         """Format a user-friendly session summary."""
-        if self.stats.recoverable_errors_encountered == 0:
+        if self.stats.files_with_recoverable_issues == 0:
             return ""
 
         parts = []
 
         if self.stats.successful_retries > 0:
             parts.append(
-                f"✅ {self.stats.successful_retries} files recovered after temporary issues"
+                f"♻️ {self.stats.successful_retries} files recovered after temporary issues"
             )
 
-        if self.stats.recoverable_errors_encountered > 0:
+        if self.stats.files_with_recoverable_issues > 0:
             parts.append(
-                f"ℹ️  {self.stats.recoverable_errors_encountered} files had temporary permission/lock issues "
+                f"⚠️ {self.stats.files_with_recoverable_issues} files had temporary permission/lock issues "
                 f"(typically caused by antivirus scans or cloud sync)"
             )
 

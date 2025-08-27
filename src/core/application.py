@@ -298,20 +298,37 @@ def organize_content(
     if retry_summary:
         display_manager.info(retry_summary)
 
-    # Show completion statistics with actual counts
-    display_manager.show_completion_stats(
-        {
-            "total_files": total_files,
-            "successful": successful_count,
-            "errors": failed_count,
-            "recoverable_errors": session_retry_handler.get_stats().recoverable_errors_encountered,
-            "successful_retries": session_retry_handler.get_stats().successful_retries,
-        }
-    )
+    # Use progress stats as source of truth for final summary 
+    progress_stats = display_manager.progress.stats if hasattr(display_manager.progress, 'stats') else None
+    
+    # Show completion statistics with actual counts from progress tracking
+    if progress_stats:
+        display_manager.show_completion_stats(
+            {
+                "total_files": total_files,
+                "successful": progress_stats.succeeded,
+                "errors": progress_stats.failed,
+                "warnings": progress_stats.warnings,
+                "recoverable_errors": session_retry_handler.get_stats().files_with_recoverable_issues,
+                "successful_retries": session_retry_handler.get_stats().successful_retries,
+            }
+        )
+    else:
+        # Fallback to loop counters if progress stats unavailable
+        display_manager.show_completion_stats(
+            {
+                "total_files": total_files,
+                "successful": successful_count,
+                "errors": failed_count,
+                "warnings": 0,
+                "recoverable_errors": session_retry_handler.get_stats().files_with_recoverable_issues,
+                "successful_retries": session_retry_handler.get_stats().successful_retries,
+            }
+        )
 
     # Show detailed error summary if there were failures
     if error_details:
-        display_manager.info("\n📋 Detailed Error Summary:")
+        display_manager.info("📋 Detailed Error Summary:")
         for error in error_details:
             display_manager.error(f"❌ {error['filename']}: {error['error']}")
 

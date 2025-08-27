@@ -89,9 +89,9 @@ class TestPDFProcessor(unittest.TestCase):
         self.assertEqual(result, "")
 
     @patch('builtins.open', unittest.mock.mock_open(read_data=b'fake pdf'))
-    @patch('content_processors.PyPDF2.PdfReader')
-    def test_pypdf2_text_extraction(self, mock_reader_class):
-        """Test PyPDF2 text extraction."""
+    @patch('content_processors.pypdf.PdfReader')
+    def test_pypdf_text_extraction(self, mock_reader_class):
+        """Test pypdf text extraction."""
         # Mock PDF reader and pages
         mock_page = MagicMock()
         mock_page.extract_text.return_value = "Extracted text"
@@ -101,18 +101,18 @@ class TestPDFProcessor(unittest.TestCase):
         mock_reader.pages = [mock_page]
         mock_reader_class.return_value = mock_reader
         
-        result = self.processor._pypdf2_text("test.pdf")
+        result = self.processor._pypdf_text("test.pdf")
         self.assertIn("Extracted text", result)
 
     @patch('builtins.open', unittest.mock.mock_open(read_data=b'fake pdf'))
-    @patch('content_processors.PyPDF2.PdfReader')
-    def test_pypdf2_encrypted_pdf(self, mock_reader_class):
+    @patch('content_processors.pypdf.PdfReader')
+    def test_pypdf_encrypted_pdf(self, mock_reader_class):
         """Test handling of encrypted PDFs."""
         mock_reader = MagicMock()
         mock_reader.is_encrypted = True
         mock_reader_class.return_value = mock_reader
         
-        result = self.processor._pypdf2_text("test.pdf")
+        result = self.processor._pypdf_text("test.pdf")
         self.assertIn("Error: PDF is encrypted", result)
 
     @patch('content_processors.HAVE_TESSERACT', True)
@@ -146,9 +146,9 @@ class TestPDFProcessor(unittest.TestCase):
         self.assertEqual(result, mock_image)
 
     @patch.object(PDFProcessor, '_fitz_text')
-    @patch.object(PDFProcessor, '_pypdf2_text')
+    @patch.object(PDFProcessor, '_pypdf_text')
     @patch.object(PDFProcessor, '_fitz_render_png_b64')
-    def test_extract_text_and_image_fitz_success(self, mock_render, mock_pypdf2, mock_fitz):
+    def test_extract_text_and_image_fitz_success(self, mock_render, mock_pypdf, mock_fitz):
         """Test successful extraction using PyMuPDF."""
         mock_fitz.return_value = "Fitz extracted text"
         mock_render.return_value = "base64_image_data"
@@ -157,10 +157,10 @@ class TestPDFProcessor(unittest.TestCase):
         
         self.assertEqual(text, "Fitz extracted text")
         self.assertEqual(image, "base64_image_data")
-        mock_pypdf2.assert_not_called()  # Should not fallback to PyPDF2
+        mock_pypdf.assert_not_called()  # Should not fallback to pypdf
 
     @patch.object(PDFProcessor, '_fitz_text')
-    @patch.object(PDFProcessor, '_pypdf2_text')
+    @patch.object(PDFProcessor, '_pypdf_text')
     @patch.object(PDFProcessor, '_ocr_tesseract_from_pdf')
     def test_extract_text_and_image_ocr_fallback(self, mock_ocr, mock_pypdf2, mock_fitz):
         """Test OCR fallback for short text."""

@@ -298,7 +298,7 @@ verify_installation() {
     print_step 6 "Verifying Installation"
     
     core_packages=(
-        "PyPDF2"
+        "pypdf"
         "tiktoken"
         "tqdm"
         "requests"
@@ -397,7 +397,7 @@ main() {
     
     # Core requirements
     core_packages=(
-        "PyPDF2>=6.0.0"
+        "pypdf>=6.0.0"
         "tiktoken>=0.11.0"
         "tqdm>=4.67.1"
         "requests>=2.32.5"

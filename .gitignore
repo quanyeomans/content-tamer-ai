@@ -262,3 +262,9 @@ config.local.json
 *.key
 id_rsa*
 id_ed25519*
+
+# Private PDF Test Files
+documents/processed/*
+documents/processed/unprocessed/*
+!documents/processed/unprocessed/
+documents/input/*
