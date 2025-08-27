@@ -261,5 +261,205 @@ class TestSecurityConfiguration(unittest.TestCase):
         update_security_config(max_content_length=original_length)
 
 
+class TestSecretLoggingProtection(unittest.TestCase):
+    """Test that API keys and secrets are never logged or exposed."""
+
+    def test_sanitize_log_message_removes_api_keys(self):
+        """
+        When logging message contains API key
+        Then API key should be replaced with sanitized version
+        Because API keys must never appear in logs
+        """
+        from utils.security import sanitize_log_message
+        
+        # Arrange
+        openai_key = "sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567"
+        claude_key = "sk-ant-api03-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567890abc123def456ghi789jkl012mno345pqr678stu901vwx234"
+        message_with_keys = f"API Error with key {openai_key} failed. Also tried {claude_key}"
+        
+        # Act
+        sanitized = sanitize_log_message(message_with_keys)
+        
+        # Assert
+        self.assertNotIn(openai_key, sanitized)
+        self.assertNotIn(claude_key, sanitized)
+        self.assertIn("sk-proj-abc***", sanitized)  # Should show partial key
+        self.assertIn("sk-ant***", sanitized)
+
+    def test_sanitize_log_message_preserves_non_secrets(self):
+        """
+        When logging message contains no secrets
+        Then message should remain unchanged
+        Because only secrets should be sanitized
+        """
+        from utils.security import sanitize_log_message
+        
+        # Arrange
+        normal_message = "File processing failed: Invalid PDF format"
+        
+        # Act
+        sanitized = sanitize_log_message(normal_message)
+        
+        # Assert
+        self.assertEqual(sanitized, normal_message)
+
+    def test_logging_functions_use_sanitization(self):
+        """
+        When using logging functions with secrets
+        Then secrets should be automatically sanitized
+        Because logging should be secure by default
+        """
+        import logging
+        from io import StringIO
+        from utils.security import SecureLogger
+        
+        # Arrange
+        log_stream = StringIO()
+        handler = logging.StreamHandler(log_stream)
+        secure_logger = SecureLogger("test_logger")
+        # Clear any existing handlers first
+        secure_logger.handlers.clear()
+        secure_logger.addHandler(handler)
+        
+        api_key = "sk-proj-test123456789abcdef"
+        
+        # Act
+        secure_logger.error(f"Authentication failed with key: {api_key}")
+        
+        # Assert
+        log_output = log_stream.getvalue()
+        self.assertNotIn(api_key, log_output)
+        self.assertIn("sk-proj-tes***", log_output)
+
+    def test_exception_logging_sanitizes_stack_traces(self):
+        """
+        When exception contains API key in stack trace
+        Then stack trace should be sanitized before logging
+        Because exceptions might contain secrets in error messages
+        """
+        from utils.security import SecureLogger
+        import logging
+        from io import StringIO
+        
+        # Arrange
+        log_stream = StringIO()
+        handler = logging.StreamHandler(log_stream)
+        secure_logger = SecureLogger("test_logger")
+        # Clear any existing handlers first
+        secure_logger.handlers.clear() 
+        secure_logger.addHandler(handler)
+        
+        api_key = "sk-ant-test123456789abcdef"
+        
+        # Act
+        try:
+            raise ValueError(f"Invalid API key format: {api_key}")
+        except ValueError as e:
+            secure_logger.exception("Processing failed")
+        
+        # Assert
+        log_output = log_stream.getvalue()
+        self.assertNotIn(api_key, log_output)
+        # The sanitized key appears in the exception message within the stack trace
+        self.assertIn("sk-ant-***", log_output)
+
+    def test_environment_variables_not_logged(self):
+        """
+        When logging environment information
+        Then API key environment variables should be redacted
+        Because environment variables might contain secrets
+        """
+        from utils.security import sanitize_environment_vars
+        
+        # Arrange
+        env_vars = {
+            "OPENAI_API_KEY": "sk-proj-test123",
+            "CLAUDE_API_KEY": "sk-ant-test456", 
+            "PATH": "/usr/bin:/usr/local/bin",
+            "HOME": "/home/user"
+        }
+        
+        # Act
+        sanitized_env = sanitize_environment_vars(env_vars)
+        
+        # Assert
+        self.assertEqual(sanitized_env["OPENAI_API_KEY"], "[REDACTED]")
+        self.assertEqual(sanitized_env["CLAUDE_API_KEY"], "[REDACTED]")
+        self.assertEqual(sanitized_env["PATH"], "/usr/bin:/usr/local/bin")  # Non-secret preserved
+        self.assertEqual(sanitized_env["HOME"], "/home/user")
+
+    def test_secure_logger_comprehensive_functionality(self):
+        """
+        Comprehensive test of SecureLogger functionality with various key types.
+        This test validates the fixes for SecureLogger architecture issues.
+        """
+        from utils.security import SecureLogger
+        import logging
+        from io import StringIO
+        
+        # Arrange - different types of API keys
+        test_cases = [
+            ("sk-proj-test123456789abcdef", "sk-proj-tes***"),  # Short test key
+            ("sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567", "sk-proj-abc***"),  # Real-size key
+            ("sk-ant-test123456789abcdef", "sk-ant***"),  # Claude test key
+            ("sk-ant-api03-abc123def456ghi789jkl012mno345pqr678stu901vwx234", "sk-ant-***"),  # Claude real key
+        ]
+        
+        for original_key, expected_sanitized in test_cases:
+            with self.subTest(key_type=original_key[:10]):
+                # Create fresh logger and handler for each test
+                log_stream = StringIO()
+                handler = logging.StreamHandler(log_stream)
+                secure_logger = SecureLogger(f"test_logger_{original_key[:6]}")
+                secure_logger.handlers.clear()
+                secure_logger.addHandler(handler)
+                secure_logger.setLevel(logging.DEBUG)
+                
+                # Test various logging methods
+                secure_logger.debug(f"Debug message with key: {original_key}")
+                secure_logger.info(f"Info message with key: {original_key}")
+                secure_logger.warning(f"Warning message with key: {original_key}")
+                secure_logger.error(f"Error message with key: {original_key}")
+                
+                # Get all log output
+                log_output = log_stream.getvalue()
+                
+                # Assert that original key never appears (most important security requirement)
+                self.assertNotIn(original_key, log_output, 
+                               f"SECURITY FAILURE: Original key {original_key[:10]}... found in logs")
+                
+                # Assert that some sanitized form appears (format may vary but key should be sanitized)
+                self.assertRegex(log_output, r'sk-[a-z-]*\*\*\*', 
+                               f"No sanitized key pattern found in logs")
+
+    def test_secure_logger_format_arguments_sanitization(self):
+        """
+        Test that SecureLogger sanitizes format arguments as well as main message.
+        This validates the fix for argument sanitization in _log method.
+        """
+        from utils.security import SecureLogger
+        import logging
+        from io import StringIO
+        
+        # Arrange
+        log_stream = StringIO()
+        handler = logging.StreamHandler(log_stream)
+        secure_logger = SecureLogger("format_test_logger")
+        secure_logger.handlers.clear()
+        secure_logger.addHandler(handler)
+        secure_logger.setLevel(logging.DEBUG)
+        
+        api_key = "sk-proj-test123456789abcdef"
+        
+        # Act - log with format arguments containing secrets
+        secure_logger.error("Authentication failed with key %s for user %s", api_key, "testuser")
+        
+        # Assert
+        log_output = log_stream.getvalue()
+        self.assertNotIn(api_key, log_output)
+        self.assertIn("sk-proj-tes***", log_output)
+        self.assertIn("testuser", log_output)  # Non-secret should be preserved
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Optional, Tuple
 
+# Import secure logging to prevent API key exposure
+from .security import sanitize_log_message
+
 logger = logging.getLogger(__name__)
 
 
@@ -208,8 +211,9 @@ class RetryHandler:
                 error_classification = ErrorClassifier.classify_error(e)
                 last_error_classification = error_classification
 
-                # Log the attempt
-                logger.debug(f"Attempt {attempt + 1} failed for {filename}: {str(e)}")
+                # Log the attempt with sanitized error message
+                sanitized_error = sanitize_log_message(str(e))
+                logger.debug(f"Attempt {attempt + 1} failed for {filename}: {sanitized_error}")
 
                 # Check if we should retry
                 if (

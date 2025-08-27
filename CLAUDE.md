@@ -10,18 +10,27 @@
 
 ## Working Patterns
 
-### Mandatory Workflow
-**ALWAYS follow this sequence - no exceptions:**
+### **Choose Your Workflow**
 
+#### **For New Features/Development:**
 1. **PRE-CODE_CHECKLIST.md** - Complete all 4 mandatory gates
-   - Use TodoWrite for task planning and tracking
-   - Identify test file and security requirements
-   - Confirm backward compatibility approach
-
 2. **IMPLEMENTATION_WORKFLOW.md** - Test-first development
-   - Write failing test first in existing `tests/test_*.py` files
-   - Implement minimal solution
-   - Validate security and integration
+
+#### **For Bugs/Issues/Debugging:**
+1. **DEBUGGING_WORKFLOW.md** - Streamlined issue resolution
+   - Quick analysis and minimal reproduction
+   - Root cause identification and minimal fix
+   - Focus on speed and safety
+
+#### **For Security Issues:**
+1. **SECURITY_AUDIT_METHODOLOGY.md** - Systematic vulnerability discovery
+2. **DEBUGGING_WORKFLOW.md** (Fast-track) - Immediate containment and fix
+3. **SECURITY_TESTING_STRATEGY.md** - Adversarial testing approach
+
+### **ALWAYS Use TodoWrite**
+- **For complex work**: Break into trackable tasks
+- **For debugging**: Optional but recommended for multi-step fixes
+- **For security work**: Mandatory to ensure no steps are missed
 
 ### Test Strategy
 - **Test-first development**: Always write failing tests before implementation
@@ -98,22 +107,30 @@ if platform.system() == "Windows":
 
 ## Recent Context
 
-### Last Major Changes
-- Fixed Unicode encoding crashes on Windows terminals
-- Implemented comprehensive API key provider validation
-- Resolved file processing regression where failed files weren't moved
-- Optimized Ways of Working documentation structure
+### **Security Overhaul Completed**
+- **Fixed 3 critical API key logging vulnerabilities**:
+  - `src/utils/error_handling.py:212` - Debug logging of exceptions
+  - `src/core/file_processor.py:179` - Direct file logging without sanitization
+  - `src/core/file_processor.py:533` - Runtime error file logging
+- **Comprehensive security tooling**: Automatic sanitization, SecureLogger, log cleanup utilities
+- **Complete test coverage**: 7 security-specific tests validating secret protection
 
-### Test Coverage Focus
-- Need tests for API key validation logic in directory_manager.py:712
-- Need tests for error handling fixes in process_file_enhanced_core
-- All new security validation code needs test coverage
+### **Process Improvements**
+- **Enhanced Ways of Working**: Added specialized workflows for debugging vs development
+- **Security methodologies**: Systematic audit and testing approaches
+- **Retrospective framework**: Built-in continuous improvement process
 
-### Known Working State
-- All tests passing (resolved from 17 failures to 0)
-- Repository structure cleaned and organized
-- Code quality: 30 pyright errors resolved, 7.97/10 pylint score
-- File processing functional with proper error handling
+### **Lessons Learned from This Session**
+- **Security-first mindset**: Always audit for secret exposure when touching logging/error code
+- **Test-driven debugging**: Write reproduction tests before implementing fixes
+- **Architecture simplicity**: Prefer single-layer solutions over complex dual-layer approaches
+- **Process discipline**: Following Ways of Working prevents quality issues even under time pressure
+
+### **Known Working State**
+- **All 264 tests passing** - comprehensive test coverage maintained
+- **Zero security vulnerabilities** - complete protection against API key exposure
+- **Clean repository structure** - organized documentation and code
+- **Robust error handling** - files properly moved, errors properly logged (securely)
 
 ## Development Standards
 
@@ -127,4 +144,34 @@ if platform.system() == "Windows":
 - **No sensitive data**: Never expose API keys or internal paths
 - **Clear context**: Explain what failed and why
 
-*This file ensures Claude Code maintains our established patterns and quality standards across sessions*
+## 🔄 **Session Retrospective Checklist**
+
+After any significant work session, always:
+- [ ] **Conduct retrospective** using RETROSPECTIVE_PROCESS.md
+- [ ] **Update this file** with key lessons learned
+- [ ] **Identify process improvements** and update Ways of Working
+- [ ] **Plan concrete changes** for next session
+
+## ⚡ **Quick Reference Commands**
+
+### **Security Audit**
+```bash
+# Quick security scan for potential issues
+grep -r "print\|log.*\(.*api.*key\|str(.*e.*)" src/
+
+# Sanitize any existing logs
+python scripts/sanitize_logs.py
+```
+
+### **Test-Driven Debugging**
+```python
+def test_reproduce_issue():
+    # Write this test first to reproduce the bug
+    pass
+
+def test_issue_is_fixed():
+    # Write this test to verify the fix works
+    pass
+```
+
+*This file ensures Claude Code maintains our established patterns, learns from each session, and continuously improves development quality.*

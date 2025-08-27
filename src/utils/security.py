@@ -528,3 +528,213 @@ class PDFAnalyzer:
             return f"Potential threats detected: {', '.join(threats)}"
         else:
             return f"PDF has {threat_level.value} risk indicators"
+
+
+# ============================================================================
+# SECURE LOGGING - Prevent API keys and secrets from appearing in logs
+# ============================================================================
+
+import logging
+import re
+from typing import Dict, Any
+
+
+def sanitize_log_message(message: str) -> str:
+    """
+    Sanitize log messages to remove API keys and other secrets.
+    
+    Args:
+        message: Log message that might contain secrets
+        
+    Returns:
+        Message with secrets replaced by sanitized versions
+    """
+    if not message:
+        return message
+    
+    # Define API key patterns to sanitize (fixed patterns with realistic lengths)
+    patterns = [
+        # OpenAI project keys: sk-proj-... (typically 51+ chars total, so 43+ after prefix)
+        (r'sk-proj-[A-Za-z0-9_-]{15,}', lambda m: f"sk-proj-{m.group(0)[8:11]}***"),
+        # OpenAI legacy keys: sk-... (typically 51+ chars total, so 48+ after prefix)  
+        (r'sk-[A-Za-z0-9_-]{40,}', lambda m: f"sk-{m.group(0)[3:6]}***"),
+        # Claude keys: sk-ant-... (typically 100+ chars total, so 93+ after prefix)
+        (r'sk-ant-[A-Za-z0-9_-]{15,}', lambda m: f"sk-ant-***"),
+        # Google API keys: AIza... (typically 39+ chars total, so 35+ after prefix)
+        (r'AIza[A-Za-z0-9_-]{30,}', lambda m: f"AIza***"),
+        # Also catch shorter test keys for development/testing
+        (r'sk-proj-test[A-Za-z0-9_-]+', lambda m: f"sk-proj-test***"),
+        (r'sk-ant-test[A-Za-z0-9_-]+', lambda m: f"sk-ant-***"),
+    ]
+    
+    sanitized = message
+    for pattern, replacer in patterns:
+        sanitized = re.sub(pattern, replacer, sanitized)
+    
+    return sanitized
+
+
+def sanitize_environment_vars(env_vars: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Sanitize environment variables dictionary to redact secret values.
+    
+    Args:
+        env_vars: Dictionary of environment variables
+        
+    Returns:
+        Dictionary with secret values redacted
+    """
+    secret_patterns = [
+        'API_KEY', 'SECRET', 'TOKEN', 'PASSWORD', 'PRIVATE_KEY', 'AUTH'
+    ]
+    
+    sanitized = {}
+    for key, value in env_vars.items():
+        # Check if this is a secret environment variable
+        is_secret = any(pattern in key.upper() for pattern in secret_patterns)
+        sanitized[key] = "[REDACTED]" if is_secret else value
+    
+    return sanitized
+
+
+class SecureLoggingFormatter(logging.Formatter):
+    """Formatter that sanitizes log records to remove secrets."""
+    
+    def format(self, record):
+        # Get the formatted message
+        formatted = super().format(record)
+        # Sanitize it before returning
+        return sanitize_log_message(formatted)
+
+
+class SecureLogger(logging.Logger):
+    """
+    Custom logger that automatically sanitizes log messages to prevent secret exposure.
+    Uses a single-layer approach to avoid conflicts and ensure consistent sanitization.
+    """
+    
+    def __init__(self, name: str, level=logging.NOTSET):
+        super().__init__(name, level)
+    
+    def addHandler(self, handler):
+        """Override addHandler to ensure secure formatting."""
+        # Always apply our secure formatter
+        handler.setFormatter(SecureLoggingFormatter(
+            fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        ))
+        super().addHandler(handler)
+    
+    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, **kwargs):
+        """
+        Override _log to sanitize messages before logging.
+        This is the single point where all log messages pass through.
+        """
+        if self.isEnabledFor(level):
+            # Sanitize the message first
+            sanitized_msg = sanitize_log_message(str(msg))
+            
+            # Sanitize any format arguments too
+            if args:
+                sanitized_args = tuple(sanitize_log_message(str(arg)) for arg in args)
+            else:
+                sanitized_args = args
+            
+            # Call parent with sanitized content
+            super()._log(level, sanitized_msg, sanitized_args, 
+                        exc_info=exc_info, extra=extra, stack_info=stack_info, **kwargs)
+
+
+# ============================================================================
+# SECURE LOGGING UTILITIES - Easy-to-use functions for developers
+# ============================================================================
+
+def secure_log_error(logger_instance: logging.Logger, message: str, *args, **kwargs):
+    """
+    Log an error message with automatic secret sanitization.
+    
+    Args:
+        logger_instance: The logger to use
+        message: Message to log (will be sanitized)
+        *args: Additional arguments for logger
+        **kwargs: Additional keyword arguments for logger
+    """
+    sanitized_message = sanitize_log_message(message)
+    logger_instance.error(sanitized_message, *args, **kwargs)
+
+
+def secure_log_debug(logger_instance: logging.Logger, message: str, *args, **kwargs):
+    """
+    Log a debug message with automatic secret sanitization.
+    
+    Args:
+        logger_instance: The logger to use
+        message: Message to log (will be sanitized)
+        *args: Additional arguments for logger
+        **kwargs: Additional keyword arguments for logger
+    """
+    sanitized_message = sanitize_log_message(message)
+    logger_instance.debug(sanitized_message, *args, **kwargs)
+
+
+def setup_secure_log_rotation(log_file_path: str, max_size_mb: int = 10, backup_count: int = 3):
+    """
+    Set up secure log rotation with automatic sanitization.
+    
+    Args:
+        log_file_path: Path to the log file
+        max_size_mb: Maximum size in MB before rotation
+        backup_count: Number of backup files to keep
+    """
+    import logging.handlers
+    import os
+    
+    # Create directory if it doesn't exist
+    log_dir = os.path.dirname(log_file_path)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir, mode=0o750)  # Restricted permissions
+    
+    # Set up rotating file handler with secure formatting
+    handler = logging.handlers.RotatingFileHandler(
+        log_file_path,
+        maxBytes=max_size_mb * 1024 * 1024,
+        backupCount=backup_count,
+        encoding='utf-8'
+    )
+    
+    # Apply secure formatter that sanitizes all log messages
+    handler.setFormatter(SecureLoggingFormatter(
+        fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    ))
+    
+    return handler
+
+
+def cleanup_old_logs(log_directory: str, days_to_keep: int = 30):
+    """
+    Clean up old log files older than specified days.
+    
+    Args:
+        log_directory: Directory containing log files
+        days_to_keep: Number of days of logs to keep (default: 30)
+    """
+    import os
+    import time
+    import glob
+    
+    if not os.path.exists(log_directory):
+        return
+    
+    cutoff_time = time.time() - (days_to_keep * 24 * 60 * 60)
+    
+    # Find all log files and backups
+    log_patterns = ["*.log", "*.log.*", "*.log.backup.*"]
+    
+    for pattern in log_patterns:
+        for log_file in glob.glob(os.path.join(log_directory, pattern)):
+            try:
+                if os.path.getmtime(log_file) < cutoff_time:
+                    os.remove(log_file)
+                    print(f"Cleaned up old log file: {log_file}")
+            except (OSError, IOError):
+                # Ignore errors - file might be in use
+                pass

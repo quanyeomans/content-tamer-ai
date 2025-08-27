@@ -171,12 +171,17 @@ def _handle_processing_error(
 
 
 def _handle_runtime_error(error: RuntimeError, filename: str, display_context) -> tuple:
-    """Handle runtime errors by logging."""
+    """Handle runtime errors by logging with secret sanitization."""
+    # Import secure logging to prevent API key exposure
+    from utils.security import sanitize_log_message
+    
     error_msg = f"Unexpected error with file {filename}: {str(error)}"
+    # Sanitize error message to prevent API key exposure in logs
+    sanitized_error_msg = sanitize_log_message(error_msg)
 
     try:
         with open(ERROR_LOG_FILE, mode="a", encoding="utf-8") as log:
-            log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {error_msg}\\n")
+            log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {sanitized_error_msg}\\n")
     except (IOError, OSError):
         pass  # Error will be handled in summary
 
@@ -526,11 +531,16 @@ def process_file(
         pbar.update(1)
         return False
     except RuntimeError as e:
+        # Import secure logging to prevent API key exposure
+        from utils.security import sanitize_log_message
+        
         error_msg = f"Unexpected error with file {filename}: {str(e)}"
-        print(f"\\n{error_msg}")
+        # Sanitize error message before displaying and logging
+        sanitized_error_msg = sanitize_log_message(error_msg)
+        print(f"\\n{sanitized_error_msg}")
         try:
             with open(ERROR_LOG_FILE, mode="a", encoding="utf-8") as log:
-                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {error_msg}\\n")
+                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {sanitized_error_msg}\\n")
         except (IOError, OSError) as log_error:
             print(f"Warning: Could not write to error log: {str(log_error)}")
         pbar.set_postfix({"Status": "Error", "Message": "Unexpected error"})
