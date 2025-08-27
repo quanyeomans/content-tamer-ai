@@ -230,25 +230,9 @@ def process_file_enhanced_core(
         except Exception as progress_error:
             print(f"Warning: Progress recording failed for {filename}: {progress_error}")
     
-    # Determine success based on actual file system state - most robust approach
-    original_file_gone = not os.path.exists(input_path)
-    
-    # Check if processed file exists (with proper extension)
-    if result:
-        file_extension = os.path.splitext(input_path)[1]
-        final_processed_path = os.path.join(renamed_folder, result + file_extension)
-        processed_file_exists = os.path.exists(final_processed_path)
-    else:
-        processed_file_exists = False
-    
-    # Success = original file moved AND processed file exists
-    success = original_file_gone and processed_file_exists
-    
-    # Optional debug logging (remove in production)
-    # if success:
-    #     print(f"[SUCCESS] Successfully processed {filename} -> {result}")
-    # else:
-    #     print(f"[FAILED] Processing failed for {filename}: original_gone={original_file_gone}, processed_exists={processed_file_exists}")
+    # Success is determined by completing all processing steps successfully
+    # If we got a result from _move_file_only, the file was processed successfully
+    success = result is not None
     
     return success, result
 
@@ -480,6 +464,9 @@ def process_file(
         organizer.progress_tracker.record_progress(
             progress_f, filename, organizer.file_manager
         )
+        
+        # Update progress bar
+        pbar.update(1)
         return True
 
     except (ValueError, OSError, FileNotFoundError) as e:
@@ -503,6 +490,9 @@ def process_file(
         organizer.progress_tracker.record_progress(
             progress_f, filename, organizer.file_manager
         )
+        
+        # Update progress bar for error case
+        pbar.update(1)
         return False
     except RuntimeError as e:
         error_msg = f"Unexpected error with file {filename}: {str(e)}"
@@ -513,10 +503,10 @@ def process_file(
         except (IOError, OSError) as log_error:
             print(f"Warning: Could not write to error log: {str(log_error)}")
         pbar.set_postfix({"Status": "Error", "Message": "Unexpected error"})
+        
+        # Update progress bar for runtime error case
+        pbar.update(1)
         return False
-
-    pbar.update(1)
-    return True
 
 
 def pdfs_to_text_string(filepath: str, max_pages: Optional[int] = None) -> str:

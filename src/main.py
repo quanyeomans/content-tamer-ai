@@ -52,12 +52,12 @@ def main() -> int:
         original_env, api_key_set = setup_api_key(args)
 
         try:
-            # Setup display options
+            # Setup display options with auto-detection
             display_options = {
                 "verbose": args.verbose,
                 "quiet": args.quiet,
-                "no_color": args.no_color,
-                "show_stats": not args.no_stats,
+                "no_color": False,  # Auto-detect in verbose mode, always False for rich UI
+                "show_stats": True,  # Always show stats
             }
 
             input_dir, renamed_dir, unprocessed_dir = setup_directories(args)

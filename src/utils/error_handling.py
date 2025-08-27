@@ -134,6 +134,7 @@ class RetryStats:
     failed_retries: int = 0
     files_with_recoverable_issues: int = 0  # Unique files that had warnings
     permanent_errors: int = 0
+    recoverable_errors_encountered: int = 0  # Total retry attempts across all files
     
     # Track which files have already been counted for warnings
     _files_with_warnings: set = None
@@ -153,6 +154,10 @@ class RetryStats:
 
     def add_recoverable_error(self, filename: str = None):
         """Record a recoverable error encounter for a specific file."""
+        # Always increment total retry attempts
+        self.recoverable_errors_encountered += 1
+        
+        # Track unique files with recoverable issues
         if filename and filename not in self._files_with_warnings:
             self.files_with_recoverable_issues += 1
             self._files_with_warnings.add(filename)
@@ -190,7 +195,8 @@ class RetryHandler:
                 if attempt > 0:
                     # This was a successful retry
                     self.stats.add_attempt(success=True, was_retry=True)
-                    display_context.set_status("completed")
+                    display_context.set_status("recovered")
+                    display_context.show_info("✅ Successfully processed after retry")
                 else:
                     # First attempt success
                     self.stats.add_attempt(success=True, was_retry=False)
@@ -218,8 +224,9 @@ class RetryHandler:
                     # Calculate wait time with exponential backoff
                     wait_time = error_classification.suggested_wait_time * (2**attempt)
 
-                    # Show only status update, no verbose messages during processing
+                    # Show status update and user-friendly retry message
                     display_context.set_status("retrying")
+                    display_context.show_info(f"⏳ {error_classification.user_message}, retrying...")
 
                     # Wait before retry
                     time.sleep(wait_time)

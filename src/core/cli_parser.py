@@ -105,23 +105,13 @@ Examples:
         "--quiet",
         "-q",
         action="store_true",
-        help="Minimal output (progress bar only, suppress info and success messages)",
+        help="Self-contained mode: one-line stats output, no user prompts. Requires API key and folders as parameters.",
     )
     parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
-        help="Detailed logging output (show debug messages and additional info)",
-    )
-    parser.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Disable colored output (useful for CI/CD or when output is redirected)",
-    )
-    parser.add_argument(
-        "--no-stats",
-        action="store_true",
-        help="Disable statistics display in progress bar",
+        help="Default mode with guided menus, auto-detecting unicode support for rich or basic UI",
     )
 
     return parser.parse_args()

@@ -90,10 +90,9 @@ class ProcessingContext:
     def show_success(self, message: str) -> None:
         """Show success message as a permanent line."""
         # Temporarily disable progress to show permanent success message
-        was_active = self.display.messages._progress_active
         self.display.messages.set_progress_active(False)
         self.display.messages.success(message, location=DisplayLocation.INLINE)
-        self.display.messages.set_progress_active(was_active)
+        self.display.messages.set_progress_active(True)
 
     def show_warning(self, message: str, filename: str = None) -> None:
         """Show warning message and track unique files with warnings."""

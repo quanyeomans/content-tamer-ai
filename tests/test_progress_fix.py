@@ -137,7 +137,7 @@ class TestProgressRecordingFix(unittest.TestCase):
         mock_progress_f = Mock()
         
         # Mock successful content processing
-        with patch('core.file_processor.ContentProcessorFactory') as mock_factory_class:
+        with patch('content_processors.ContentProcessorFactory') as mock_factory_class:
             mock_factory = Mock()
             mock_processor = Mock()
             mock_processor.extract_content.return_value = ("Test content", None)
@@ -181,7 +181,7 @@ class TestProgressRecordingFix(unittest.TestCase):
         mock_progress_f = Mock()
         
         # Mock content processing to fail
-        with patch('core.file_processor.ContentProcessorFactory') as mock_factory_class:
+        with patch('content_processors.ContentProcessorFactory') as mock_factory_class:
             mock_factory = Mock()
             mock_processor = Mock()
             mock_processor.extract_content.return_value = ("Error: Processing failed", None)

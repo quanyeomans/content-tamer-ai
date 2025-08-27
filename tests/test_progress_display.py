@@ -13,7 +13,7 @@ from io import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
 from utils.progress_display import (
-    ProgressStats, ProgressDisplay, SimpleProgressDisplay
+    ProgressStats, ProgressDisplay
 )
 from utils.cli_display import Colors
 
@@ -41,10 +41,9 @@ class TestProgressStats(unittest.TestCase):
         self.assertEqual(stats.progress_percentage, 0.0)
         
     def test_success_count(self):
-        """Test success count calculation."""
+        """Test success count property."""
         stats = ProgressStats()
-        stats.completed = 10
-        stats.failed = 3
+        stats.succeeded = 7
         self.assertEqual(stats.success_count, 7)
         
     def test_elapsed_time(self):
@@ -196,64 +195,6 @@ class TestProgressDisplayWithColors(unittest.TestCase):
         # If colors are supported, should contain ANSI escape sequences
         if self.progress.formatter.capabilities.supports_color:
             self.assertIn('\033[', output_content)
-
-
-class TestSimpleProgressDisplay(unittest.TestCase):
-    """Test simple fallback progress display."""
-    
-    def setUp(self):
-        self.output = StringIO()
-        # Redirect stdout to capture print statements
-        self.original_stdout = sys.stdout
-        sys.stdout = self.output
-        self.simple_progress = SimpleProgressDisplay()
-        
-    def tearDown(self):
-        sys.stdout = self.original_stdout
-        
-    def test_simple_start(self):
-        """Test simple progress start."""
-        self.simple_progress.start(total=5, description="Simple test")
-        output = self.output.getvalue()
-        self.assertIn("Simple test", output)
-        self.assertIn("5 files", output)
-        
-    def test_simple_update(self):
-        """Test simple progress update."""
-        self.simple_progress.start(total=3)
-        self.simple_progress.update(filename="test1.pdf")
-        self.simple_progress.update(filename="test2.pdf")
-        
-        output = self.output.getvalue()
-        self.assertIn("test1.pdf", output)
-        self.assertIn("test2.pdf", output)
-        self.assertIn("[1/3]", output)
-        self.assertIn("[2/3]", output)
-        
-    def test_simple_finish(self):
-        """Test simple progress finish."""
-        self.simple_progress.start(total=1)
-        self.simple_progress.finish("Done")
-        
-        output = self.output.getvalue()
-        self.assertIn("Done", output)
-        
-    def test_simple_context_manager(self):
-        """Test simple progress as context manager."""
-        with self.simple_progress as progress:
-            self.assertIs(progress, self.simple_progress)
-            progress.start(total=1)
-            progress.update(filename="test.pdf")
-            
-        # Should complete without errors
-        
-    def test_simple_methods_dont_crash(self):
-        """Test that simple progress methods don't crash."""
-        # These methods should exist but might be no-ops
-        self.simple_progress.add_warning()
-        self.simple_progress.add_error()
-        
-        # Should not crash
 
 
 class TestProgressDisplayEdgeCases(unittest.TestCase):

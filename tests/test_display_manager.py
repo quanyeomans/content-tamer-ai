@@ -15,7 +15,7 @@ from utils.display_manager import (
     DisplayOptions, ProcessingContext, DisplayManager,
     create_display_manager, create_simple_display, create_rich_display
 )
-from utils.progress_display import ProgressDisplay, SimpleProgressDisplay
+from utils.progress_display import ProgressDisplay
 from utils.message_handler import MessageHandler, SimpleMessageHandler
 
 
@@ -114,7 +114,7 @@ class TestDisplayManager(unittest.TestCase):
         quiet_manager = DisplayManager(quiet_options)
         
         # Should use simple implementations for quiet mode
-        self.assertIsInstance(quiet_manager.progress, SimpleProgressDisplay)
+        self.assertIsInstance(quiet_manager.progress, ProgressDisplay)
         self.assertIsInstance(quiet_manager.messages, SimpleMessageHandler)
         
     def test_rich_mode_uses_enhanced_components(self):

@@ -179,7 +179,7 @@ class TestRetryHandler(unittest.TestCase):
         """Test session summary message formatting."""
         # Simulate some successful retries
         self.retry_handler.stats.successful_retries = 2
-        self.retry_handler.stats.recoverable_errors_encountered = 3
+        self.retry_handler.stats.files_with_recoverable_issues = 3
         
         summary = self.retry_handler.format_session_summary()
         

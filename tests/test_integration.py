@@ -111,38 +111,40 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_create_ai.return_value = mock_ai_client
         mock_get_api.return_value = "fake-api-key"
         
-        # Mock content extraction
-        with patch('content_processors.ContentProcessorFactory') as mock_factory_class:
-            mock_factory = MagicMock()
-            mock_processor = MagicMock()
-            mock_processor.extract_content.return_value = ("extracted text", None)
-            mock_factory.get_processor.return_value = mock_processor
-            mock_factory.get_supported_extensions.return_value = ['.pdf', '.png']
-            mock_factory_class.return_value = mock_factory
-            
-            # Mock file organizer
-            with patch('file_organizer.FileOrganizer') as mock_organizer_class:
-                mock_organizer = MagicMock()
-                mock_organizer.filename_handler.validate_and_trim_filename.return_value = "cleaned_name"
-                mock_organizer.move_file_to_category.return_value = "final_name"
-                mock_organizer_class.return_value = mock_organizer
+        # Set NO_COLOR to avoid Unicode encoding issues in tests
+        with patch.dict(os.environ, {'NO_COLOR': '1', 'PYTHONIOENCODING': 'utf-8'}):
+            # Mock content extraction
+            with patch('content_processors.ContentProcessorFactory') as mock_factory_class:
+                mock_factory = MagicMock()
+                mock_processor = MagicMock()
+                mock_processor.extract_content.return_value = ("extracted text", None)
+                mock_factory.get_processor.return_value = mock_processor
+                mock_factory.get_supported_extensions.return_value = ['.pdf', '.png']
+                mock_factory_class.return_value = mock_factory
                 
-                # Run the main function
-                success = organize_content(
-                    self.input_dir,
-                    self.unprocessed_dir, 
-                    self.renamed_dir,
-                    provider="openai",
-                    model="gpt-4o"
-                )
-                
-                self.assertTrue(success)
-                
-                # Verify AI client was called
-                self.assertTrue(mock_ai_client.generate_filename.called)
-                
-                # Verify file operations were performed
-                self.assertTrue(mock_organizer.move_file_to_category.called)
+                # Mock file organizer
+                with patch('core.application.FileOrganizer') as mock_organizer_class:
+                    mock_organizer = MagicMock()
+                    mock_organizer.filename_handler.validate_and_trim_filename.return_value = "cleaned_name"
+                    mock_organizer.move_file_to_category.return_value = "final_name"
+                    mock_organizer_class.return_value = mock_organizer
+                    
+                    # Run the main function
+                    success = organize_content(
+                        self.input_dir,
+                        self.unprocessed_dir, 
+                        self.renamed_dir,
+                        provider="openai",
+                        model="gpt-4o"
+                    )
+                    
+                    self.assertTrue(success)
+                    
+                    # Verify AI client was called
+                    self.assertTrue(mock_ai_client.generate_filename.called)
+                    
+                    # Verify file operations were performed
+                    self.assertTrue(mock_organizer.move_file_to_category.called)
 
     @patch('core.application.get_api_details')
     def test_organize_content_invalid_provider(self, mock_get_api):
