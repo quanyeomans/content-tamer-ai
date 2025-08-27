@@ -10,11 +10,11 @@ from typing import Tuple
 
 # Directory structure constants
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_DOCUMENTS_DIR = os.path.join(PROJECT_ROOT, "documents")
-DEFAULT_INPUT_DIR = os.path.join(DEFAULT_DOCUMENTS_DIR, "input")
-DEFAULT_PROCESSED_DIR = os.path.join(DEFAULT_DOCUMENTS_DIR, "processed")
+DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DEFAULT_INPUT_DIR = os.path.join(DEFAULT_DATA_DIR, "input")
+DEFAULT_PROCESSED_DIR = os.path.join(DEFAULT_DATA_DIR, "processed")
 DEFAULT_UNPROCESSED_DIR = os.path.join(DEFAULT_PROCESSED_DIR, "unprocessed")
-DEFAULT_PROCESSING_DIR = os.path.join(DEFAULT_DOCUMENTS_DIR, ".processing")
+DEFAULT_PROCESSING_DIR = os.path.join(DEFAULT_DATA_DIR, ".processing")
 
 # Error log location
 ERROR_LOG_FILE = os.path.join(DEFAULT_PROCESSING_DIR, "errors.log")
@@ -23,7 +23,7 @@ ERROR_LOG_FILE = os.path.join(DEFAULT_PROCESSING_DIR, "errors.log")
 def ensure_default_directories() -> Tuple[str, str, str]:
     """Creates the default directory structure if it doesn't exist."""
     directories = [
-        DEFAULT_DOCUMENTS_DIR,
+        DEFAULT_DATA_DIR,
         DEFAULT_INPUT_DIR,
         DEFAULT_PROCESSED_DIR,
         DEFAULT_UNPROCESSED_DIR,

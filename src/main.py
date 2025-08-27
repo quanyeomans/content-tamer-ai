@@ -24,7 +24,7 @@ from core.directory_manager import (
     setup_directories,
     ensure_default_directories,
     get_api_details,
-    DEFAULT_DOCUMENTS_DIR,
+    DEFAULT_DATA_DIR,
     DEFAULT_INPUT_DIR,
     DEFAULT_PROCESSED_DIR,
     DEFAULT_UNPROCESSED_DIR,

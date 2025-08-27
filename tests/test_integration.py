@@ -14,7 +14,7 @@ from core.cli_parser import parse_arguments, list_available_models, _print_capab
 from core.directory_manager import (
     ensure_default_directories, 
     get_api_details,
-    DEFAULT_DOCUMENTS_DIR,
+    DEFAULT_DATA_DIR,
     DEFAULT_INPUT_DIR,
     DEFAULT_PROCESSED_DIR,
     DEFAULT_UNPROCESSED_DIR,
@@ -37,11 +37,11 @@ class TestDefaultDirectories(unittest.TestCase):
 
     def test_ensure_default_directories(self):
         """Test that default directories are created correctly."""
-        with patch('core.directory_manager.DEFAULT_DOCUMENTS_DIR', tempfile.mkdtemp()) as temp_docs_dir:
-            with patch('core.directory_manager.DEFAULT_INPUT_DIR', os.path.join(temp_docs_dir, 'input')), \
-                 patch('core.directory_manager.DEFAULT_PROCESSED_DIR', os.path.join(temp_docs_dir, 'processed')), \
-                 patch('core.directory_manager.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_docs_dir, 'processed', 'unprocessed')), \
-                 patch('core.directory_manager.DEFAULT_PROCESSING_DIR', os.path.join(temp_docs_dir, '.processing')):
+        with patch('core.directory_manager.DEFAULT_DATA_DIR', tempfile.mkdtemp()) as temp_data_dir:
+            with patch('core.directory_manager.DEFAULT_INPUT_DIR', os.path.join(temp_data_dir, 'input')), \
+                 patch('core.directory_manager.DEFAULT_PROCESSED_DIR', os.path.join(temp_data_dir, 'processed')), \
+                 patch('core.directory_manager.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_data_dir, 'processed', 'unprocessed')), \
+                 patch('core.directory_manager.DEFAULT_PROCESSING_DIR', os.path.join(temp_data_dir, '.processing')):
                 
                 input_dir, processed_dir, unprocessed_dir = ensure_default_directories()
                 
@@ -54,13 +54,13 @@ class TestDefaultDirectories(unittest.TestCase):
                 self.assertTrue(unprocessed_dir.startswith(processed_dir))
                 
                 # Clean up
-                shutil.rmtree(temp_docs_dir)
+                shutil.rmtree(temp_data_dir)
 
     def test_subfolder_structure(self):
         """Test that unprocessed folder is correctly nested under processed."""
-        with patch('core.directory_manager.DEFAULT_DOCUMENTS_DIR', tempfile.mkdtemp()) as temp_docs_dir:
-            with patch('core.directory_manager.DEFAULT_PROCESSED_DIR', os.path.join(temp_docs_dir, 'processed')), \
-                 patch('core.directory_manager.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_docs_dir, 'processed', 'unprocessed')):
+        with patch('core.directory_manager.DEFAULT_DATA_DIR', tempfile.mkdtemp()) as temp_data_dir:
+            with patch('core.directory_manager.DEFAULT_PROCESSED_DIR', os.path.join(temp_data_dir, 'processed')), \
+                 patch('core.directory_manager.DEFAULT_UNPROCESSED_DIR', os.path.join(temp_data_dir, 'processed', 'unprocessed')):
                 
                 input_dir, processed_dir, unprocessed_dir = ensure_default_directories()
                 
@@ -69,7 +69,7 @@ class TestDefaultDirectories(unittest.TestCase):
                 self.assertTrue(os.path.basename(unprocessed_dir) == 'unprocessed')
                 
                 # Clean up
-                shutil.rmtree(temp_docs_dir)
+                shutil.rmtree(temp_data_dir)
 
 
 class TestIntegrationWorkflow(unittest.TestCase):

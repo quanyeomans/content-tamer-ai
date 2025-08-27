@@ -414,8 +414,8 @@ def print_completion_summary(tesseract_available):
     print("Next steps:")
     print(f"  1. Set up API key: {Colors.BOLD}export OPENAI_API_KEY='your-key-here'{Colors.END}")
     print(f"  2. Run the application: {Colors.BOLD}python run.py{Colors.END}")
-    print(f"  3. Place files in: {Colors.BOLD}documents/input/{Colors.END}")
-    print(f"  4. Find results in: {Colors.BOLD}documents/processed/{Colors.END}")
+    print(f"  3. Place files in: {Colors.BOLD}data/input/{Colors.END}")
+    print(f"  4. Find results in: {Colors.BOLD}data/processed/{Colors.END}")
     print()
     
     print("Documentation:")

@@ -26,8 +26,8 @@ RETRY_DELAY = 2
 
 # Error log location
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_DOCUMENTS_DIR = os.path.join(PROJECT_ROOT, "documents")
-DEFAULT_PROCESSING_DIR = os.path.join(DEFAULT_DOCUMENTS_DIR, ".processing")
+DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DEFAULT_PROCESSING_DIR = os.path.join(DEFAULT_DATA_DIR, ".processing")
 ERROR_LOG_FILE = os.path.join(DEFAULT_PROCESSING_DIR, "errors.log")
 
 

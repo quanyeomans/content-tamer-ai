@@ -29,9 +29,9 @@ except ImportError:
 
 # Default directories
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_DOCUMENTS_DIR = os.path.join(PROJECT_ROOT, "documents")
-DEFAULT_INPUT_DIR = os.path.join(DEFAULT_DOCUMENTS_DIR, "input")
-DEFAULT_PROCESSED_DIR = os.path.join(DEFAULT_DOCUMENTS_DIR, "processed")
+DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DEFAULT_INPUT_DIR = os.path.join(DEFAULT_DATA_DIR, "input")
+DEFAULT_PROCESSED_DIR = os.path.join(DEFAULT_DATA_DIR, "processed")
 
 
 def parse_arguments():
@@ -40,7 +40,7 @@ def parse_arguments():
         description="Content Tamer AI - Organize documents with intelligent AI-powered filename generation",
         epilog="""
 Examples:
-  # Process documents using defaults (documents/input -> documents/processed)
+  # Process documents using defaults (data/input -> data/processed)
   content-tamer-ai
 
   # Use specific AI provider and model

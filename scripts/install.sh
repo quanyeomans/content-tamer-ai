@@ -363,8 +363,8 @@ print_completion_summary() {
     echo "Next steps:"
     echo -e "  1. Set up API key: ${BOLD}export OPENAI_API_KEY='your-key-here'${NC}"
     echo -e "  2. Run the application: ${BOLD}python3 run.py${NC}"
-    echo -e "  3. Place files in: ${BOLD}documents/input/${NC}"
-    echo -e "  4. Find results in: ${BOLD}documents/processed/${NC}"
+    echo -e "  3. Place files in: ${BOLD}data/input/${NC}"
+    echo -e "  4. Find results in: ${BOLD}data/processed/${NC}"
     echo
     
     echo "Documentation:"

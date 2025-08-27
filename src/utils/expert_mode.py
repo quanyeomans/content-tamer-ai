@@ -55,7 +55,7 @@ class ExpertModePrompter:
         print()
         print("🚀 QUICK START (Recommended for new users)")
         print("   • Uses smart defaults")
-        print("   • Processes documents/input/ → documents/processed/")
+        print("   • Processes data/input/ → data/processed/")
         print("   • Just needs your API key")
         print()
         print("⚙️  EXPERT MODE (For advanced users)")

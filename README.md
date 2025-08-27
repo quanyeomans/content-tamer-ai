@@ -10,7 +10,7 @@ When you digitize your life - scanning bills, taking screenshots, saving documen
 # 1. Clone and install
 git clone https://github.com/quanyeomans/content-tamer-ai.git
 cd content-tamer-ai
-python install.py  # Cross-platform installer with guided setup
+python scripts/install.py  # Cross-platform installer with guided setup
 
 # 2. Set your API key
 export OPENAI_API_KEY="your-key-here"  # or set OPENAI_API_KEY=your-key-here on Windows
@@ -20,7 +20,7 @@ content-tamer-ai  # Uses smart defaults - just works!
 # or: python run.py
 ```
 
-**That's it!** Drop files in `documents/input/` and find intelligently renamed files in `documents/processed/`
+**That's it!** Drop files in `data/input/` and find intelligently renamed files in `data/processed/`
 
 ---
 
@@ -123,7 +123,7 @@ set OPENAI_API_KEY=your-key-here             # Windows
 content-tamer-ai
 # or: python run.py
 
-# Check documents/processed/ for intelligently renamed files
+# Check data/processed/ for intelligently renamed files
 ```
 
 ### 🎛️ Advanced Options
@@ -196,7 +196,7 @@ Processing documents... ██████████████████�
 
 **Default Directory Structure:**
 ```
-documents/
+data/
 ├── 📥 input/           # ← Drop your files here
 ├── ✅ processed/       # ← Intelligently renamed files appear here  
 │   └── ❌ unprocessed/ # ← Files that couldn't be processed
@@ -333,7 +333,7 @@ The following test failures are known environment/mocking issues, not applicatio
 *These represent 3.4% of total tests and do not affect application functionality*
 
 ### Getting Help
-- Check the detailed error logs in `documents/.processing/errors.log`
+- Check the detailed error logs in `data/.processing/errors.log`
 - Run with `--verbose` for comprehensive diagnostic output
 - Use `--debug` mode for maximum detail (messages, timing, system info)
 - [Open an issue](https://github.com/quanyeomans/content-tamer-ai/issues) for bug reports
@@ -416,4 +416,4 @@ The original project focused specifically on PDF processing, while Content Tamer
 
 **Ready to tame your digital chaos?** 🎯
 
-Drop some files in `documents/input/` and run `content-tamer-ai` to see the magic happen!
+Drop some files in `data/input/` and run `content-tamer-ai` to see the magic happen!
