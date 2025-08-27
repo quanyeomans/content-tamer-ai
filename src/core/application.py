@@ -8,23 +8,23 @@ import os
 from typing import Optional, Set
 
 from .directory_manager import (
-    get_api_details,
     DEFAULT_PROCESSED_DIR,
     DEFAULT_PROCESSING_DIR,
+    get_api_details,
 )
 from .file_processor import process_file_enhanced
 
 # Import utils with fallback
 try:
-    from utils.error_handling import create_retry_handler
     from utils.display_manager import DisplayManager, DisplayOptions
+    from utils.error_handling import create_retry_handler
 except ImportError:
-    import sys
     import os
+    import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from utils.error_handling import create_retry_handler
     from utils.display_manager import DisplayManager, DisplayOptions
+    from utils.error_handling import create_retry_handler
 
 
 # Import modules - handle both package and direct execution
@@ -33,8 +33,8 @@ try:
     from content_processors import ContentProcessorFactory
     from file_organizer import FileOrganizer
 except ImportError:
-    import sys
     import os
+    import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     from ai_providers import AIProviderFactory
@@ -298,9 +298,13 @@ def organize_content(
     if retry_summary:
         display_manager.info(retry_summary)
 
-    # Use progress stats as source of truth for final summary 
-    progress_stats = display_manager.progress.stats if hasattr(display_manager.progress, 'stats') else None
-    
+    # Use progress stats as source of truth for final summary
+    progress_stats = (
+        display_manager.progress.stats
+        if hasattr(display_manager.progress, "stats")
+        else None
+    )
+
     # Show completion statistics with actual counts from progress tracking
     if progress_stats:
         display_manager.show_completion_stats(

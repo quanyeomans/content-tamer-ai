@@ -7,12 +7,12 @@ respecting user preferences for verbosity and quiet modes.
 
 import sys
 import time
-from typing import Optional, TextIO, List, Dict, Any, Tuple
-from enum import Enum
-from dataclasses import dataclass
 from contextlib import contextmanager
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
-from .cli_display import ColorFormatter, MessageLevel, Colors
+from .cli_display import ColorFormatter, Colors, MessageLevel
 
 
 class DisplayLocation(Enum):

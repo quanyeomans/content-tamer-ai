@@ -137,7 +137,13 @@ class TerminalCapabilities:
         # If forced to disable Unicode, return False
         if self._force_no_unicode:
             return False
-            
+
+        # Force disable Unicode on Windows to prevent encoding issues
+        import platform
+
+        if platform.system() == "Windows":
+            return False
+
         try:
             # Try encoding Unicode box-drawing characters
             "█▓▒░→".encode(sys.stdout.encoding or "utf-8")

@@ -5,12 +5,12 @@ Provides smart error categorization, retry logic, and user-friendly messaging
 for common filesystem issues like permission errors and file locks.
 """
 
-import time
 import errno
-from enum import Enum
-from dataclasses import dataclass
-from typing import Optional, Callable, Any, Tuple
 import logging
+import time
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class RetryStats:
     files_with_recoverable_issues: int = 0  # Unique files that had warnings
     permanent_errors: int = 0
     recoverable_errors_encountered: int = 0  # Total retry attempts across all files
-    
+
     # Track which files have already been counted for warnings
     _files_with_warnings: set = None
 
@@ -156,7 +156,7 @@ class RetryStats:
         """Record a recoverable error encounter for a specific file."""
         # Always increment total retry attempts
         self.recoverable_errors_encountered += 1
-        
+
         # Track unique files with recoverable issues
         if filename and filename not in self._files_with_warnings:
             self.files_with_recoverable_issues += 1
@@ -226,7 +226,9 @@ class RetryHandler:
 
                     # Show status update and user-friendly retry message
                     display_context.set_status("retrying")
-                    display_context.show_info(f"⏳ {error_classification.user_message}, retrying...")
+                    display_context.show_info(
+                        f"⏳ {error_classification.user_message}, retrying..."
+                    )
 
                     # Wait before retry
                     time.sleep(wait_time)

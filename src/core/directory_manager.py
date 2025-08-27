@@ -9,7 +9,9 @@ import re
 from typing import Tuple
 
 # Directory structure constants
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 DEFAULT_INPUT_DIR = os.path.join(DEFAULT_DATA_DIR, "input")
 DEFAULT_PROCESSED_DIR = os.path.join(DEFAULT_DATA_DIR, "processed")
@@ -62,14 +64,14 @@ def setup_directories(args) -> Tuple[str, str, str]:
 def get_api_details(provider: str, model: str) -> str:
     """
     Gets the API key from environment variables or prompts the user securely.
-    
+
     Args:
         provider: AI provider name (openai, claude, etc.)
         model: Model name to validate
-        
+
     Returns:
         Validated API key
-        
+
     Raises:
         ValueError: If provider/model invalid or API key invalid
     """
@@ -78,15 +80,16 @@ def get_api_details(provider: str, model: str) -> str:
         from ai_providers import AI_PROVIDERS
     except ImportError:
         import sys
+
         sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
         from ai_providers import AI_PROVIDERS
-        
+
     if provider not in AI_PROVIDERS:
         available_providers = ", ".join(AI_PROVIDERS.keys())
         raise ValueError(
             f"Unsupported provider '{provider}'. Available providers: {available_providers}"
         )
-    
+
     # Validate model for the given provider
     if model not in AI_PROVIDERS[provider]:
         available_models = ", ".join(AI_PROVIDERS[provider])
@@ -96,32 +99,36 @@ def get_api_details(provider: str, model: str) -> str:
 
     env_var_name = f"{provider.upper()}_API_KEY"
     api_key = os.environ.get(env_var_name)
-    
+
     if not api_key:
         # Use regular input with immediate feedback
         print(f"\nAPI Key Input:")
         print(f"• Type or paste your API key (you'll see it as you type)")
-        print(f"• {provider.capitalize()} keys start with '{'sk-ant-' if provider == 'claude' else 'sk-'}' and are typically 40-60 characters")
-        print(f"• You can set {provider.upper()}_API_KEY environment variable to skip this step")
+        print(
+            f"• {provider.capitalize()} keys start with '{'sk-ant-' if provider == 'claude' else 'sk-'}' and are typically 40-60 characters"
+        )
+        print(
+            f"• You can set {provider.upper()}_API_KEY environment variable to skip this step"
+        )
         print(f"• Your key will be validated and cleared from display after entry")
-        
+
         max_attempts = 3
         for attempt in range(max_attempts):
             try:
                 if attempt > 0:
                     print(f"\nAttempt {attempt + 1} of {max_attempts}")
-                
+
                 api_key = input(
                     f"\nEnter your {provider.capitalize()} API key: "
                 ).strip()
-                
+
                 # Clean up common paste issues
                 if api_key:
                     # Remove all whitespace, newlines, and common paste artifacts
-                    api_key = ''.join(api_key.split())
+                    api_key = "".join(api_key.split())
                     # Remove common quotes that might get copied
-                    api_key = api_key.strip('"\'`')
-                
+                    api_key = api_key.strip("\"'`")
+
                 # Provide user feedback about the input received
                 if api_key:
                     # Show partial key for user verification (first 10, last 4 characters)
@@ -129,20 +136,26 @@ def get_api_details(provider: str, model: str) -> str:
                         partial_display = f"{api_key[:10]}{'*' * max(0, len(api_key) - 14)}{api_key[-4:]}"
                     else:
                         partial_display = f"{api_key[:min(6, len(api_key))]}{'*' * max(0, len(api_key) - 6)}"
-                    
-                    print(f"[OK] Received API key: {partial_display} ({len(api_key)} characters)")
+
+                    print(
+                        f"[OK] Received API key: {partial_display} ({len(api_key)} characters)"
+                    )
                     if len(api_key) < 20:
-                        print(f"[WARNING] Key seems short for {provider.capitalize()} (got {len(api_key)} chars, expected 40+)")
-                    
+                        print(
+                            f"[WARNING] Key seems short for {provider.capitalize()} (got {len(api_key)} chars, expected 40+)"
+                        )
+
                     # Try validation
                     try:
                         validated_key = _validate_api_key(api_key, provider)
                         print("[OK] API key format validated successfully")
-                        
+
                         # Clear the screen to remove visible API key
-                        os.system('cls' if os.name == 'nt' else 'clear')
-                        print(f"[OK] {provider.capitalize()} API key accepted and secured.")
-                        
+                        os.system("cls" if os.name == "nt" else "clear")
+                        print(
+                            f"[OK] {provider.capitalize()} API key accepted and secured."
+                        )
+
                         return validated_key
                     except ValueError as e:
                         print(f"[ERROR] Validation failed: {e}")
@@ -157,11 +170,13 @@ def get_api_details(provider: str, model: str) -> str:
                         print("Please try again...")
                         continue
                     else:
-                        raise ValueError(f"{provider.capitalize()} API key is required.")
-                        
+                        raise ValueError(
+                            f"{provider.capitalize()} API key is required."
+                        )
+
             except (KeyboardInterrupt, EOFError):
                 raise ValueError("API key entry cancelled by user.")
-        
+
         # If we get here, all attempts failed
         raise ValueError(f"Failed to get valid API key after {max_attempts} attempts.")
 
@@ -169,19 +184,43 @@ def get_api_details(provider: str, model: str) -> str:
     return _validate_api_key(api_key, provider)
 
 
+def _detect_api_key_provider(api_key: str) -> str:
+    """
+    Detect which provider an API key belongs to based on its format.
+
+    Args:
+        api_key: API key to analyze
+
+    Returns:
+        Provider name or "unknown"
+    """
+    if api_key.startswith("sk-ant-"):
+        return "claude"
+    elif api_key.startswith("sk-proj-"):
+        return "openai"
+    elif api_key.startswith("sk-") and len(api_key) > 20:
+        return "openai"  # Catch both old and new OpenAI formats
+    elif api_key.startswith("AIza"):
+        return "gemini"
+    elif len(api_key) == 32 and api_key.isalnum():
+        return "deepseek"
+    else:
+        return "unknown"
+
+
 def _validate_api_key(api_key: str, provider: str) -> str:
     """
-    Validate API key format and security.
-    
+    Validate API key format and security with enhanced provider detection.
+
     Args:
         api_key: API key to validate
-        provider: Provider name for validation rules
-        
+        provider: Expected provider name for validation
+
     Returns:
         Validated API key
-        
+
     Raises:
-        ValueError: If API key is invalid or insecure
+        ValueError: If API key is invalid, insecure, or mismatched
     """
     # Basic security checks
     if len(api_key) < 10:
@@ -190,42 +229,91 @@ def _validate_api_key(api_key: str, provider: str) -> str:
             f"Expected format: OpenAI keys start with 'sk-' and are ~51 characters long. "
             f"Please check your paste was successful and try again."
         )
-    
+
     if len(api_key) > 512:
-        raise ValueError(f"{provider.capitalize()} API key appears to be too long ({len(api_key)} characters).")
-    
+        raise ValueError(
+            f"{provider.capitalize()} API key appears to be too long ({len(api_key)} characters)."
+        )
+
     # Check for obviously fake or test keys
     test_patterns = [
-        r'^(test|fake|dummy|placeholder)',
-        r'^(sk-)?1{10,}',  # All 1s
-        r'^(sk-)?0{10,}',  # All 0s
-        r'password|secret|key|token',  # Contains obvious words
+        r"^(test|fake|dummy|placeholder)",
+        r"^(sk-)?1{10,}",  # All 1s
+        r"^(sk-)?0{10,}",  # All 0s
+        r"password|secret|key|token",  # Contains obvious words
     ]
-    
+
     for pattern in test_patterns:
         if re.match(pattern, api_key, re.IGNORECASE):
             raise ValueError(
                 f"API key appears to be a placeholder or test value. Please use a real {provider.capitalize()} API key."
             )
-    
+
+    # Detect actual provider from key format
+    detected_provider = _detect_api_key_provider(api_key)
+
+    # Check for provider mismatch
+    if detected_provider != "unknown" and detected_provider != provider:
+        provider_formats = {
+            "openai": "sk-proj-... or sk-... (51+ characters)",
+            "claude": "sk-ant-... (104 characters)",
+            "gemini": "AIza... (Google Cloud API key)",
+            "deepseek": "32-character alphanumeric string",
+        }
+
+        current_format = provider_formats.get(detected_provider, "unknown format")
+        expected_format = provider_formats.get(provider, "unknown format")
+
+        raise ValueError(
+            f"API key mismatch detected!\n"
+            f"  • You provided a {detected_provider.upper()} API key ({current_format})\n"
+            f"  • But the application is configured for {provider.upper()} ({expected_format})\n"
+            f"  • Either use --provider {detected_provider} or provide a {provider.upper()} API key\n"
+            f"  • To switch providers, run: python src/main.py --provider {detected_provider} --model <model_name>"
+        )
+
     # Provider-specific validation
     if provider == "openai":
-        if not api_key.startswith('sk-'):
-            raise ValueError("OpenAI API keys must start with 'sk-'")
+        if not api_key.startswith("sk-"):
+            raise ValueError(
+                f"OpenAI API keys must start with 'sk-'. "
+                f"Your key starts with '{api_key[:10]}...' which looks like a {detected_provider.upper() if detected_provider != 'unknown' else 'different provider'} key."
+            )
         if len(api_key) < 20:
             raise ValueError("OpenAI API key format appears invalid")
-    
+
     elif provider == "claude":
-        if not api_key.startswith('sk-ant-'):
-            raise ValueError("Claude API keys must start with 'sk-ant-'")
-        if len(api_key) < 20:
-            raise ValueError("Claude API key format appears invalid")
-    
+        if not api_key.startswith("sk-ant-"):
+            raise ValueError(
+                f"Claude API keys must start with 'sk-ant-'. "
+                f"Your key starts with '{api_key[:10]}...' which looks like a {detected_provider.upper() if detected_provider != 'unknown' else 'different provider'} key."
+            )
+        if len(api_key) < 50:
+            raise ValueError("Claude API key format appears invalid (too short)")
+
+    elif provider == "gemini":
+        if not api_key.startswith("AIza"):
+            raise ValueError(
+                f"Google Gemini API keys must start with 'AIza'. "
+                f"Your key starts with '{api_key[:10]}...' which looks like a {detected_provider.upper() if detected_provider != 'unknown' else 'different provider'} key."
+            )
+        if len(api_key) < 35:
+            raise ValueError("Google Gemini API key format appears invalid")
+
+    elif provider == "deepseek":
+        if not (len(api_key) == 32 and api_key.isalnum()):
+            raise ValueError(
+                f"DeepSeek API keys should be 32-character alphanumeric strings. "
+                f"Your key is {len(api_key)} characters and looks like a {detected_provider.upper() if detected_provider != 'unknown' else 'different provider'} key."
+            )
+
     # Check for suspicious characters that might indicate injection attempts
     # Allow common API key characters: letters, numbers, hyphens, underscores, dots, plus signs
-    if not re.match(r'^[a-zA-Z0-9\-_.+]+$', api_key):
+    if not re.match(r"^[a-zA-Z0-9\-_.+]+$", api_key):
         # Show what characters were found for debugging
-        invalid_chars = set(re.findall(r'[^a-zA-Z0-9\-_.+]', api_key))
-        raise ValueError(f"API key contains invalid characters: {sorted(invalid_chars)}")
-    
+        invalid_chars = set(re.findall(r"[^a-zA-Z0-9\-_.+]", api_key))
+        raise ValueError(
+            f"API key contains invalid characters: {sorted(invalid_chars)}"
+        )
+
     return api_key

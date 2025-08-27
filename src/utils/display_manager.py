@@ -6,18 +6,18 @@ and user interaction with configurable verbosity levels.
 """
 
 import sys
-from typing import Optional, TextIO, Any, Dict
 from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Any, Dict, Optional, TextIO
 
 from .cli_display import ColorFormatter, MessageLevel
-from .progress_display import ProgressDisplay
 from .message_handler import (
-    MessageHandler,
-    MessageConfig,
-    SimpleMessageHandler,
     DisplayLocation,
+    MessageConfig,
+    MessageHandler,
+    SimpleMessageHandler,
 )
+from .progress_display import ProgressDisplay
 
 
 @dataclass
@@ -43,12 +43,17 @@ class ProcessingContext:
         """Start processing a new file."""
         self.current_file = filename
         self.display.progress.update(
-            filename=filename, target_filename=target_filename, status="processing", increment=False
+            filename=filename,
+            target_filename=target_filename,
+            status="processing",
+            increment=False,
         )
 
     def set_status(self, status: str, target_filename: str = "") -> None:
         """Update current file processing status."""
-        self.display.progress.update(status=status, target_filename=target_filename, increment=False)
+        self.display.progress.update(
+            status=status, target_filename=target_filename, increment=False
+        )
 
     def skip_file(self, filename: str) -> None:
         """Mark file as skipped."""
@@ -63,13 +68,11 @@ class ProcessingContext:
         # Single source of truth: update progress stats and display
         self.display.progress.add_success()
         self.display.progress.update(status="completed", increment=True)
-        
+
         # Always show success line for completed files (unless in quiet mode)
         if not self.display.options.quiet:
             self.display.progress.complete_file_display(
-                source_filename=filename,
-                target_filename=new_filename,
-                status="SUCCESS"
+                source_filename=filename, target_filename=new_filename, status="SUCCESS"
             )
 
     def fail_file(self, filename: str, error_details: str = "") -> None:
@@ -77,13 +80,11 @@ class ProcessingContext:
         # Single source of truth: update progress stats and display
         self.display.progress.add_error()
         self.display.progress.update(status="failed", increment=True)
-        
+
         # Show failure line for failed files (unless in quiet mode)
         if not self.display.options.quiet:
             self.display.progress.complete_file_display(
-                source_filename=filename,
-                target_filename="",
-                status="FAILED"
+                source_filename=filename, target_filename="", status="FAILED"
             )
         # Error details will be shown in final summary instead of during processing
 

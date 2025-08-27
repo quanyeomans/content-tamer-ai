@@ -7,10 +7,10 @@ target filename display, and statistics tracking.
 
 import sys
 import time
-from typing import Dict, Optional, Any, TextIO
 from dataclasses import dataclass, field
+from typing import Any, Dict, Optional, TextIO
 
-from .cli_display import ColorFormatter, MessageLevel, Colors
+from .cli_display import ColorFormatter, Colors, MessageLevel
 
 
 @dataclass
@@ -23,7 +23,9 @@ class ProgressStats:
     failed: int = 0
     warnings: int = 0
     start_time: float = field(default_factory=time.time)
-    _files_with_warnings: set = field(default_factory=set)  # Track unique files with warnings
+    _files_with_warnings: set = field(
+        default_factory=set
+    )  # Track unique files with warnings
 
     @property
     def elapsed_time(self) -> float:
@@ -71,7 +73,11 @@ class ProgressDisplay:
         self._render_progress(description)
 
     def update(
-        self, filename: str = "", status: str = "", increment: bool = True, target_filename: str = ""
+        self,
+        filename: str = "",
+        status: str = "",
+        increment: bool = True,
+        target_filename: str = "",
     ) -> None:
         """Update progress with new filename and status."""
         if increment:
@@ -103,29 +109,39 @@ class ProgressDisplay:
         """Increment success count."""
         self.stats.succeeded += 1
 
-    def complete_file_display(self, source_filename: str, target_filename: str, status: str = "SUCCESS") -> None:
+    def complete_file_display(
+        self, source_filename: str, target_filename: str, status: str = "SUCCESS"
+    ) -> None:
         """Create a persistent display line for a completed file."""
         # Calculate current progress percentage
         percentage = self.stats.progress_percentage
-        
+
         # Create progress bar with current completion state
         bar_length = 40
         filled_length = int(percentage / 100 * bar_length)
         # Use ASCII characters for better compatibility
         if self.formatter.capabilities.supports_unicode:
-            bar = '█' * filled_length + '─' * (bar_length - filled_length)
+            bar = "█" * filled_length + "─" * (bar_length - filled_length)
         else:
-            bar = '#' * filled_length + '-' * (bar_length - filled_length)
-        
+            bar = "#" * filled_length + "-" * (bar_length - filled_length)
+
         # Format the final display name (prefer target filename)
-        display_name = target_filename if target_filename and target_filename != "processed" else source_filename
-        
+        display_name = (
+            target_filename
+            if target_filename and target_filename != "processed"
+            else source_filename
+        )
+
         # Format status with color and icon
         if status == "SUCCESS":
             if self.formatter.capabilities.supports_unicode:
-                status_display = self.formatter.colorize("✅ Success", "green", bold=True)
+                status_display = self.formatter.colorize(
+                    "✅ Success", "green", bold=True
+                )
             else:
-                status_display = self.formatter.colorize("[SUCCESS]", "green", bold=True)
+                status_display = self.formatter.colorize(
+                    "[SUCCESS]", "green", bold=True
+                )
         elif status == "FAILED":
             if self.formatter.capabilities.supports_unicode:
                 status_display = self.formatter.colorize("❌ Failed", "red", bold=True)
@@ -133,22 +149,24 @@ class ProgressDisplay:
                 status_display = self.formatter.colorize("[FAILED]", "red", bold=True)
         else:
             status_display = status
-        
+
         # Create the complete line with fallback for arrow character
         arrow = "→" if self.formatter.capabilities.supports_unicode else "->"
         progress_line = f"[{bar}] {percentage:5.1f}% {arrow} {self.formatter.highlight_filename(display_name)} {status_display}"
-        
+
         # Write the persistent line
         self.file.write(f"\n{progress_line}")
         self.file.flush()
-        
+
         # Track this file as completed
-        self._completed_files.append({
-            'source': source_filename,
-            'target': target_filename,
-            'status': status,
-            'percentage': percentage
-        })
+        self._completed_files.append(
+            {
+                "source": source_filename,
+                "target": target_filename,
+                "status": status,
+                "percentage": percentage,
+            }
+        )
 
     def finish(self, final_message: str = "Processing complete") -> None:
         """Complete progress display."""
@@ -183,7 +201,9 @@ class ProgressDisplay:
             # Fallback: overwrite with spaces
             self.file.write(f"\r{' ' * self.last_line_length}\r")
             if self.show_stats and self.stats.total > 0:
-                self.file.write(f"\n{' ' * 80}\r{Colors.CURSOR_UP if not self.formatter.no_color else ''}")
+                self.file.write(
+                    f"\n{' ' * 80}\r{Colors.CURSOR_UP if not self.formatter.no_color else ''}"
+                )
 
     def _render_progress(self, description: str = "Processing") -> None:
         """Render the complete progress display."""
@@ -217,7 +237,10 @@ class ProgressDisplay:
             if len(display_name) > max_filename_length:
                 display_name = display_name[: max_filename_length - 3] + "..."
 
-            target_display = f" → {self.formatter.highlight_filename(display_name)}"
+            arrow = "->" if not self.formatter.capabilities.supports_unicode else "→"
+            target_display = (
+                f" {arrow} {self.formatter.highlight_filename(display_name)}"
+            )
 
         # Format status indicator
         status_display = ""

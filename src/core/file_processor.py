@@ -11,13 +11,14 @@ import time
 from typing import Any, Optional, Tuple
 
 try:
-    from utils.error_handling import create_retry_handler, RetryHandler
+    from utils.error_handling import RetryHandler, create_retry_handler
 except ImportError:
     # For when running as package
-    import sys
     import os
+    import sys
+
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from utils.error_handling import create_retry_handler, RetryHandler
+    from utils.error_handling import RetryHandler, create_retry_handler
 
 
 # Constants
@@ -25,7 +26,9 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 
 # Error log location
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 DEFAULT_PROCESSING_DIR = os.path.join(DEFAULT_DATA_DIR, ".processing")
 ERROR_LOG_FILE = os.path.join(DEFAULT_PROCESSING_DIR, "errors.log")
@@ -34,16 +37,17 @@ ERROR_LOG_FILE = os.path.join(DEFAULT_PROCESSING_DIR, "errors.log")
 def _extract_file_content(input_path: str, ocr_lang: str, display_context) -> tuple:
     """Extract content from file using appropriate processor."""
     display_context.set_status("extracting_content")
-    
+
     # Import here to avoid circular imports
     try:
         from content_processors import ContentProcessorFactory
     except ImportError:
-        import sys
         import os
+        import sys
+
         sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
         from content_processors import ContentProcessorFactory
-        
+
     content_factory = ContentProcessorFactory(ocr_lang)
     processor = content_factory.get_processor(input_path)
     if not processor:
@@ -74,11 +78,15 @@ def _generate_filename(
     new_file_name = get_new_filename_with_retry_enhanced(
         ai_client, text, img_b64, display_context, filename=filename
     )
-    validated_filename = organizer.filename_handler.validate_and_trim_filename(new_file_name)
-    
+    validated_filename = organizer.filename_handler.validate_and_trim_filename(
+        new_file_name
+    )
+
     # Update progress display with the generated target filename
-    display_context.set_status("ai_processing_complete", target_filename=validated_filename)
-    
+    display_context.set_status(
+        "ai_processing_complete", target_filename=validated_filename
+    )
+
     return validated_filename
 
 
@@ -189,11 +197,11 @@ def process_file_enhanced_core(
     """Core file processing logic with robust success determination."""
     result = None
     original_file_existed = os.path.exists(input_path)
-    
+
     try:
         if not original_file_existed:
             return False, None
-            
+
         # Extract content
         text, img_b64 = _extract_file_content(input_path, ocr_lang, display_context)
 
@@ -211,16 +219,32 @@ def process_file_enhanced_core(
             organizer,
             display_context,
         )
-        
+
         result = final_file_name
 
     except (ValueError, OSError, FileNotFoundError) as e:
-        # Let retry handler determine if this is recoverable
+        # Handle unprocessable files by moving them to unprocessed folder
+        try:
+            if os.path.exists(input_path):
+                unprocessed_path = os.path.join(unprocessed_folder, filename)
+                organizer.file_manager.safe_move(input_path, unprocessed_path)
+                display_context.show_error(
+                    f"File moved to unprocessed: {str(e)}", filename=filename
+                )
+            else:
+                display_context.show_error(
+                    f"File not found: {str(e)}", filename=filename
+                )
+        except Exception as move_error:
+            display_context.show_error(
+                f"Failed to move file: {str(move_error)}", filename=filename
+            )
+
         return False, None
 
     except RuntimeError as e:
         return _handle_runtime_error(e, filename, display_context)
-    
+
     finally:
         # Record progress - don't let this affect success determination
         try:
@@ -228,12 +252,14 @@ def process_file_enhanced_core(
                 progress_f, filename, organizer.file_manager
             )
         except Exception as progress_error:
-            print(f"Warning: Progress recording failed for {filename}: {progress_error}")
-    
+            print(
+                f"Warning: Progress recording failed for {filename}: {progress_error}"
+            )
+
     # Success is determined by completing all processing steps successfully
     # If we got a result from _move_file_only, the file was processed successfully
     success = result is not None
-    
+
     return success, result
 
 
@@ -338,11 +364,14 @@ def get_new_filename_with_retry_enhanced(
                 wait_time = RETRY_DELAY * (2**timeout_count)  # Exponential backoff
                 if display_context:
                     display_context.show_warning(
-                        f"API timeout/network error. Retrying in {wait_time} seconds...", filename=filename
+                        f"API timeout/network error. Retrying in {wait_time} seconds...",
+                        filename=filename,
                     )
             else:
                 if display_context:
-                    display_context.show_warning(f"AI API error: {str(e)}", filename=filename)
+                    display_context.show_warning(
+                        f"AI API error: {str(e)}", filename=filename
+                    )
 
             if attempt < max_attempts - 1:  # Don't wait after the last attempt
                 if display_context:
@@ -352,7 +381,8 @@ def get_new_filename_with_retry_enhanced(
     # If all retries failed, return a timestamped fallback name
     if display_context:
         display_context.show_warning(
-            f"AI filename generation failed after {max_attempts} attempts. Using fallback naming.", filename=filename
+            f"AI filename generation failed after {max_attempts} attempts. Using fallback naming.",
+            filename=filename,
         )
     timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
     return f"failed_ai_generation_{timestamp}"
@@ -372,7 +402,7 @@ def get_new_filename_with_retry(
     # Handle backward compatibility for max_retries parameter
     if max_retries is not None:
         max_attempts = max_retries
-    
+
     # Legacy implementation with original error handling and fallback names
     for attempt in range(max_attempts):
         try:
@@ -386,10 +416,10 @@ def get_new_filename_with_retry(
                     return f"network_error_{timestamp}"
                 else:
                     return f"untitled_document_{timestamp}"
-            
+
             # Sleep before retry (except on last attempt)
-            time.sleep(2 ** attempt)  # Exponential backoff
-    
+            time.sleep(2**attempt)  # Exponential backoff
+
     # Fallback (should not reach here)
     timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
     return f"untitled_document_{timestamp}"
@@ -428,9 +458,10 @@ def process_file(
             from content_processors import ContentProcessorFactory
         except ImportError:
             import sys
+
             sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
             from content_processors import ContentProcessorFactory
-            
+
         content_factory = ContentProcessorFactory(ocr_lang)
         processor = content_factory.get_processor(input_path)
         if not processor:
@@ -464,7 +495,7 @@ def process_file(
         organizer.progress_tracker.record_progress(
             progress_f, filename, organizer.file_manager
         )
-        
+
         # Update progress bar
         pbar.update(1)
         return True
@@ -485,12 +516,12 @@ def process_file(
             # Progress recording is already handled in success path above
         except OSError as move_error:
             pbar.set_postfix({"Status": "Error", "Message": str(move_error)})
-        
+
         # Record progress once for error case
         organizer.progress_tracker.record_progress(
             progress_f, filename, organizer.file_manager
         )
-        
+
         # Update progress bar for error case
         pbar.update(1)
         return False
@@ -503,7 +534,7 @@ def process_file(
         except (IOError, OSError) as log_error:
             print(f"Warning: Could not write to error log: {str(log_error)}")
         pbar.set_postfix({"Status": "Error", "Message": "Unexpected error"})
-        
+
         # Update progress bar for runtime error case
         pbar.update(1)
         return False
@@ -516,8 +547,9 @@ def pdfs_to_text_string(filepath: str, max_pages: Optional[int] = None) -> str:
     try:
         from content_processors import PDFProcessor
     except ImportError:
-        import sys
         import os
+        import sys
+
         sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
         from content_processors import PDFProcessor
     processor = PDFProcessor()

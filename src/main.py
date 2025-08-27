@@ -13,30 +13,30 @@ import sys
 
 from core.application import organize_content
 from core.cli_parser import (
-    setup_environment_and_args,
-    setup_api_key,
-    restore_api_key,
-    parse_arguments,
-    list_available_models,
     _print_capabilities,
+    list_available_models,
+    parse_arguments,
+    restore_api_key,
+    setup_api_key,
+    setup_environment_and_args,
 )
 from core.directory_manager import (
-    setup_directories,
-    ensure_default_directories,
-    get_api_details,
     DEFAULT_DATA_DIR,
     DEFAULT_INPUT_DIR,
     DEFAULT_PROCESSED_DIR,
-    DEFAULT_UNPROCESSED_DIR,
     DEFAULT_PROCESSING_DIR,
+    DEFAULT_UNPROCESSED_DIR,
+    ensure_default_directories,
+    get_api_details,
+    setup_directories,
 )
 from core.file_processor import (
-    process_file,
-    process_file_enhanced,
+    get_filename_from_ai,
     get_new_filename_with_retry,
     get_new_filename_with_retry_enhanced,
-    get_filename_from_ai,
     pdfs_to_text_string,
+    process_file,
+    process_file_enhanced,
 )
 
 # Public API - only main function is exported

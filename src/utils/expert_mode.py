@@ -7,8 +7,8 @@ more control over Content Tamer AI settings and parameters.
 
 import os
 import sys
-from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -55,7 +55,7 @@ class ExpertModePrompter:
         print()
         print("🚀 QUICK START (Recommended for new users)")
         print("   • Uses smart defaults")
-        print("   • Processes data/input/ → data/processed/")
+        print("   • Processes data/input/ -> data/processed/")
         print("   • Just needs your API key")
         print()
         print("⚙️  EXPERT MODE (For advanced users)")

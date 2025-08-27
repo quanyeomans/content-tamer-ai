@@ -132,17 +132,18 @@ class OpenAIProvider(AIProvider):
         try:
             from utils.security import InputSanitizer, SecurityError
         except ImportError:
-            import sys
             import os
+            import sys
+
             sys.path.insert(0, os.path.dirname(__file__))
             from utils.security import InputSanitizer, SecurityError
-        
+
         parts = []
         if content:
             try:
                 # Sanitize content to prevent prompt injection
                 sanitized_content = InputSanitizer.sanitize_content_for_ai(content)
-                
+
                 # Use sanitized content in a secure prompt template
                 parts.append(
                     {
@@ -160,7 +161,7 @@ class OpenAIProvider(AIProvider):
                 # If content is suspicious, use a safe fallback
                 parts.append(
                     {
-                        "type": "input_text", 
+                        "type": "input_text",
                         "text": (
                             "Create a generic filename for a document that contained "
                             "potentially unsafe content. Use format: suspicious_document_YYYYMMDD"
@@ -232,7 +233,9 @@ class OpenAIProvider(AIProvider):
             except Exception as e:
                 # Handle image-related errors by checking message content
                 msg = str(e).lower()
-                if "image" in msg or "vision" in msg:  # Model doesn't support images, retry without
+                if (
+                    "image" in msg or "vision" in msg
+                ):  # Model doesn't support images, retry without
                     raw = self._handle_image_error(base, parts, client)
                 elif (
                     HAVE_OPENAI
