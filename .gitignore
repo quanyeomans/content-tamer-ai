@@ -264,7 +264,9 @@ id_rsa*
 id_ed25519*
 
 # Private PDF Test Files
-documents/processed/*
-documents/processed/unprocessed/*
-!documents/processed/unprocessed/
-documents/input/*
+data/processed/*
+data/processed/unprocessed/*
+!data/processed/unprocessed/
+data/input/*
+data/.processing/*
+

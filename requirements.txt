@@ -7,6 +7,7 @@ pymupdf>=1.26.3
 pillow>=11.3.0
 pytesseract>=0.3.13
 pdfid>=1.1.0
+rich>=13.7.0
 
 # AI Provider dependencies (install based on your needs)
 # openai>=1.0.0              # For OpenAI models (recommended)

@@ -94,29 +94,57 @@ class TestIntegrationWorkflow(unittest.TestCase):
 
     def setUp(self):
         """Set up temporary directory structure for integration testing."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.input_dir = os.path.join(self.temp_dir, "input")
-        self.unprocessed_dir = os.path.join(self.temp_dir, "unprocessed")
-        self.renamed_dir = os.path.join(self.temp_dir, "renamed")
+        self.temp_dir = None
+        self.test_files = []
+        try:
+            self.temp_dir = tempfile.mkdtemp()
+            self.input_dir = os.path.join(self.temp_dir, "input")
+            self.unprocessed_dir = os.path.join(self.temp_dir, "unprocessed")
+            self.renamed_dir = os.path.join(self.temp_dir, "renamed")
 
-        # Create directory structure
-        os.makedirs(self.input_dir)
-        os.makedirs(self.unprocessed_dir)
-        os.makedirs(self.renamed_dir)
+            # Create directory structure
+            os.makedirs(self.input_dir)
+            os.makedirs(self.unprocessed_dir)
+            os.makedirs(self.renamed_dir)
 
-        # Create test files
-        self.test_pdf = os.path.join(self.input_dir, "test.pdf")
-        self.test_image = os.path.join(self.input_dir, "test.png")
+            # Create test files
+            self.test_pdf = os.path.join(self.input_dir, "test.pdf")
+            self.test_image = os.path.join(self.input_dir, "test.png")
 
-        with open(self.test_pdf, "w") as f:
-            f.write("fake pdf content")
+            with open(self.test_pdf, "w", encoding='utf-8') as f:
+                f.write("fake pdf content")
+            self.test_files.append(self.test_pdf)
 
-        with open(self.test_image, "wb") as f:
-            f.write(b"fake image data")
+            with open(self.test_image, "wb") as f:
+                f.write(b"fake image data")
+            self.test_files.append(self.test_image)
+            
+        except Exception as e:
+            self.tearDown()
+            raise e
 
     def tearDown(self):
-        """Clean up temporary directory."""
-        shutil.rmtree(self.temp_dir)
+        """Clean up temporary directory and files."""
+        # Close any open file handles first
+        for test_file in getattr(self, 'test_files', []):
+            try:
+                if os.path.exists(test_file):
+                    os.chmod(test_file, 0o666)  # Ensure writable for cleanup
+            except (OSError, PermissionError):
+                pass
+        
+        # Clean up temp directory
+        if hasattr(self, 'temp_dir') and self.temp_dir and os.path.exists(self.temp_dir):
+            try:
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
+            except (OSError, PermissionError):
+                # Try again with more aggressive cleanup
+                import time
+                time.sleep(0.1)
+                try:
+                    shutil.rmtree(self.temp_dir, ignore_errors=True)
+                except:
+                    pass  # Best effort cleanup
 
     @patch("core.application.get_api_details")
     @patch("core.application.AIProviderFactory.create")
@@ -131,83 +159,74 @@ class TestIntegrationWorkflow(unittest.TestCase):
         # Set environment variables to avoid encoding issues
         env_patches = {"NO_COLOR": "1", "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
 
-        with patch.dict(os.environ, env_patches):
-            # Mock content extraction
-            with patch("content_processors.ContentProcessorFactory") as mock_factory_class:
-                mock_factory = MagicMock()
-                mock_processor = MagicMock()
-                mock_processor.extract_content.return_value = ("extracted text", None)
-                mock_processor.can_process.return_value = True
-                mock_factory.get_processor.return_value = mock_processor
-                mock_factory.get_supported_extensions.return_value = [".pdf", ".png"]
-                mock_factory_class.return_value = mock_factory
+        # Use individual patches to avoid nested context manager issues
+        with patch.dict(os.environ, env_patches), \
+             patch("content_processors.ContentProcessorFactory") as mock_factory_class, \
+             patch("core.application.FileOrganizer") as mock_organizer_class, \
+             patch("core.application.process_file_enhanced") as mock_process_enhanced, \
+             patch("core.application._setup_display_manager") as mock_display_setup:
+            
+            # Configure content processor mock
+            mock_factory = MagicMock()
+            mock_processor = MagicMock()
+            mock_processor.extract_content.return_value = ("extracted text", None)
+            mock_processor.can_process.return_value = True
+            mock_factory.get_processor.return_value = mock_processor
+            mock_factory.get_supported_extensions.return_value = [".pdf", ".png"]
+            mock_factory_class.return_value = mock_factory
 
-                # Mock file organizer with proper progress tracking
-                with patch("core.application.FileOrganizer") as mock_organizer_class:
-                    mock_organizer = MagicMock()
-                    mock_organizer.filename_handler.validate_and_trim_filename.return_value = (
-                        "cleaned_name"
-                    )
-                    mock_organizer.move_file_to_category.return_value = "final_name"
+            # Configure file organizer mock
+            mock_organizer = MagicMock()
+            mock_organizer.filename_handler.validate_and_trim_filename.return_value = "cleaned_name"
+            mock_organizer.move_file_to_category.return_value = "final_name"
+            mock_file_manager = MagicMock()
+            mock_organizer.file_manager = mock_file_manager
+            mock_progress_tracker = MagicMock()
+            mock_progress_tracker.load_progress.return_value = set()
+            mock_organizer.progress_tracker = mock_progress_tracker
+            mock_organizer_class.return_value = mock_organizer
 
-                    # Mock file manager
-                    mock_file_manager = MagicMock()
-                    mock_organizer.file_manager = mock_file_manager
+            # Configure enhanced processor mock
+            mock_process_enhanced.return_value = (True, "final_name")
 
-                    # Mock progress tracker
-                    mock_progress_tracker = MagicMock()
-                    mock_progress_tracker.load_progress.return_value = (
-                        set()
-                    )  # No previously processed files
-                    mock_organizer.progress_tracker = mock_progress_tracker
+            # Configure display manager mock
+            mock_display = MagicMock()
+            mock_progress = MagicMock()
+            mock_display.progress = mock_progress
+            mock_display_setup.return_value = mock_display
 
-                    mock_organizer_class.return_value = mock_organizer
+            # Run the main function
+            success = organize_content(
+                self.input_dir,
+                self.unprocessed_dir,
+                self.renamed_dir,
+                provider="openai",
+                model="gpt-4o",
+                display_options={"no_color": True},
+            )
 
-                    # Mock the enhanced file processing function that's actually called
-                    with patch("core.application.process_file_enhanced") as mock_process_enhanced:
-                        # Make the enhanced processor return success
-                        mock_process_enhanced.return_value = (True, "final_name")
-
-                        # Mock display manager to avoid Unicode issues
-                        with patch("core.application._setup_display_manager") as mock_display_setup:
-                            mock_display = MagicMock()
-                            # Mock progress to avoid Unicode encoding issues
-                            mock_progress = MagicMock()
-                            mock_display.progress = mock_progress
-                            mock_display_setup.return_value = mock_display
-
-                            # Run the main function
-                            success = organize_content(
-                                self.input_dir,
-                                self.unprocessed_dir,
-                                self.renamed_dir,
-                                provider="openai",
-                                model="gpt-4o",
-                                display_options={"no_color": True},
-                            )
-
-                            # Verify success
-                            self.assertTrue(success)
-
-                            # Verify the enhanced processor was called
-                            self.assertTrue(mock_process_enhanced.called)
-
-                            # Verify file operations setup
-                            self.assertTrue(mock_organizer_class.called)
+            # Verify success
+            self.assertTrue(success)
+            self.assertTrue(mock_process_enhanced.called)
+            self.assertTrue(mock_organizer_class.called)
 
     @patch("core.application.get_api_details")
     def test_organize_content_invalid_provider(self, mock_get_api):
         """Test handling of invalid AI provider."""
         mock_get_api.side_effect = ValueError("Unsupported provider")
 
-        success = organize_content(
-            self.input_dir,
-            self.unprocessed_dir,
-            self.renamed_dir,
-            provider="invalid_provider",
-        )
+        # Use environment patches to avoid encoding issues
+        env_patches = {"NO_COLOR": "1", "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+        with patch.dict(os.environ, env_patches):
+            success = organize_content(
+                self.input_dir,
+                self.unprocessed_dir,
+                self.renamed_dir,
+                provider="invalid_provider",
+                display_options={"no_color": True},
+            )
 
-        self.assertFalse(success)
+            self.assertFalse(success)
 
     @patch("core.application.get_api_details")
     @patch("core.application.AIProviderFactory.create")

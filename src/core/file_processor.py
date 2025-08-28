@@ -79,7 +79,7 @@ def _generate_filename(
     validated_filename = organizer.filename_handler.validate_and_trim_filename(new_file_name)
 
     # Update progress display with the generated target filename
-    display_context.set_status("ai_processing_complete", target_filename=validated_filename)
+    display_context.set_status("ai_processing_complete")
 
     return validated_filename
 
@@ -93,7 +93,7 @@ def _move_file_only(
     display_context,
 ) -> str:
     """Move file to renamed folder (progress recording handled separately)."""
-    display_context.set_status("moving_file", target_filename=new_file_name)
+    display_context.set_status("moving_file")
     file_extension = os.path.splitext(input_path)[1]
     final_file_name = organizer.move_file_to_category(
         input_path, filename, renamed_folder, new_file_name, file_extension
@@ -416,43 +416,6 @@ def get_filename_from_ai(ai_client: Any, pdf_content: str, image_b64: Optional[s
     return ai_client.generate_filename(pdf_content, image_b64)
 
 
-def _extract_file_content(input_path: str, ocr_lang: str) -> Tuple[str, str]:
-    """Extract content from file using appropriate processor."""
-    # Import content processors
-    try:
-        from content_processors import ContentProcessorFactory
-    except ImportError:
-        import sys
-
-        sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-        from content_processors import ContentProcessorFactory
-
-    content_factory = ContentProcessorFactory(ocr_lang)
-    processor = content_factory.get_processor(input_path)
-    if not processor:
-        raise ValueError(f"Unsupported file type: {input_path}")
-
-    text, img_b64 = processor.extract_content(input_path)
-
-    # If the extractor returned an error message, treat it as an unprocessable file.
-    if text.startswith("Error"):
-        raise ValueError(text)
-
-    return text, img_b64
-
-
-def _generate_filename(text: str, img_b64: str, ai_client: Any, organizer: Any) -> str:
-    """Generate appropriate filename for content."""
-    # If the file is empty (no text or image), give it a generic name.
-    if not text and not img_b64:
-        timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
-        return f"empty_file_{timestamp}"
-    else:
-        # Get a new filename from the AI, with retries in case of network issues.
-        new_file_name = get_new_filename_with_retry(ai_client, text, img_b64)
-        return organizer.filename_handler.validate_and_trim_filename(new_file_name)
-
-
 def _handle_file_success(
     input_path: str,
     filename: str,
@@ -478,52 +441,6 @@ def _handle_file_success(
     return final_filename
 
 
-def _handle_processing_error(
-    input_path: str,
-    filename: str,
-    unprocessed_folder: str,
-    organizer: Any,
-    pbar: Any,
-    progress_f: Any,
-    error: Exception,
-) -> None:
-    """Handle processing errors by moving file to unprocessed folder."""
-    error_msg = f"Error with file {filename}: {str(error)}"
-    print(f"\n{error_msg}")
-
-    try:
-        if os.path.exists(input_path):
-            unprocessed_path = os.path.join(unprocessed_folder, filename)
-            organizer.file_manager.safe_move(input_path, unprocessed_path)
-            pbar.set_postfix({"Status": "Unprocessed", "Moved to": unprocessed_folder})
-        else:
-            pbar.set_postfix({"Status": "Error", "Message": "File not found"})
-    except OSError as move_error:
-        pbar.set_postfix({"Status": "Error", "Message": str(move_error)})
-
-    # Record progress for error case
-    organizer.progress_tracker.record_progress(progress_f, filename, organizer.file_manager)
-    pbar.update(1)
-
-
-def _handle_runtime_error(filename: str, error: RuntimeError, pbar: Any) -> None:
-    """Handle unexpected runtime errors with secure logging."""
-    from utils.security import sanitize_log_message
-
-    error_msg = f"Unexpected error with file {filename}: {str(error)}"
-    sanitized_error_msg = sanitize_log_message(error_msg)
-    print(f"\n{sanitized_error_msg}")
-
-    try:
-        with open(ERROR_LOG_FILE, mode="a", encoding="utf-8") as log:
-            log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {sanitized_error_msg}\n")
-    except (IOError, OSError) as log_error:
-        print(f"Warning: Could not write to error log: {str(log_error)}")
-
-    pbar.set_postfix({"Status": "Error", "Message": "Unexpected error"})
-    pbar.update(1)
-
-
 def process_file(
     input_path: str,
     filename: str,
@@ -543,11 +460,19 @@ def process_file(
         if not os.path.isfile(input_path):
             return False
 
+        # Create mock display context for legacy compatibility
+        class MockDisplayContext:
+            def set_status(self, status, **kwargs): pass
+            def show_warning(self, msg, **kwargs): pass
+            def show_error(self, msg, **kwargs): pass
+        
+        mock_display = MockDisplayContext()
+        
         # Extract content from file
-        text, img_b64 = _extract_file_content(input_path, ocr_lang)
+        text, img_b64 = _extract_file_content(input_path, ocr_lang, mock_display)
 
         # Generate appropriate filename
-        new_file_name = _generate_filename(text, img_b64, ai_client, organizer)
+        new_file_name = _generate_filename(text, img_b64, ai_client, organizer, mock_display, filename=filename)
 
         # Handle successful processing
         _handle_file_success(

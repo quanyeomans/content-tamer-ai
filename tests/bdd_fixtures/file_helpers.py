@@ -36,11 +36,75 @@ class BDDTestContext:
             shutil.rmtree(self.temp_dir)
 
     def create_pdf_file(self, filename: str, content: str = "Test document content") -> str:
-        """Create a realistic PDF file for testing."""
+        """Create a realistic PDF file for testing by copying from fixtures."""
         filepath = os.path.join(self.input_dir, filename)
-        pdf_content = f"%PDF-1.4\n{content}\n%EOF"
-        with open(filepath, "wb") as f:
-            f.write(pdf_content.encode("utf-8"))
+        
+        # Use real PDF from fixtures instead of fake PDF
+        fixture_pdf = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "fixtures", "sample.pdf"
+        )
+        
+        if os.path.exists(fixture_pdf):
+            shutil.copy2(fixture_pdf, filepath)
+        else:
+            # Fallback to minimal valid PDF if fixture not found
+            # This creates a minimal but valid PDF that PyMuPDF can parse
+            pdf_content = b"""%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+100 700 Td
+(Test content) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000010 00000 n 
+0000000053 00000 n 
+0000000110 00000 n 
+0000000205 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+295
+%%EOF"""
+            with open(filepath, "wb") as f:
+                f.write(pdf_content)
+        
         self.test_files.append(filepath)
         return filepath
 

@@ -179,7 +179,7 @@ def run_document_processing(bdd_context):
                         unprocessed_dir=bdd_context.unprocessed_dir,
                         renamed_dir=bdd_context.processed_dir,
                         provider="openai",
-                        model="gpt-4o",
+                        model="gpt-5-mini",  # Use application default
                     )
                 except Exception as e:
                     bdd_context.processing_result = False

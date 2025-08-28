@@ -47,8 +47,14 @@ def test_specific_user_behavior(self):
 - [ ] **SAST Scan Clean**: `bandit -r src/ -f text` shows no HIGH/MEDIUM issues
 - [ ] **Dependency Scan**: `safety check` shows no known vulnerabilities  
 - [ ] **Code Quality**: `pylint src/ --fail-under=8.0` passes minimum threshold
-- [ ] **Type Safety**: `mypy src/ --ignore-missing-imports` shows no critical errors
+- [ ] **Type Safety**: `pyright src/` shows no errors or redeclarations
+- [ ] **Mypy Validation**: `mypy src/ --ignore-missing-imports` shows no critical errors
 - [ ] **Formatting**: `black --check src/` and `isort --check-only src/` pass
+- [ ] **Test Coverage**: All modified code paths covered by passing tests
+- [ ] **Integration Validation**: End-to-end functionality verified with real data
+- [ ] **Debugging Evidence**: All fixes backed by root cause analysis documentation
+
+**🚨 CRITICAL: Pyright is our early warning system for structural issues like duplicate functions. Always run `pyright src/` before declaring work complete.**
 
 ### Security Validation (Enhanced)
 - [ ] **API key safety**: Verify no API keys in logs/displays using `grep -r "sk-" src/`
@@ -115,6 +121,35 @@ Ready for review/deployment.
 - Creating new patterns instead of following existing ones
 - Wanting to skip steps for "simple changes"
 
+## 🔍 Evidence-Based Debugging Protocol
+
+**When issues arise, follow this mandatory protocol:**
+
+### Phase 1: Evidence Collection
+- [ ] **Reproduce issue**: Create minimal reproduction case
+- [ ] **Gather logs**: Collect full error traces and context
+- [ ] **Document symptoms**: What exactly is failing vs what's expected
+- [ ] **Version control status**: Check what changed since last working state
+
+### Phase 2: Root Cause Analysis
+- [ ] **Hypothesis formation**: Based on evidence, not assumptions
+- [ ] **Systematic testing**: Test one variable at a time
+- [ ] **Code path tracing**: Follow execution through suspected areas
+- [ ] **Dependency verification**: Check imports, versions, configurations
+
+### Phase 3: Fix Implementation
+- [ ] **Minimal viable fix**: Address root cause, not symptoms
+- [ ] **Feature flags/alternatives**: Preserve working paths during changes
+- [ ] **Test fix in isolation**: Verify fix resolves specific issue
+- [ ] **No functionality changes**: Fix the bug without altering behavior
+
+### Debugging First Principles
+1. **Evidence over assumptions**: Never guess when you can verify
+2. **Root cause over symptoms**: Fix the underlying issue, not manifestations
+3. **One change at a time**: Isolate variables to identify actual causes
+4. **Preserve working code**: Use feature flags rather than replacing working logic
+5. **Document the journey**: Record what was tried and why it failed/succeeded
+
 ## 📋 TodoWrite Integration Points
 
 1. **Pre-implementation**: Create todo list with specific tasks
@@ -122,4 +157,24 @@ Ready for review/deployment.
 3. **Task discovery**: Add new tasks as they're discovered during implementation
 4. **Completion**: Final todo should be completion validation
 
-*This workflow integrates our TESTING_STRATEGY.md patterns with TodoWrite discipline to ensure consistent, high-quality development*
+## 📚 Related Documentation
+
+- **[DEBUG_FIRST_PRINCIPLES.md](DEBUG_FIRST_PRINCIPLES.md)**: Evidence-based debugging methodology
+- **[CODE_QUALITY_CHECKLIST.md](CODE_QUALITY_CHECKLIST.md)**: Comprehensive quality gates for complex changes
+- **[TESTING_STRATEGY.md](../TESTING_STRATEGY.md)**: Test-first development patterns and practices
+
+## 🎯 Process Integration
+
+**For complex changes affecting multiple components:**
+1. Follow this IMPLEMENTATION_WORKFLOW.md for TDD process
+2. Apply CODE_QUALITY_CHECKLIST.md for comprehensive quality gates  
+3. Use DEBUG_FIRST_PRINCIPLES.md when issues arise
+4. Maintain TodoWrite discipline throughout
+
+**For debugging sessions:**
+1. Start with DEBUG_FIRST_PRINCIPLES.md evidence collection
+2. Apply systematic root cause analysis
+3. Implement fixes using this workflow's TDD approach
+4. Validate with appropriate sections of CODE_QUALITY_CHECKLIST.md
+
+*This workflow integrates our TESTING_STRATEGY.md patterns with TodoWrite discipline and evidence-based debugging to ensure consistent, high-quality development*
