@@ -32,7 +32,7 @@ from rich.text import Text
 @dataclass
 class RichProgressStats:
     """Statistics for progress tracking with enhanced metrics."""
-    
+
     total: int = 0
     completed: int = 0
     succeeded: int = 0
@@ -79,14 +79,14 @@ class RichProgressDisplay:
             width=width,
             no_color=no_color,
             legacy_windows=False,  # Disable legacy Windows mode to avoid encoding issues
-            _environ={'TERM': 'xterm-256color'},  # Force modern terminal detection
+            _environ={"TERM": "xterm-256color"},  # Force modern terminal detection
         )
-        
+
         self.show_stats = show_stats
         self.stats = RichProgressStats()
         self.current_filename = ""
         self.current_target_filename = ""
-        
+
         # Rich Progress components
         self._progress = None
         self._task_id: Optional[TaskID] = None
@@ -97,7 +97,7 @@ class RichProgressDisplay:
         """Initialize the delightful progress display."""
         self.stats.total = total
         self.stats.start_time = time.time()
-        
+
         # Create Rich progress bar with beautiful styling
         self._progress = Progress(
             SpinnerColumn("dots12", style="cyan"),
@@ -117,11 +117,9 @@ class RichProgressDisplay:
             console=self.console,
             expand=True,
         )
-        
-        self._task_id = self._progress.add_task(
-            f"[cyan]{description}[/cyan]", total=total
-        )
-        
+
+        self._task_id = self._progress.add_task(f"[cyan]{description}[/cyan]", total=total)
+
         # Start live display
         self._start_live_display()
 
@@ -148,7 +146,7 @@ class RichProgressDisplay:
 
         # Update the task description with current file and status
         self._update_task_description()
-        
+
         if increment:
             self._progress.advance(self._task_id, 1)
 
@@ -156,13 +154,15 @@ class RichProgressDisplay:
         """Add a successful processing with celebration."""
         self.stats.succeeded += 1
         if filename:
-            self.stats._processed_files.append({
-                'source': filename,
-                'target': target_filename or filename,
-                'status': 'success',
-                'timestamp': time.time()
-            })
-        
+            self.stats._processed_files.append(
+                {
+                    "source": filename,
+                    "target": target_filename or filename,
+                    "status": "success",
+                    "timestamp": time.time(),
+                }
+            )
+
         # Update status to show success
         self._status_text = "completed"
         self._update_task_description()
@@ -178,6 +178,10 @@ class RichProgressDisplay:
     def add_error(self, filename: str = "") -> None:
         """Add error count with visual feedback."""
         self.stats.failed += 1
+        if filename:
+            self.stats._processed_files.append(
+                {"source": filename, "target": "", "status": "failed", "timestamp": time.time()}
+            )
         self._status_text = "failed"
         self._update_task_description()
 
@@ -198,69 +202,68 @@ class RichProgressDisplay:
         }
 
         icon, color, text = status_styles.get(self._status_text, ("•", "white", ""))
-        
+
         # Format current filename for display
         display_name = self.current_target_filename or self.current_filename
         if display_name:
             # Truncate long filenames gracefully
             if len(display_name) > 40:
                 display_name = f"{display_name[:37]}..."
-            
+
             file_display = f"[dim cyan]→[/dim cyan] [bright_white]{display_name}[/bright_white]"
         else:
             file_display = ""
-        
+
         # Create rich description
         if text and file_display:
-            description = f"[cyan]Processing Files[/cyan] {file_display} [{color}]{icon} {text}[/{color}]"
+            description = (
+                f"[cyan]Processing Files[/cyan] {file_display} [{color}]{icon} {text}[/{color}]"
+            )
         elif file_display:
             description = f"[cyan]Processing Files[/cyan] {file_display}"
         else:
             description = "[cyan]Processing Files[/cyan]"
-        
+
         self._progress.update(self._task_id, description=description)
 
     def _start_live_display(self) -> None:
         """Start the live Rich display."""
         if not self.show_stats:
             self._live = Live(
-                self._progress, 
-                console=self.console, 
-                refresh_per_second=10,
-                transient=True
+                self._progress, console=self.console, refresh_per_second=10, transient=True
             )
         else:
             # Create combined display with stats
             self._live = Live(
-                self._create_full_display(), 
-                console=self.console, 
+                self._create_full_display(),
+                console=self.console,
                 refresh_per_second=10,
-                transient=True
+                transient=True,
             )
-        
+
         self._live.start()
 
     def _create_full_display(self) -> Table:
         """Create the full display with progress and stats."""
         table = Table.grid()
         table.add_row(self._progress)
-        
+
         if self.show_stats and self.stats.total > 0:
             table.add_row(self._create_stats_display())
-        
+
         return table
 
     def _create_stats_display(self) -> Panel:
         """Create a beautiful stats panel."""
         stats_text = Text()
-        
+
         # Success stats
         if self.stats.succeeded > 0:
             stats_text.append("✅ ", style="bright_green")
             stats_text.append(f"{self.stats.succeeded} processed", style="bright_green")
             stats_text.append("  ")
 
-        # Warning stats  
+        # Warning stats
         if self.stats.warnings > 0:
             stats_text.append("⚠️ ", style="yellow")
             stats_text.append(f"{self.stats.warnings} warnings", style="yellow")
@@ -280,7 +283,7 @@ class RichProgressDisplay:
             time_str = f"{elapsed/60:.1f}m"
         else:
             time_str = f"{elapsed/3600:.1f}h"
-        
+
         stats_text.append("⏱️ ", style="dim cyan")
         stats_text.append(f"{time_str} elapsed", style="dim cyan")
 
@@ -303,7 +306,7 @@ class RichProgressDisplay:
         """Display a beautiful final summary."""
         # Create summary table
         summary_table = Table.grid(padding=1)
-        
+
         # Header
         if self.stats.succeeded == self.stats.total and self.stats.total > 0:
             # Perfect success - celebrate!
@@ -314,31 +317,40 @@ class RichProgressDisplay:
         else:
             # No successes
             header = Text(f"⚠️ {message}", style="bold yellow")
-        
+
         summary_table.add_row(header)
         summary_table.add_row("")
 
         # Stats summary
         if self.stats.total > 0:
             success_rate = self.stats.success_rate
-            
+
             stats_text = Text()
             stats_text.append("📊 Results: ", style="bold cyan")
             stats_text.append(f"Total: {self.stats.total}", style="white")
             stats_text.append(" • ", style="dim")
             stats_text.append(f"Successful: {self.stats.succeeded}", style="bright_green")
             stats_text.append(" • ", style="dim")
-            stats_text.append(f"Success Rate: {success_rate:.1f}%", 
-                             style="bright_green" if success_rate >= 80 else "yellow" if success_rate >= 50 else "red")
-            
+            stats_text.append(
+                f"Success Rate: {success_rate:.1f}%",
+                style=(
+                    "bright_green"
+                    if success_rate >= 80
+                    else "yellow" if success_rate >= 50 else "red"
+                ),
+            )
+
+            # Store completion summary for testing access
+            self._completion_summary = f"Success Rate: {success_rate:.1f}%"
+
             if self.stats.warnings > 0:
                 stats_text.append(" • ", style="dim")
                 stats_text.append(f"Warnings: {self.stats.warnings}", style="yellow")
-            
+
             if self.stats.failed > 0:
                 stats_text.append(" • ", style="dim")
                 stats_text.append(f"Errors: {self.stats.failed}", style="red")
-            
+
             # Time summary
             elapsed = self.stats.elapsed_time
             if elapsed < 60:
@@ -347,10 +359,10 @@ class RichProgressDisplay:
                 time_str = f"{elapsed/60:.1f}m"
             else:
                 time_str = f"{elapsed/3600:.1f}h"
-            
+
             stats_text.append(" • ", style="dim")
             stats_text.append(f"Time: {time_str}", style="cyan")
-            
+
             summary_table.add_row(stats_text)
 
         # Display in a nice panel
@@ -359,7 +371,7 @@ class RichProgressDisplay:
             border_style="bright_green" if self.stats.success_rate >= 80 else "yellow",
             padding=(1, 2),
         )
-        
+
         self.console.print()
         self.console.print(panel)
 
@@ -383,12 +395,14 @@ class RichProgressDisplay:
     def complete_file(self, filename: str, target_filename: str = "") -> None:
         """Complete file processing successfully."""
         self.add_success(filename, target_filename)
-        self.update(filename=filename, target_filename=target_filename, status="completed", increment=False)
+        self.update(
+            filename=filename, target_filename=target_filename, status="completed", increment=True
+        )
 
     def fail_file(self, filename: str, error: str = "") -> None:
         """Mark file processing as failed."""
         self.add_error(filename)
-        self.update(filename=filename, status="failed", increment=False)
+        self.update(filename=filename, status="failed", increment=True)
 
     def warn_file(self, filename: str, warning: str = "") -> None:
         """Add warning for file processing."""

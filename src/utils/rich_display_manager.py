@@ -57,7 +57,7 @@ class RichProcessingContext:
         """Start processing a new file."""
         self.current_file = filename
         self.display.progress.start_file(filename)
-        
+
         if self.display.options.verbose:
             self.display.cli.debug(f"Starting file: {filename}")
 
@@ -65,18 +65,33 @@ class RichProcessingContext:
         """Complete file processing successfully."""
         self.display.progress.complete_file(filename, target_filename)
         self.files_processed += 1
-        
+
         if self.display.options.verbose:
             success_msg = f"Completed: {filename}"
             if target_filename and target_filename != filename:
                 success_msg += f" → {target_filename}"
             self.display.cli.success(success_msg)
 
+    def set_status(self, status: str) -> None:
+        """Set current processing status."""
+        self.display.progress.set_status(status)
+
+        # Also show stage progress in verbose mode with simple descriptive messages
+        if self.display.options.verbose and status:
+            stage_messages = {
+                "extracting_content": "Extracting text content from document",
+                "generating_filename": "AI processing to generate intelligent filename",
+                "moving_file": "Organizing file to processed directory",
+                "completed": "File processing completed successfully",
+            }
+            if status in stage_messages:
+                self.display.cli.info(stage_messages[status])
+
     def fail_file(self, filename: str, error: str = "") -> None:
         """Mark file processing as failed."""
         self.display.progress.fail_file(filename, error)
         self.files_processed += 1
-        
+
         if not self.display.options.quiet:
             error_msg = f"Failed to process: {filename}"
             if error:
@@ -86,7 +101,7 @@ class RichProcessingContext:
     def skip_file(self, filename: str) -> None:
         """Skip a file (already processed)."""
         self.display.progress.skip_file(filename)
-        
+
         if self.display.options.verbose:
             self.display.cli.debug(f"Skipping (already processed): {filename}")
 
@@ -94,7 +109,7 @@ class RichProcessingContext:
         """Display a warning message."""
         if filename:
             self.display.progress.warn_file(filename, message)
-        
+
         if not self.display.options.quiet:
             self.display.cli.warning(message)
 
@@ -108,19 +123,19 @@ class RichDisplayManager:
 
     def __init__(self, options: Optional[RichDisplayOptions] = None):
         self.options = options or RichDisplayOptions()
-        
+
         # Create UTF-8 compatible output stream for Windows
         output_file = self.options.file or sys.stdout
-        if hasattr(output_file, 'buffer'):
+        if hasattr(output_file, "buffer"):
             # Wrap stdout with UTF-8 encoder for Windows compatibility
             output_file = io.TextIOWrapper(
                 output_file.buffer,
-                encoding='utf-8',
-                errors='replace',  # Replace non-encodable characters
-                newline='',
-                line_buffering=True
+                encoding="utf-8",
+                errors="replace",  # Replace non-encodable characters
+                newline="",
+                line_buffering=True,
             )
-        
+
         # Initialize Rich console
         self.console = Console(
             force_terminal=True,
@@ -130,13 +145,10 @@ class RichDisplayManager:
             file=output_file,
             legacy_windows=False,  # Disable legacy Windows mode
         )
-        
+
         # Initialize Rich components
-        self.cli = RichCLIDisplay(
-            no_color=self.options.no_color,
-            console=self.console
-        )
-        
+        self.cli = RichCLIDisplay(no_color=self.options.no_color, console=self.console)
+
         self.progress = RichProgressDisplay(
             no_color=self.options.no_color,
             show_stats=self.options.show_stats,
@@ -227,10 +239,10 @@ class RichDisplayManager:
         """Create a Rich processing context for file operations."""
         context = RichProcessingContext(self, total_files, description)
         try:
+            context.__enter__()
             yield context
         finally:
-            # Context cleanup is handled in __exit__
-            pass
+            context.__exit__(None, None, None)
 
     # Backward compatibility methods
     def show_message(self, message: str, level: str = MessageLevel.INFO, **kwargs) -> None:
@@ -276,11 +288,22 @@ class RichDisplayManager:
         if self.options.quiet:
             return
 
-        success_rate = stats.get("success_rate", 0.0)
+        # Calculate success rate from stats
         total_files = stats.get("total_files", 0)
+        successful = stats.get("successful", 0)
+        
+        if total_files > 0:
+            success_rate = (successful / total_files) * 100
+        else:
+            success_rate = stats.get("success_rate", 0.0)
+
         error_details = stats.get("error_details", [])
 
-        self.print_completion_message(success_rate, total_files)
+        # Only show completion message if we haven't already shown rich progress completion
+        # The Rich progress display already shows a beautiful completion summary
+        if not hasattr(self, 'progress') or not hasattr(self.progress, 'stats') or self.progress.stats.total == 0:
+            self.print_completion_message(success_rate, total_files)
+        
         self.print_error_summary(error_details)
 
 

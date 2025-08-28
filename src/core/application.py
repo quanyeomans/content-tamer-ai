@@ -61,9 +61,7 @@ def _setup_display_manager(display_options: Optional[dict]) -> DisplayManager:
     )
 
 
-def _setup_ai_client(
-    provider: str, model: Optional[str], display_manager: DisplayManager
-):
+def _setup_ai_client(provider: str, model: Optional[str], display_manager: DisplayManager):
     """Setup and validate AI client."""
     try:
         if model is None:
@@ -157,20 +155,14 @@ def _process_files_batch(
                         # Move file to unprocessed folder
                         try:
                             if os.path.exists(input_path):
-                                unprocessed_path = os.path.join(
-                                    unprocessed_dir, filename
-                                )
-                                organizer.file_manager.safe_move(
-                                    input_path, unprocessed_path
-                                )
+                                unprocessed_path = os.path.join(unprocessed_dir, filename)
+                                organizer.file_manager.safe_move(input_path, unprocessed_path)
                         except OSError:
                             pass  # Will be noted in error summary
 
                         ctx.fail_file(filename, "Processing failed")
                         failed_count += 1
-                        error_details.append(
-                            {"filename": filename, "error": "Processing failed"}
-                        )
+                        error_details.append({"filename": filename, "error": "Processing failed"})
         return True, successful_count, failed_count, error_details
     except KeyboardInterrupt:
         display_manager.warning("Process interrupted by user. Progress has been saved.")
@@ -243,9 +235,7 @@ def _setup_processing_environment(
     return ai_client, model, organizer, content_factory
 
 
-def _handle_no_files(
-    input_dir: str, supported_extensions: list, display_manager
-) -> bool:
+def _handle_no_files(input_dir: str, supported_extensions: list, display_manager) -> bool:
     """Handle case when no processable files are found."""
     display_manager.warning(f"No processable files found in {input_dir}")
     display_manager.info(f"Supported extensions: {', '.join(supported_extensions)}")
@@ -391,9 +381,7 @@ def organize_content(
 
     # Display completion summary
     progress_stats = (
-        display_manager.progress.stats
-        if hasattr(display_manager.progress, "stats")
-        else None
+        display_manager.progress.stats if hasattr(display_manager.progress, "stats") else None
     )
     _display_completion_summary(
         display_manager,

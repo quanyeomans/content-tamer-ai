@@ -462,17 +462,24 @@ def process_file(
 
         # Create mock display context for legacy compatibility
         class MockDisplayContext:
-            def set_status(self, status, **kwargs): pass
-            def show_warning(self, msg, **kwargs): pass
-            def show_error(self, msg, **kwargs): pass
-        
+            def set_status(self, status, **kwargs):
+                pass
+
+            def show_warning(self, msg, **kwargs):
+                pass
+
+            def show_error(self, msg, **kwargs):
+                pass
+
         mock_display = MockDisplayContext()
-        
+
         # Extract content from file
         text, img_b64 = _extract_file_content(input_path, ocr_lang, mock_display)
 
         # Generate appropriate filename
-        new_file_name = _generate_filename(text, img_b64, ai_client, organizer, mock_display, filename=filename)
+        new_file_name = _generate_filename(
+            text, img_b64, ai_client, organizer, mock_display, filename=filename
+        )
 
         # Handle successful processing
         _handle_file_success(

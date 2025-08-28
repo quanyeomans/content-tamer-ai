@@ -19,6 +19,7 @@ from rich.rule import Rule
 
 class MessageLevel:
     """Message level constants for consistent styling."""
+
     DEBUG = "debug"
     INFO = "info"
     SUCCESS = "success"
@@ -37,9 +38,9 @@ class RichCLIDisplay:
             stderr=False,
             no_color=no_color,
             legacy_windows=False,  # Disable legacy Windows mode to avoid encoding issues
-            _environ={'TERM': 'xterm-256color'},  # Force modern terminal detection
+            _environ={"TERM": "xterm-256color"},  # Force modern terminal detection
         )
-        
+
         # Message styling configuration
         self.styles = {
             MessageLevel.DEBUG: ("🔍", "dim cyan", "DEBUG"),
@@ -77,12 +78,12 @@ class RichCLIDisplay:
     def _print_message(self, message: str, level: str, **kwargs) -> None:
         """Print formatted message with appropriate styling."""
         icon, color, label = self.styles[level]
-        
+
         # Create formatted message
         text = Text()
         text.append(f"[{label}] ", style=f"bold {color}")
         text.append(message, style=color if level == MessageLevel.CRITICAL else "")
-        
+
         self.console.print(text, **kwargs)
 
     def print_header(self, title: str, subtitle: str = "") -> None:
@@ -90,7 +91,7 @@ class RichCLIDisplay:
         header_text = Text()
         header_text.append("🎯 ", style="bold cyan")
         header_text.append(title.upper(), style="bold bright_cyan")
-        
+
         if subtitle:
             header_text.append("\n")
             header_text.append(subtitle, style="dim cyan")
@@ -100,7 +101,7 @@ class RichCLIDisplay:
             border_style="bright_cyan",
             padding=(1, 2),
         )
-        
+
         self.console.print()
         self.console.print(panel)
         self.console.print()
@@ -112,25 +113,29 @@ class RichCLIDisplay:
     def print_capabilities(self, ocr_deps: dict, ocr_settings: dict) -> None:
         """Display system capabilities with beautiful formatting."""
         self.print_section("System Capabilities", "bright_blue")
-        
+
         # Create capabilities table
         table = Table(show_header=False, box=None, padding=(0, 2))
         table.add_column("Component", style="cyan", min_width=15)
         table.add_column("Status", min_width=10)
         table.add_column("Details", style="dim")
-        
+
         # OCR dependencies
         for dep, available in ocr_deps.items():
             status_icon = "✅" if available else "❌"
             status_text = "Available" if available else "Missing"
             status_style = "green" if available else "red"
-            
+
             table.add_row(
                 f"{dep}:",
                 f"[{status_style}]{status_icon} {status_text}[/{status_style}]",
-                f"Required for PDF text extraction" if dep == "PyMuPDF" else "Required for image OCR"
+                (
+                    f"Required for PDF text extraction"
+                    if dep == "PyMuPDF"
+                    else "Required for image OCR"
+                ),
             )
-        
+
         # OCR settings
         table.add_row("", "", "")  # Spacer
         for setting, value in ocr_settings.items():
@@ -139,26 +144,36 @@ class RichCLIDisplay:
             elif setting == "OCR_PAGES":
                 table.add_row("Max Pages:", f"[cyan]{value}[/cyan]", "Pages processed per document")
             elif setting == "OCR_ZOOM":
-                table.add_row("Image Zoom:", f"[cyan]{value}x[/cyan]", "Resolution enhancement factor")
-        
+                table.add_row(
+                    "Image Zoom:", f"[cyan]{value}x[/cyan]", "Resolution enhancement factor"
+                )
+
         self.console.print(table)
         self.console.print()
 
     def print_api_key_prompt(self, provider: str) -> None:
         """Display beautiful API key input prompt."""
         self.print_section(f"{provider.title()} API Key", "magenta")
-        
+
         # Create informative panel
         info_text = Text()
         info_text.append("🔐 ", style="yellow")
         info_text.append("Type or paste your API key (you'll see it as you type)\n", style="white")
         info_text.append("🔑 ", style="cyan")
-        info_text.append(f"{provider.title()} keys start with 'sk-' and are typically 40-60 characters\n", style="dim")
+        info_text.append(
+            f"{provider.title()} keys start with 'sk-' and are typically 40-60 characters\n",
+            style="dim",
+        )
         info_text.append("💡 ", style="green")
-        info_text.append(f"You can set {provider.upper()}_API_KEY environment variable to skip this step\n", style="dim")
+        info_text.append(
+            f"You can set {provider.upper()}_API_KEY environment variable to skip this step\n",
+            style="dim",
+        )
         info_text.append("🔒 ", style="blue")
-        info_text.append("Your key will be validated and cleared from display after entry", style="dim")
-        
+        info_text.append(
+            "Your key will be validated and cleared from display after entry", style="dim"
+        )
+
         panel = Panel(
             info_text,
             title="API Key Input",
@@ -166,20 +181,20 @@ class RichCLIDisplay:
             border_style="magenta",
             padding=(1, 2),
         )
-        
+
         self.console.print(panel)
 
     def print_api_key_validation(self, key: str, key_length: int) -> None:
         """Display API key validation results."""
         masked_key = f"{key[:8]}{'*' * (key_length - 16)}{key[-8:]}"
-        
+
         validation_text = Text()
         validation_text.append("[OK] ", style="bold green")
         validation_text.append("Received API key: ", style="white")
         validation_text.append(f"{masked_key} ({key_length} characters)", style="cyan")
-        
+
         self.console.print(validation_text)
-        
+
         # Validation success
         success_text = Text()
         success_text.append("[OK] ", style="bold green")
@@ -191,22 +206,22 @@ class RichCLIDisplay:
         setup_text = Text()
         setup_text.append("[OK] ", style="bold green")
         setup_text.append(f"{provider.title()} API key accepted and secured.", style="green")
-        
+
         self.console.print(setup_text)
         self.console.print()
-        
+
         # Model info
         model_text = Text()
         model_text.append("[INFO] ", style="bold blue")
         model_text.append(f"Using {provider} provider with model ", style="blue")
         model_text.append(model, style="bold cyan")
-        
+
         self.console.print(model_text)
 
     def print_directory_info(self, directories: dict) -> None:
         """Display directory configuration with clear paths."""
         self.console.print()
-        
+
         # Create directory info table
         for label, path in directories.items():
             info_text = Text()
@@ -218,24 +233,20 @@ class RichCLIDisplay:
     def print_available_models(self, providers: dict) -> None:
         """Display available models in beautiful table format."""
         self.print_section("Available AI Models", "bright_magenta")
-        
+
         # Create models table
         table = Table(show_header=True, header_style="bold bright_magenta")
         table.add_column("Provider", style="cyan", min_width=12)
         table.add_column("Available Models", style="white")
         table.add_column("Recommended", style="green")
-        
+
         # Add provider rows
         for provider, models in providers.items():
             models_text = ", ".join(models)
             recommended = models[0] if models else "N/A"  # First model is usually default
-            
-            table.add_row(
-                provider.title(),
-                models_text,
-                f"✨ {recommended}"
-            )
-        
+
+            table.add_row(provider.title(), models_text, f"✨ {recommended}")
+
         self.console.print(table)
         self.console.print()
 
@@ -243,27 +254,27 @@ class RichCLIDisplay:
         """Display error summary with helpful formatting."""
         if not error_details:
             return
-            
+
         self.print_section("Detailed Error Summary", "red")
-        
+
         for error in error_details:
-            filename = error.get('filename', 'Unknown file')
-            error_msg = error.get('error', 'Unknown error')
-            
+            filename = error.get("filename", "Unknown file")
+            error_msg = error.get("error", "Unknown error")
+
             error_text = Text()
             error_text.append("[ERROR] ", style="bold red")
             error_text.append("❌ ", style="red")
             error_text.append(f"{filename}: ", style="bright_white")
             error_text.append(error_msg, style="red")
-            
+
             self.console.print(error_text)
-        
+
         self.console.print()
 
     def print_completion_message(self, success_rate: float, total_files: int) -> None:
         """Display completion message with appropriate celebration level."""
         self.console.print()
-        
+
         if success_rate >= 100:
             # Perfect success!
             completion_text = Text()
@@ -288,13 +299,13 @@ class RichCLIDisplay:
             completion_text.append("[ERROR] ", style="bold red")
             completion_text.append("Processing complete: ", style="red")
             completion_text.append("0.0% success rate", style="bright_red")
-        
+
         self.console.print(completion_text)
 
     def highlight_filename(self, filename: str) -> Text:
         """Create highlighted filename text for display."""
         text = Text()
-        
+
         # Split filename and extension
         if "." in filename:
             name, ext = filename.rsplit(".", 1)
@@ -303,7 +314,7 @@ class RichCLIDisplay:
             text.append(ext, style="cyan")
         else:
             text.append(filename, style="bright_white")
-        
+
         return text
 
     def format_time(self, seconds: float) -> str:
