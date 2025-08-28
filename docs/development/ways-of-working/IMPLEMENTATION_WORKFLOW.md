@@ -43,11 +43,19 @@ def test_specific_user_behavior(self):
 - [ ] **Import optimization**: Remove unused imports
 - [ ] **PEP 8 compliance**: Ensure proper formatting
 
-### Security Validation
-- [ ] **API key safety**: Verify no API keys in logs/displays
+### **🚨 MANDATORY Security & Quality Gates**
+- [ ] **SAST Scan Clean**: `bandit -r src/ -f text` shows no HIGH/MEDIUM issues
+- [ ] **Dependency Scan**: `safety check` shows no known vulnerabilities  
+- [ ] **Code Quality**: `pylint src/ --fail-under=8.0` passes minimum threshold
+- [ ] **Type Safety**: `mypy src/ --ignore-missing-imports` shows no critical errors
+- [ ] **Formatting**: `black --check src/` and `isort --check-only src/` pass
+
+### Security Validation (Enhanced)
+- [ ] **API key safety**: Verify no API keys in logs/displays using `grep -r "sk-" src/`
 - [ ] **Path security**: Validate file paths against directory traversal
-- [ ] **Input validation**: Check all user inputs are sanitized
-- [ ] **Error handling**: Ensure safe error messages
+- [ ] **Input validation**: Check all user inputs are sanitized  
+- [ ] **Error handling**: Ensure safe error messages (no stack traces with secrets)
+- [ ] **XML/JSON parsing**: Use secure parsers (defusedxml, not ElementTree)
 
 ## 🔗 STEP 4: Integration Testing (If Multi-Component)
 

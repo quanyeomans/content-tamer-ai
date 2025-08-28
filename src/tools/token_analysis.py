@@ -5,9 +5,9 @@ Quick test to analyze optimal token settings for 160-character filenames.
 import os
 import sys
 
-sys.path.append("src")
-
 from utils.text_utils import ENCODING
+
+sys.path.append("src")
 
 
 def analyze_filename_tokens():
@@ -34,7 +34,7 @@ def analyze_filename_tokens():
 
         print(f"Test {i}: {char_count} chars, {token_count} tokens")
         print(f"  '{filename}'")
-        print(f"  Ratio: {char_count/token_count:.2f} chars/token")
+        print(f"  Ratio: {char_count / token_count:.2f} chars/token")
         print()
 
     # Calculate optimal token allocation
@@ -43,9 +43,9 @@ def analyze_filename_tokens():
     optimal_tokens = int(max_chars / avg_chars_per_token * 1.2)  # 20% buffer
 
     print("=== Recommendations ===")
-    print(f"Current AI output tokens: 60-64")
+    print("Current AI output tokens: 60-64")
     print(f"Optimal AI output tokens: {optimal_tokens}")
-    print(f"Current prompt instruction: '50 characters max'")
+    print("Current prompt instruction: '50 characters max'")
     print(f"Optimal prompt instruction: '{max_chars} characters max'")
 
     # Test content truncation limits
@@ -56,7 +56,7 @@ def analyze_filename_tokens():
 
     print(f"Sample content: {len(sample_content)} chars, {token_count} tokens")
     print(f"Current input limit: {current_limit} tokens")
-    print(f"Utilization: {(current_limit/token_count)*100:.1f}% of sample content")
+    print(f"Utilization: {(current_limit / token_count) * 100:.1f}% of sample content")
 
 
 if __name__ == "__main__":

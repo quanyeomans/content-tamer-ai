@@ -65,20 +65,14 @@ class FileManager:
             os.remove(src)
         except OSError as e:
             # Raise the current error, or the last error if current is None
-            raise (
-                e
-                if e is not None
-                else (last_err or OSError("Unknown file operation error"))
-            )
+            raise (e if e is not None else (last_err or OSError("Unknown file operation error")))
 
 
 class ProgressTracker:
     """Progress tracking for resumable batch processing."""
 
     @staticmethod
-    def load_progress(
-        progress_file: str, input_dir: str, reset_progress: bool = False
-    ) -> Set[str]:
+    def load_progress(progress_file: str, input_dir: str, reset_progress: bool = False) -> Set[str]:
         """Load processed files list with optional reset."""
         if reset_progress and os.path.exists(progress_file):
             try:
@@ -113,7 +107,7 @@ class ProgressTracker:
             progress_file_obj.write(f"{filename}\n")
             progress_file_obj.flush()
             file_manager.unlock_file(progress_file_obj)
-        except (OSError, ValueError) as e:
+        except (OSError, ValueError):
             # If locking fails, try without locking (for tests and edge cases)
             try:
                 progress_file_obj.write(f"{filename}\n")
@@ -149,9 +143,7 @@ class FilenameHandler:
         return cleaned_filename[:160]  # Limit length for filesystem compatibility
 
     @staticmethod
-    def handle_duplicate_filename(
-        filename: str, folder: str, extension: str = ".pdf"
-    ) -> str:
+    def handle_duplicate_filename(filename: str, folder: str, extension: str = ".pdf") -> str:
         """Resolve filename collisions by appending numeric suffix."""
         base_filename = filename
         counter = 1
@@ -215,9 +207,7 @@ class FileOrganizer:
 
     # Future domain organization features
 
-    def organize_by_content_type(
-        self, files: List[str], base_dir: str
-    ) -> Dict[str, List[str]]:
+    def organize_by_content_type(self, files: List[str], base_dir: str) -> Dict[str, List[str]]:
         """Organize files by content type (placeholder for AI-powered categorization)."""
         # Future: AI analysis for document types (invoices, contracts, reports, etc.)
 
@@ -234,9 +224,7 @@ class FileOrganizer:
 
         return organization_map
 
-    def organize_by_date_pattern(
-        self, files: List[str], base_dir: str
-    ) -> Dict[str, List[str]]:
+    def organize_by_date_pattern(self, files: List[str], base_dir: str) -> Dict[str, List[str]]:
         """Organize files by temporal patterns (placeholder for date extraction)."""
         # Future: Extract dates from content/filenames for chronological organization
 
@@ -247,9 +235,7 @@ class FileOrganizer:
 
         return organization_map
 
-    def create_domain_folders(
-        self, base_dir: str, domains: List[str]
-    ) -> Dict[str, str]:
+    def create_domain_folders(self, base_dir: str, domains: List[str]) -> Dict[str, str]:
         """Create domain-specific folder structure."""
         domain_paths = {}
         for domain in domains:

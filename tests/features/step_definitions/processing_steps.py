@@ -41,16 +41,12 @@ def test_user_encounters_temporary_file_locks():
     pass
 
 
-@scenario(
-    "../document_processing.feature", "User processes mixed file types successfully"
-)
+@scenario("../document_processing.feature", "User processes mixed file types successfully")
 def test_user_processes_mixed_file_types_successfully():
     pass
 
 
-@scenario(
-    "../document_processing.feature", "User understands which files failed and why"
-)
+@scenario("../document_processing.feature", "User understands which files failed and why")
 def test_user_understands_which_files_failed_and_why():
     pass
 
@@ -119,9 +115,7 @@ def lock_file_temporarily(bdd_context):
     # We'll simulate this in the processing step with retry logic
     bdd_context.file_locked_scenario = True
     bdd_context.locked_file = (
-        bdd_context.test_files[1]
-        if len(bdd_context.test_files) > 1
-        else bdd_context.test_files[0]
+        bdd_context.test_files[1] if len(bdd_context.test_files) > 1 else bdd_context.test_files[0]
     )
 
 
@@ -132,9 +126,7 @@ def run_document_processing(bdd_context):
     from utils.display_manager import DisplayManager, DisplayOptions
 
     # Set fake API key to avoid prompting during tests
-    with patch.dict(
-        os.environ, {"OPENAI_API_KEY": "sk-fake-test-key-just-for-testing"}
-    ):
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-fake-test-key-just-for-testing"}):
         # Capture display output for user experience validation
         bdd_context.display_output = StringIO()
         display_options = DisplayOptions(quiet=False, file=bdd_context.display_output)
@@ -144,13 +136,8 @@ def run_document_processing(bdd_context):
             # Determine which file this is based on content
             for filename, response in bdd_context.ai_mock_responses.items():
                 # Simple matching - in real scenario this would be more sophisticated
-                base_name = (
-                    filename.replace(".pdf", "").replace(".png", "").replace(".txt", "")
-                )
-                if (
-                    base_name.split("_")[-1] in content
-                    or len(bdd_context.ai_mock_responses) == 1
-                ):
+                base_name = filename.replace(".pdf", "").replace(".png", "").replace(".txt", "")
+                if base_name.split("_")[-1] in content or len(bdd_context.ai_mock_responses) == 1:
                     return response
             return "ai_generated_default"
 
@@ -159,16 +146,12 @@ def run_document_processing(bdd_context):
             with patch("ai_providers.AIProviderFactory.create") as mock_ai_factory:
                 mock_get_api.return_value = "sk-fake-test-key-just-for-testing"
                 mock_ai_client = Mock()
-                mock_ai_client.generate_filename.side_effect = (
-                    mock_ai_filename_generator
-                )
+                mock_ai_client.generate_filename.side_effect = mock_ai_filename_generator
                 mock_ai_factory.return_value = mock_ai_client
 
                 # Handle file locking scenario if needed
                 if hasattr(bdd_context, "file_locked_scenario"):
-                    with patch(
-                        "core.file_processor.process_file_enhanced_core"
-                    ) as mock_processor:
+                    with patch("core.file_processor.process_file_enhanced_core") as mock_processor:
                         # Simulate retry scenario: fail twice, then succeed
                         call_count = 0
                         original_files = list(bdd_context.test_files)
@@ -178,10 +161,7 @@ def run_document_processing(bdd_context):
                             call_count += 1
                             input_path = args[0]
 
-                            if (
-                                input_path == bdd_context.locked_file
-                                and call_count <= 2
-                            ):
+                            if input_path == bdd_context.locked_file and call_count <= 2:
                                 # Simulate temporary file lock
                                 raise OSError("File temporarily locked by antivirus")
                             else:
@@ -236,9 +216,7 @@ def verify_ai_generated_names(bdd_context):
 
     # Verify AI-generated naming pattern
     for filename in processed_files:
-        assert (
-            "ai_generated" in filename
-        ), f"File should have AI-generated name: {filename}"
+        assert "ai_generated" in filename, f"File should have AI-generated name: {filename}"
 
     # Verify all original files were processed
     original_count = len(bdd_context.test_files)
@@ -317,18 +295,14 @@ def verify_file_type_messages(bdd_context):
     """Verify user sees appropriate messages for different file types."""
     display_text = bdd_context.display_output.getvalue()
     # User should see evidence that different file types were handled
-    assert (
-        len(display_text) > 0
-    ), "Should see processing messages for different file types"
+    assert len(display_text) > 0, "Should see processing messages for different file types"
 
 
 @then(parsers.parse("I should see {num:d} file failed with clear error message"))
 def verify_clear_error_message(bdd_context, num):
     """Verify user sees clear error message for failed files."""
     display_text = bdd_context.display_output.getvalue()
-    error_indicators = display_text.lower().count("error") + display_text.lower().count(
-        "failed"
-    )
+    error_indicators = display_text.lower().count("error") + display_text.lower().count("failed")
     assert error_indicators >= num, f"Should see error indication for {num} file(s)"
 
 
@@ -336,9 +310,7 @@ def verify_clear_error_message(bdd_context, num):
 def verify_failed_file_location(bdd_context):
     """Verify failed files are moved to unprocessed directory."""
     unprocessed_files = os.listdir(bdd_context.unprocessed_dir)
-    assert (
-        len(unprocessed_files) > 0
-    ), "Failed files should appear in unprocessed directory"
+    assert len(unprocessed_files) > 0, "Failed files should appear in unprocessed directory"
 
 
 @then(

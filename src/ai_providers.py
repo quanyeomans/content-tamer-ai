@@ -7,7 +7,7 @@ interface for adding new providers, including local LLM support.
 
 import json
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 import requests
 
@@ -157,7 +157,7 @@ class OpenAIProvider(AIProvider):
                         ),
                     }
                 )
-            except SecurityError as e:
+            except SecurityError:
                 # If content is suspicious, use a safe fallback
                 parts.append(
                     {
@@ -233,15 +233,9 @@ class OpenAIProvider(AIProvider):
             except Exception as e:
                 # Handle image-related errors by checking message content
                 msg = str(e).lower()
-                if (
-                    "image" in msg or "vision" in msg
-                ):  # Model doesn't support images, retry without
+                if "image" in msg or "vision" in msg:  # Model doesn't support images, retry without
                     raw = self._handle_image_error(base, parts, client)
-                elif (
-                    HAVE_OPENAI
-                    and hasattr(e, "__class__")
-                    and "APIError" in str(type(e))
-                ):
+                elif HAVE_OPENAI and hasattr(e, "__class__") and "APIError" in str(type(e)):
                     # Handle other OpenAI API errors
                     raise
                 else:
@@ -262,9 +256,7 @@ class GeminiProvider(AIProvider):
     def __init__(self, api_key: str, model: str) -> None:
         super().__init__(api_key, model)
         if not HAVE_GEMINI or genai is None:
-            raise ImportError(
-                "Please install Google Generative AI: pip install google-genai"
-            )
+            raise ImportError("Please install Google Generative AI: pip install google-genai")
         genai.configure(api_key=api_key)  # type: ignore
         self.client = genai.GenerativeModel(model)  # type: ignore
 
@@ -351,9 +343,7 @@ class DeepseekProvider(AIProvider):
             "temperature": 0.2,
         }
         try:
-            response = requests.post(
-                self.base_url, headers=headers, json=data, timeout=30
-            )
+            response = requests.post(self.base_url, headers=headers, json=data, timeout=30)
             if response.status_code != 200:
                 raise RuntimeError(
                     f"Status code: {response.status_code}, Response: {response.text}"

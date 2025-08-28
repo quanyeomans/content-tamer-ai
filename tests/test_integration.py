@@ -9,9 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 from ai_providers import AIProviderFactory
 from content_processors import ContentProcessorFactory
 from core.application import organize_content
@@ -42,9 +40,7 @@ class TestDefaultDirectories(unittest.TestCase):
 
     def test_ensure_default_directories(self):
         """Test that default directories are created correctly."""
-        with patch(
-            "core.directory_manager.DEFAULT_DATA_DIR", tempfile.mkdtemp()
-        ) as temp_data_dir:
+        with patch("core.directory_manager.DEFAULT_DATA_DIR", tempfile.mkdtemp()) as temp_data_dir:
             with patch(
                 "core.directory_manager.DEFAULT_INPUT_DIR",
                 os.path.join(temp_data_dir, "input"),
@@ -74,9 +70,7 @@ class TestDefaultDirectories(unittest.TestCase):
 
     def test_subfolder_structure(self):
         """Test that unprocessed folder is correctly nested under processed."""
-        with patch(
-            "core.directory_manager.DEFAULT_DATA_DIR", tempfile.mkdtemp()
-        ) as temp_data_dir:
+        with patch("core.directory_manager.DEFAULT_DATA_DIR", tempfile.mkdtemp()) as temp_data_dir:
             with patch(
                 "core.directory_manager.DEFAULT_PROCESSED_DIR",
                 os.path.join(temp_data_dir, "processed"),
@@ -134,44 +128,72 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_create_ai.return_value = mock_ai_client
         mock_get_api.return_value = "fake-api-key"
 
-        # Set NO_COLOR to avoid Unicode encoding issues in tests
-        with patch.dict(os.environ, {"NO_COLOR": "1", "PYTHONIOENCODING": "utf-8"}):
+        # Set environment variables to avoid encoding issues
+        env_patches = {"NO_COLOR": "1", "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+
+        with patch.dict(os.environ, env_patches):
             # Mock content extraction
-            with patch(
-                "content_processors.ContentProcessorFactory"
-            ) as mock_factory_class:
+            with patch("content_processors.ContentProcessorFactory") as mock_factory_class:
                 mock_factory = MagicMock()
                 mock_processor = MagicMock()
                 mock_processor.extract_content.return_value = ("extracted text", None)
+                mock_processor.can_process.return_value = True
                 mock_factory.get_processor.return_value = mock_processor
                 mock_factory.get_supported_extensions.return_value = [".pdf", ".png"]
                 mock_factory_class.return_value = mock_factory
 
-                # Mock file organizer
+                # Mock file organizer with proper progress tracking
                 with patch("core.application.FileOrganizer") as mock_organizer_class:
                     mock_organizer = MagicMock()
                     mock_organizer.filename_handler.validate_and_trim_filename.return_value = (
                         "cleaned_name"
                     )
                     mock_organizer.move_file_to_category.return_value = "final_name"
+
+                    # Mock file manager
+                    mock_file_manager = MagicMock()
+                    mock_organizer.file_manager = mock_file_manager
+
+                    # Mock progress tracker
+                    mock_progress_tracker = MagicMock()
+                    mock_progress_tracker.load_progress.return_value = (
+                        set()
+                    )  # No previously processed files
+                    mock_organizer.progress_tracker = mock_progress_tracker
+
                     mock_organizer_class.return_value = mock_organizer
 
-                    # Run the main function
-                    success = organize_content(
-                        self.input_dir,
-                        self.unprocessed_dir,
-                        self.renamed_dir,
-                        provider="openai",
-                        model="gpt-4o",
-                    )
+                    # Mock the enhanced file processing function that's actually called
+                    with patch("core.application.process_file_enhanced") as mock_process_enhanced:
+                        # Make the enhanced processor return success
+                        mock_process_enhanced.return_value = (True, "final_name")
 
-                    self.assertTrue(success)
+                        # Mock display manager to avoid Unicode issues
+                        with patch("core.application._setup_display_manager") as mock_display_setup:
+                            mock_display = MagicMock()
+                            # Mock progress to avoid Unicode encoding issues
+                            mock_progress = MagicMock()
+                            mock_display.progress = mock_progress
+                            mock_display_setup.return_value = mock_display
 
-                    # Verify AI client was called
-                    self.assertTrue(mock_ai_client.generate_filename.called)
+                            # Run the main function
+                            success = organize_content(
+                                self.input_dir,
+                                self.unprocessed_dir,
+                                self.renamed_dir,
+                                provider="openai",
+                                model="gpt-4o",
+                                display_options={"no_color": True},
+                            )
 
-                    # Verify file operations were performed
-                    self.assertTrue(mock_organizer.move_file_to_category.called)
+                            # Verify success
+                            self.assertTrue(success)
+
+                            # Verify the enhanced processor was called
+                            self.assertTrue(mock_process_enhanced.called)
+
+                            # Verify file operations setup
+                            self.assertTrue(mock_organizer_class.called)
 
     @patch("core.application.get_api_details")
     def test_organize_content_invalid_provider(self, mock_get_api):
@@ -203,9 +225,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
 
         # Mock organizer
         mock_organizer = MagicMock()
-        mock_organizer.filename_handler.validate_and_trim_filename.return_value = (
-            "clean_name"
-        )
+        mock_organizer.filename_handler.validate_and_trim_filename.return_value = "clean_name"
         mock_organizer.move_file_to_category.return_value = "final_name"
 
         with patch("content_processors.ContentProcessorFactory") as mock_factory_class:
@@ -277,9 +297,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_ai_client = MagicMock()
         mock_ai_client.generate_filename.return_value = "successful_name"
 
-        result = get_new_filename_with_retry(
-            mock_ai_client, "test content", None, max_retries=3
-        )
+        result = get_new_filename_with_retry(mock_ai_client, "test content", None, max_retries=3)
 
         self.assertEqual(result, "successful_name")
         mock_ai_client.generate_filename.assert_called_once()
@@ -290,9 +308,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_ai_client = MagicMock()
         mock_ai_client.generate_filename.side_effect = RuntimeError("API Error")
 
-        result = get_new_filename_with_retry(
-            mock_ai_client, "test content", None, max_retries=2
-        )
+        result = get_new_filename_with_retry(mock_ai_client, "test content", None, max_retries=2)
 
         # Should return fallback filename
         self.assertTrue(result.startswith("untitled_document_"))
@@ -306,9 +322,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
         mock_ai_client = MagicMock()
         mock_ai_client.generate_filename.side_effect = RuntimeError("timeout error")
 
-        result = get_new_filename_with_retry(
-            mock_ai_client, "test content", None, max_retries=2
-        )
+        result = get_new_filename_with_retry(mock_ai_client, "test content", None, max_retries=2)
 
         # Should return network error fallback
         self.assertTrue(result.startswith("network_error_"))

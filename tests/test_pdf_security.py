@@ -11,9 +11,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from utils.security import PDFAnalyzer, PDFThreatAnalysis, ThreatLevel
 
@@ -34,9 +32,7 @@ class TestPDFThreatAnalysis(unittest.TestCase):
 
     def test_safe_analysis(self):
         """Test safe PDF analysis results."""
-        analysis = PDFThreatAnalysis(
-            ThreatLevel.SAFE, {"javascript": 0}, "PDF appears safe"
-        )
+        analysis = PDFThreatAnalysis(ThreatLevel.SAFE, {"javascript": 0}, "PDF appears safe")
 
         self.assertTrue(analysis.is_safe)
         self.assertFalse(analysis.should_warn)
@@ -54,9 +50,7 @@ class TestPDFThreatAnalysis(unittest.TestCase):
 
     def test_medium_threat_analysis(self):
         """Test medium threat PDF analysis results."""
-        analysis = PDFThreatAnalysis(
-            ThreatLevel.MEDIUM, {"javascript": 1}, "JavaScript detected"
-        )
+        analysis = PDFThreatAnalysis(ThreatLevel.MEDIUM, {"javascript": 1}, "JavaScript detected")
 
         self.assertFalse(analysis.is_safe)
         self.assertTrue(analysis.should_warn)

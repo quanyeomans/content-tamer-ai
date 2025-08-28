@@ -109,14 +109,10 @@ def encounter_file_path_errors(platform_context):
         if platform_context.platform_name == "Windows":
             invalid_chars = ["<", ">", ":", '"', "|", "?", "*"]
             test_char = invalid_chars[0]  # Test with '<'
-            invalid_path = os.path.join(
-                platform_context.input_dir, f"invalid{test_char}file.txt"
-            )
+            invalid_path = os.path.join(platform_context.input_dir, f"invalid{test_char}file.txt")
         else:
             # On Unix-like systems, test with null character
-            invalid_path = os.path.join(
-                platform_context.input_dir, "invalid\x00file.txt"
-            )
+            invalid_path = os.path.join(platform_context.input_dir, "invalid\x00file.txt")
 
         with open(invalid_path, "w") as f:
             f.write("This should fail on some platforms")
@@ -173,9 +169,7 @@ def verify_path_handling(platform_context):
 
         # Verify path normalization works
         normalized_path = os.path.normpath(file_path)
-        assert os.path.exists(
-            normalized_path
-        ), f"Normalized path should work: {normalized_path}"
+        assert os.path.exists(normalized_path), f"Normalized path should work: {normalized_path}"
 
 
 @then("the results should be consistent regardless of path format")
@@ -185,18 +179,14 @@ def verify_consistent_results(platform_context):
     for file_path in platform_context.test_files:
         with open(file_path, "r") as f:
             content = f.read()
-        assert (
-            "Test content" in content
-        ), f"File content should be readable: {file_path}"
+        assert "Test content" in content, f"File content should be readable: {file_path}"
 
 
 @then("error messages should be clear and platform-appropriate")
 def verify_platform_appropriate_errors(platform_context):
     """Verify error messages are appropriate for the platform."""
     # Should have encountered expected errors
-    assert (
-        len(platform_context.error_scenarios) > 0
-    ), "Should have tested error scenarios"
+    assert len(platform_context.error_scenarios) > 0, "Should have tested error scenarios"
 
     # Check that errors were handled (not crashed)
     has_expected_error = any(
@@ -224,25 +214,17 @@ def verify_graceful_platform_handling(platform_context):
     ], f"Should recognize platform: {current_platform}"
 
     # Should have handled error scenarios without crashing
-    assert (
-        len(platform_context.error_scenarios) > 0
-    ), "Should have tested error scenarios"
+    assert len(platform_context.error_scenarios) > 0, "Should have tested error scenarios"
 
 
 @then("the display should work correctly")
 def verify_display_works(platform_context):
     """Verify display works correctly across configurations."""
-    assert (
-        len(platform_context.display_tests) >= 2
-    ), "Should have tested multiple display modes"
+    assert len(platform_context.display_tests) >= 2, "Should have tested multiple display modes"
 
     # Quiet mode should produce less output than normal mode
-    quiet_test = next(
-        test for test in platform_context.display_tests if test["mode"] == "quiet"
-    )
-    normal_test = next(
-        test for test in platform_context.display_tests if test["mode"] == "normal"
-    )
+    quiet_test = next(test for test in platform_context.display_tests if test["mode"] == "quiet")
+    normal_test = next(test for test in platform_context.display_tests if test["mode"] == "normal")
 
     assert (
         quiet_test["length"] <= normal_test["length"]
@@ -253,9 +235,7 @@ def verify_display_works(platform_context):
 def verify_special_character_handling(platform_context):
     """Verify special characters in display are handled appropriately."""
     # Check that display output doesn't cause encoding errors
-    normal_test = next(
-        test for test in platform_context.display_tests if test["mode"] == "normal"
-    )
+    normal_test = next(test for test in platform_context.display_tests if test["mode"] == "normal")
     output = normal_test["output"]
 
     # Should be able to process the output without Unicode errors

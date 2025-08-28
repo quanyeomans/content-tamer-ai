@@ -8,9 +8,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from ai_providers import (
     AIProviderFactory,
@@ -72,9 +70,7 @@ class TestOpenAIProvider(unittest.TestCase):
 
     def setUp(self):
         """Set up test provider."""
-        with patch("ai_providers.HAVE_OPENAI", True), patch(
-            "ai_providers.OpenAI"
-        ) as mock_client:
+        with patch("ai_providers.HAVE_OPENAI", True), patch("ai_providers.OpenAI") as mock_client:
             self.mock_client = mock_client.return_value
             self.provider = OpenAIProvider("test-key", "gpt-4o")
 
@@ -107,10 +103,7 @@ class TestOpenAIProvider(unittest.TestCase):
         # Verify image was included in the call
         call_args = mock_client_with_options.responses.create.call_args
         self.assertTrue(
-            any(
-                "input_image" in str(part)
-                for part in call_args[1]["input"][0]["content"]
-            )
+            any("input_image" in str(part) for part in call_args[1]["input"][0]["content"])
         )
 
     def test_generate_filename_image_fallback(self):
@@ -190,9 +183,7 @@ class TestGeminiProvider(unittest.TestCase):
 
     def setUp(self):
         """Set up test provider."""
-        with patch("ai_providers.HAVE_GEMINI", True), patch(
-            "ai_providers.genai"
-        ) as mock_genai:
+        with patch("ai_providers.HAVE_GEMINI", True), patch("ai_providers.genai") as mock_genai:
             self.mock_genai = mock_genai
             self.mock_model = MagicMock()
             mock_genai.GenerativeModel.return_value = self.mock_model
@@ -240,9 +231,7 @@ class TestDeepseekProvider(unittest.TestCase):
         # Verify API call
         mock_post.assert_called_once()
         call_args = mock_post.call_args
-        self.assertEqual(
-            call_args[0][0], "https://api.deepseek.com/v1/chat/completions"
-        )
+        self.assertEqual(call_args[0][0], "https://api.deepseek.com/v1/chat/completions")
 
     @patch("ai_providers.requests.post")
     def test_generate_filename_http_error(self, mock_post):

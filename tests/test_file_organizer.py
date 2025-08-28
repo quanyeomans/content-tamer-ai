@@ -10,9 +10,7 @@ import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from file_organizer import FileManager, FilenameHandler, FileOrganizer, ProgressTracker
 
@@ -36,9 +34,7 @@ class TestFilenameHandler(unittest.TestCase):
         )
 
         # Should handle unicode characters
-        self.assertEqual(
-            handler.validate_and_trim_filename("你好世界_document"), "_document"
-        )
+        self.assertEqual(handler.validate_and_trim_filename("你好世界_document"), "_document")
 
         # Should truncate long filenames
         long_name = "a" * 200
@@ -112,9 +108,7 @@ class TestProgressTracker(unittest.TestCase):
         mock_file = mock_open()
         with patch("builtins.open", mock_file):
             progress_f = mock_file()
-            with patch.object(file_manager, "lock_file"), patch.object(
-                file_manager, "unlock_file"
-            ):
+            with patch.object(file_manager, "lock_file"), patch.object(file_manager, "unlock_file"):
                 tracker.record_progress(progress_f, "test.pdf", file_manager)
 
         progress_f.write.assert_called_with("test.pdf\n")

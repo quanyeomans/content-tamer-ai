@@ -1,0 +1,83 @@
+[MASTER]
+# Use multiple processes to speed up Pylint
+jobs=0
+
+# Add files or directories to the blacklist
+ignore=.git,__pycache__
+
+[MESSAGES CONTROL]
+# Disable warnings that are too strict for our codebase
+disable=
+    # Style issues (handled by black)
+    C0301,  # line-too-long (black handles this)
+    C0103,  # invalid-name (allow short variable names)
+    
+    # Design issues that are acceptable for this codebase
+    R0903,  # too-few-public-methods (acceptable for data classes)
+    R0913,  # too-many-arguments (acceptable for some functions)
+    R0917,  # too-many-positional-arguments (related to above)
+    R0914,  # too-many-locals (acceptable for complex functions)
+    R0912,  # too-many-branches (acceptable for complex logic)
+    R0915,  # too-many-statements (acceptable for main functions)
+    
+    # Import issues that are acceptable
+    C0415,  # import-outside-toplevel (sometimes needed for optional imports)
+    C0412,  # ungrouped-imports (isort handles this)
+    
+    # Code duplication (we handle this manually)
+    R0801,  # duplicate-code
+    
+    # Exception handling (we use broad catching intentionally)
+    W0718,  # broad-exception-caught (sometimes needed)
+    W0719,  # broad-exception-raised (sometimes needed)
+    
+    # Docstring issues (not enforcing strict docstring style)
+    C0116,  # missing-function-docstring
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+
+[REPORTS]
+# Set the output format
+output-format=colorized
+reports=no
+
+[BASIC]
+# Good variable names
+good-names=i,j,k,ex,Run,_,e,f,x,y,z,fd,fp
+
+[DESIGN]
+# Maximum number of arguments for function/method
+max-args=7
+
+# Maximum number of locals for function/method body
+max-locals=20
+
+# Maximum number of return/yield for function/method body
+max-returns=8
+
+# Maximum number of branch for function/method body
+max-branches=15
+
+# Maximum number of statements in function/method body
+max-statements=60
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=100
+
+[SIMILARITIES]
+# Minimum lines of similar code to detect
+min-similarity-lines=6
+
+# Ignore comments when computing similarities
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities
+ignore-docstrings=yes
+
+# Ignore imports when computing similarities
+ignore-imports=yes
+
+[TYPECHECK]
+# List of module names for which member attributes should not be checked
+ignored-modules=google.genai,anthropic,openai,fcntl

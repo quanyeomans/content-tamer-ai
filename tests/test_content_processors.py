@@ -10,9 +10,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from content_processors import ContentProcessorFactory, ImageProcessor, PDFProcessor
 
@@ -149,9 +147,7 @@ class TestPDFProcessor(unittest.TestCase):
     @patch.object(PDFProcessor, "_fitz_text")
     @patch.object(PDFProcessor, "_pypdf_text")
     @patch.object(PDFProcessor, "_fitz_render_png_b64")
-    def test_extract_text_and_image_fitz_success(
-        self, mock_render, mock_pypdf, mock_fitz
-    ):
+    def test_extract_text_and_image_fitz_success(self, mock_render, mock_pypdf, mock_fitz):
         """Test successful extraction using PyMuPDF."""
         mock_fitz.return_value = "Fitz extracted text"
         mock_render.return_value = "base64_image_data"
@@ -165,9 +161,7 @@ class TestPDFProcessor(unittest.TestCase):
     @patch.object(PDFProcessor, "_fitz_text")
     @patch.object(PDFProcessor, "_pypdf_text")
     @patch.object(PDFProcessor, "_ocr_tesseract_from_pdf")
-    def test_extract_text_and_image_ocr_fallback(
-        self, mock_ocr, mock_pypdf2, mock_fitz
-    ):
+    def test_extract_text_and_image_ocr_fallback(self, mock_ocr, mock_pypdf2, mock_fitz):
         """Test OCR fallback for short text."""
         mock_fitz.return_value = "Short"  # Less than min_len
         mock_pypdf2.return_value = "Short"
@@ -244,9 +238,7 @@ class TestImageProcessor(unittest.TestCase):
 
             # With security validation, invalid images return error
             if text.startswith("Error:"):
-                self.assertTrue(
-                    text.startswith("Error: File does not appear to be a valid image")
-                )
+                self.assertTrue(text.startswith("Error: File does not appear to be a valid image"))
                 self.assertIsNone(image_b64)
             else:
                 self.assertEqual(text, "")  # No OCR available

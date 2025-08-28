@@ -9,9 +9,7 @@ from io import StringIO
 from unittest.mock import MagicMock, call, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from utils.display_manager import (
     DisplayManager,
@@ -148,9 +146,7 @@ class TestDisplayManager(unittest.TestCase):
 
     def test_processing_context_creation(self):
         """Test processing context creation and usage."""
-        with self.display_manager.processing_context(
-            total_files=3, description="Testing"
-        ) as ctx:
+        with self.display_manager.processing_context(total_files=3, description="Testing") as ctx:
             self.assertIsInstance(ctx, ProcessingContext)
             self.assertIs(ctx.display, self.display_manager)
 
@@ -200,9 +196,7 @@ class TestDisplayManager(unittest.TestCase):
     @patch("builtins.input", return_value="test response")
     def test_prompt_user(self, mock_input):
         """Test user prompting functionality."""
-        response = self.display_manager.prompt_user(
-            "Enter something", default="default"
-        )
+        response = self.display_manager.prompt_user("Enter something", default="default")
 
         # In quiet mode, should return default
         self.assertEqual(response, "default")
@@ -274,9 +268,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         options = DisplayOptions(quiet=False, no_color=True, file=self.output)
         manager = DisplayManager(options)
 
-        with manager.processing_context(
-            total_files=3, description="Test Processing"
-        ) as ctx:
+        with manager.processing_context(total_files=3, description="Test Processing") as ctx:
             # Process first file successfully
             ctx.start_file("document1.pdf")
             ctx.set_status("extracting_content")

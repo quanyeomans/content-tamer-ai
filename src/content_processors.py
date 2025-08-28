@@ -115,7 +115,7 @@ class PDFProcessor(ContentProcessor):
 
             # Perform PDF threat analysis
             analyzer = PDFAnalyzer()
-            threat_analysis = analyzer.analyze_pdf(file_path)
+            analyzer.analyze_pdf(file_path)  # Results logged internally
 
             # Note: Threat analysis results are logged internally by the security module
             # They can be accessed via the threat_analysis object if needed for reporting
@@ -130,9 +130,7 @@ class PDFProcessor(ContentProcessor):
 
             # Validate extracted content for security
             if content and not content.startswith("Error:"):
-                content = ContentValidator.validate_extracted_content(
-                    content, file_path
-                )
+                content = ContentValidator.validate_extracted_content(content, file_path)
 
             return content, image_b64
 
@@ -247,9 +245,7 @@ class PDFProcessor(ContentProcessor):
                 img = Image.open(io.BytesIO(pix.tobytes("png")))
                 angle = self._detect_osd_angle(img)
                 img = self._rotate_image(img, angle)
-                text = pytesseract.image_to_string(
-                    img, lang=lang, config="--psm 6 --oem 1"
-                )
+                text = pytesseract.image_to_string(img, lang=lang, config="--psm 6 --oem 1")
                 out.append(text or "")
             except (RuntimeError, IOError, ValueError, pytesseract.TesseractError):
                 continue
@@ -280,7 +276,7 @@ class PDFProcessor(ContentProcessor):
                     try:
                         page_text = page.extract_text() or ""
                         content.append(page_text)
-                    except (TypeError, KeyError, ValueError) as e:
+                    except (TypeError, KeyError, ValueError):
                         # Note: Removed print() to avoid corrupting progress display
                         # This is a recoverable error - processing continues with other pages
                         pass

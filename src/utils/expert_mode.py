@@ -66,11 +66,7 @@ class ExpertModePrompter:
         print()
 
         while True:
-            choice = (
-                input("Choose mode [Q]uick start or [E]xpert mode (Q/E): ")
-                .strip()
-                .lower()
-            )
+            choice = input("Choose mode [Q]uick start or [E]xpert mode (Q/E): ").strip().lower()
             if choice in ["q", "quick", ""]:
                 return False
             elif choice in ["e", "expert"]:
@@ -86,9 +82,7 @@ class ExpertModePrompter:
         print("⚙️  EXPERT MODE CONFIGURATION")
         print("=" * 60)
         print()
-        print(
-            "Configure each setting below. Press Enter to use defaults shown in [brackets]."
-        )
+        print("Configure each setting below. Press Enter to use defaults shown in [brackets].")
         print()
 
         # 1. Input Directory
@@ -182,9 +176,7 @@ class ExpertModePrompter:
 
         return config
 
-    def _prompt_with_default(
-        self, prompt: str, default: str, help_text: str = ""
-    ) -> str:
+    def _prompt_with_default(self, prompt: str, default: str, help_text: str = "") -> str:
         """Prompt with a default value."""
         if help_text:
             print(f"     💡 {help_text}")

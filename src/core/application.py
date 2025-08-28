@@ -5,7 +5,7 @@ Main application logic coordinating all components for document processing.
 """
 
 import os
-from typing import Optional, Set
+from typing import Any, Optional, Tuple
 
 from .directory_manager import (
     DEFAULT_PROCESSED_DIR,
@@ -55,9 +55,7 @@ def _setup_display_manager(display_options: Optional[dict]) -> DisplayManager:
     )
 
 
-def _setup_ai_client(
-    provider: str, model: Optional[str], display_manager: DisplayManager
-):
+def _setup_ai_client(provider: str, model: Optional[str], display_manager: DisplayManager):
     """Setup and validate AI client."""
     try:
         if model is None:
@@ -151,20 +149,14 @@ def _process_files_batch(
                         # Move file to unprocessed folder
                         try:
                             if os.path.exists(input_path):
-                                unprocessed_path = os.path.join(
-                                    unprocessed_dir, filename
-                                )
-                                organizer.file_manager.safe_move(
-                                    input_path, unprocessed_path
-                                )
+                                unprocessed_path = os.path.join(unprocessed_dir, filename)
+                                organizer.file_manager.safe_move(input_path, unprocessed_path)
                         except OSError:
                             pass  # Will be noted in error summary
 
                         ctx.fail_file(filename, "Processing failed")
                         failed_count += 1
-                        error_details.append(
-                            {"filename": filename, "error": "Processing failed"}
-                        )
+                        error_details.append({"filename": filename, "error": "Processing failed"})
         return True, successful_count, failed_count, error_details
     except KeyboardInterrupt:
         display_manager.warning("Process interrupted by user. Progress has been saved.")
@@ -179,25 +171,10 @@ def _process_files_batch(
         return False, successful_count, failed_count, error_details
 
 
-def organize_content(
-    input_dir: str,
-    unprocessed_dir: str,
-    renamed_dir: str,
-    provider: str = "openai",
-    model: Optional[str] = None,
-    reset_progress: bool = False,
-    ocr_lang: str = "eng",
-    display_options: Optional[dict] = None,
-) -> bool:
-    """
-    Organize and intelligently rename documents using AI analysis.
-
-    Processes any content type - PDFs, images, screenshots - and generates
-    meaningful, descriptive filenames based on document content.
-    """
-    # Initialize display system
-    display_manager = _setup_display_manager(display_options)
-
+def _validate_and_setup_directories(
+    input_dir: str, unprocessed_dir: str, renamed_dir: str, display_manager
+) -> Tuple[bool, str, str, str]:
+    """Validate directories and setup paths securely."""
     # Security validation for paths
     try:
         from utils.security import PathValidator, SecurityError
@@ -213,97 +190,75 @@ def organize_content(
         safe_unprocessed_dir = PathValidator.validate_directory(unprocessed_dir)
         safe_renamed_dir = PathValidator.validate_directory(renamed_dir)
 
-        # Create allowed base directories set for file validation
-        allowed_dirs = {safe_input_dir, safe_unprocessed_dir, safe_renamed_dir}
-
-        # Update paths to use validated versions
-        input_dir, unprocessed_dir, renamed_dir = (
-            safe_input_dir,
-            safe_unprocessed_dir,
-            safe_renamed_dir,
-        )
+        return True, safe_input_dir, safe_unprocessed_dir, safe_renamed_dir
 
     except SecurityError as e:
         display_manager.critical(f"Security error in directory paths: {e}")
-        return False
+        return False, input_dir, unprocessed_dir, renamed_dir
 
-    # Validate input directory exists
+
+def _check_input_directory(input_dir: str, display_manager) -> bool:
+    """Check if input directory exists."""
     if not os.path.exists(input_dir):
         display_manager.critical(f"Input folder '{input_dir}' does not exist.")
         return False
+    return True
 
+
+def _setup_processing_environment(
+    provider: str,
+    model: Optional[str],
+    ocr_lang: str,
+    display_manager,
+    unprocessed_dir: str,
+    renamed_dir: str,
+) -> Tuple[Optional[Any], Optional[str], FileOrganizer, ContentProcessorFactory]:
+    """Setup AI client, organizer, and content processor."""
     # Setup AI client
     ai_client, model = _setup_ai_client(provider, model, display_manager)
     if ai_client is None:
-        return False
+        return None, None, None, None
 
     # Initialize file organizer
     organizer = FileOrganizer()
     organizer.create_directories(unprocessed_dir, renamed_dir)
 
-    # Show startup information
-    display_manager.show_startup_info(
-        {
-            "directories": {
-                "input": input_dir,
-                "processed": renamed_dir,
-                "unprocessed": unprocessed_dir,
-            }
-        }
-    )
-
-    # Get content processor factory and find processable files
+    # Get content processor factory
     content_factory = ContentProcessorFactory(ocr_lang)
-    supported_extensions = content_factory.get_supported_extensions()
-    processable_files = _find_processable_files(input_dir, content_factory)
 
-    total_files = len(processable_files)
-    if total_files == 0:
-        display_manager.warning(f"No processable files found in {input_dir}")
-        display_manager.info(f"Supported extensions: {', '.join(supported_extensions)}")
-        return True
+    return ai_client, model, organizer, content_factory
 
+
+def _handle_no_files(input_dir: str, supported_extensions: list, display_manager) -> bool:
+    """Handle case when no processable files are found."""
+    display_manager.warning(f"No processable files found in {input_dir}")
+    display_manager.info(f"Supported extensions: {', '.join(supported_extensions)}")
+    return True
+
+
+def _determine_progress_file_path(renamed_dir: str) -> str:
+    """Determine appropriate path for progress file."""
     # Use .processing directory for progress file if using defaults, otherwise use renamed_dir
     if renamed_dir == DEFAULT_PROCESSED_DIR:
-        progress_file = os.path.join(DEFAULT_PROCESSING_DIR, ".progress")
+        return os.path.join(DEFAULT_PROCESSING_DIR, ".progress")
     else:
-        progress_file = os.path.join(renamed_dir, ".progress")
-    processed_files = organizer.progress_tracker.load_progress(
-        progress_file, input_dir, reset_progress
-    )
+        return os.path.join(renamed_dir, ".progress")
 
-    # Initialize session-level retry handler for statistics
-    session_retry_handler = create_retry_handler(max_attempts=3)
 
-    # Process files batch
-    success, successful_count, failed_count, error_details = _process_files_batch(
-        processable_files,
-        processed_files,
-        input_dir,
-        unprocessed_dir,
-        renamed_dir,
-        progress_file,
-        ocr_lang,
-        ai_client,
-        organizer,
-        display_manager,
-        session_retry_handler,
-    )
-
-    if not success:
-        return False
-
+def _display_completion_summary(
+    display_manager,
+    total_files: int,
+    progress_stats,
+    successful_count: int,
+    failed_count: int,
+    session_retry_handler,
+    error_details: list,
+) -> None:
+    """Display completion statistics and error summary."""
     # Show retry/recovery summary if there were any recoverable errors
     retry_summary = session_retry_handler.format_session_summary()
     if retry_summary:
         display_manager.info(retry_summary)
-
-    # Use progress stats as source of truth for final summary
-    progress_stats = (
-        display_manager.progress.stats
-        if hasattr(display_manager.progress, "stats")
-        else None
-    )
 
     # Show completion statistics with actual counts from progress tracking
     if progress_stats:
@@ -335,5 +290,101 @@ def organize_content(
         display_manager.info("📋 Detailed Error Summary:")
         for error in error_details:
             display_manager.error(f"❌ {error['filename']}: {error['error']}")
+
+
+def organize_content(
+    input_dir: str,
+    unprocessed_dir: str,
+    renamed_dir: str,
+    provider: str = "openai",
+    model: Optional[str] = None,
+    reset_progress: bool = False,
+    ocr_lang: str = "eng",
+    display_options: Optional[dict] = None,
+) -> bool:
+    """
+    Organize and intelligently rename documents using AI analysis.
+
+    Processes any content type - PDFs, images, screenshots - and generates
+    meaningful, descriptive filenames based on document content.
+    """
+    # Initialize display system
+    display_manager = _setup_display_manager(display_options)
+
+    # Validate directories and setup paths
+    success, input_dir, unprocessed_dir, renamed_dir = _validate_and_setup_directories(
+        input_dir, unprocessed_dir, renamed_dir, display_manager
+    )
+    if not success:
+        return False
+
+    # Check input directory exists
+    if not _check_input_directory(input_dir, display_manager):
+        return False
+
+    # Setup processing environment
+    ai_client, model, organizer, content_factory = _setup_processing_environment(
+        provider, model, ocr_lang, display_manager, unprocessed_dir, renamed_dir
+    )
+    if ai_client is None:
+        return False
+
+    # Show startup information
+    display_manager.show_startup_info(
+        {
+            "directories": {
+                "input": input_dir,
+                "processed": renamed_dir,
+                "unprocessed": unprocessed_dir,
+            }
+        }
+    )
+
+    # Find processable files
+    supported_extensions = content_factory.get_supported_extensions()
+    processable_files = _find_processable_files(input_dir, content_factory)
+
+    total_files = len(processable_files)
+    if total_files == 0:
+        return _handle_no_files(input_dir, supported_extensions, display_manager)
+
+    # Setup progress tracking
+    progress_file = _determine_progress_file_path(renamed_dir)
+    processed_files = organizer.progress_tracker.load_progress(
+        progress_file, input_dir, reset_progress
+    )
+
+    # Initialize retry handler and process files
+    session_retry_handler = create_retry_handler(max_attempts=3)
+    success, successful_count, failed_count, error_details = _process_files_batch(
+        processable_files,
+        processed_files,
+        input_dir,
+        unprocessed_dir,
+        renamed_dir,
+        progress_file,
+        ocr_lang,
+        ai_client,
+        organizer,
+        display_manager,
+        session_retry_handler,
+    )
+
+    if not success:
+        return False
+
+    # Display completion summary
+    progress_stats = (
+        display_manager.progress.stats if hasattr(display_manager.progress, "stats") else None
+    )
+    _display_completion_summary(
+        display_manager,
+        total_files,
+        progress_stats,
+        successful_count,
+        failed_count,
+        session_retry_handler,
+        error_details,
+    )
 
     return True

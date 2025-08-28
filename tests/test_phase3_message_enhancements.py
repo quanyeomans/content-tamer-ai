@@ -11,9 +11,7 @@ from io import StringIO
 from unittest.mock import MagicMock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from utils.message_handler import (
     DisclosureMode,
@@ -177,9 +175,7 @@ class TestMessageGroupingAndSuppression(unittest.TestCase):
 
         output = self.output.getvalue()
         # Should see the original and a grouped message, not individual instances
-        self.assertEqual(
-            output.count("API timeout occurred"), 2
-        )  # Original + grouped message
+        self.assertEqual(output.count("API timeout occurred"), 2)  # Original + grouped message
         self.assertIn("similar messages", output)
 
     def test_suppressed_message_tracking(self):
@@ -344,9 +340,7 @@ class TestAdvancedMessageFiltering(unittest.TestCase):
 
     def test_filter_by_priority(self):
         """Test filtering messages by priority."""
-        high_priority = self.handler.get_filtered_messages(
-            priority_filter=MessagePriority.HIGH
-        )
+        high_priority = self.handler.get_filtered_messages(priority_filter=MessagePriority.HIGH)
 
         # Both warning and error should have HIGH priority
         self.assertEqual(len(high_priority), 2)
@@ -369,9 +363,7 @@ class TestAdvancedMessageFiltering(unittest.TestCase):
         future_time = current_time + 3600  # 1 hour from now
 
         # All messages should be in this range
-        recent_messages = self.handler.get_filtered_messages(
-            time_range=(past_time, future_time)
-        )
+        recent_messages = self.handler.get_filtered_messages(time_range=(past_time, future_time))
 
         self.assertEqual(len(recent_messages), 4)  # All test messages
 

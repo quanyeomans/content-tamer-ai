@@ -11,9 +11,7 @@ from io import StringIO
 from unittest.mock import MagicMock, mock_open, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from ai_providers import AIProviderFactory
 from core.application import organize_content
@@ -112,9 +110,7 @@ class TestPhase2BackwardCompatibility(unittest.TestCase):
             mock_listdir.return_value = []
 
             # Call without display_options (should default to None)
-            result = organize_content(
-                self.input_dir, self.unprocessed_dir, self.processed_dir
-            )
+            result = organize_content(self.input_dir, self.unprocessed_dir, self.processed_dir)
 
             self.assertTrue(result)
 

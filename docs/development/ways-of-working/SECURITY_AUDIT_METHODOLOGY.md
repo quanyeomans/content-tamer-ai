@@ -3,17 +3,34 @@
 
 ## 🔍 **Comprehensive Security Audit Process**
 
-### Phase 1: Automated Discovery
+### Phase 1: Automated SAST Analysis (MANDATORY)
 ```bash
-# Search for all logging/output functions
+# COMPREHENSIVE SECURITY ANALYSIS PIPELINE
+
+# 1. Static Application Security Testing (SAST)
+bandit -r src/ -f text                    # Security vulnerability scan
+bandit -r src/ -f json > security-report.json  # Machine-readable results
+
+# 2. Dependency Vulnerability Analysis  
+safety check                             # Known CVE scan
+safety check --json > dependency-vulnerabilities.json
+
+# 3. Code Quality Security Indicators
+pylint src/ --fail-under=8.0             # Quality issues that may indicate security problems
+flake8 src/ --max-line-length=100        # PEP8 compliance (readability = security)
+mypy src/ --ignore-missing-imports       # Type safety (prevents runtime errors)
+
+# 4. Legacy Manual Discovery (supplementary)
 grep -r "print\|log\|write.*file\|sys\.stdout" src/ --include="*.py"
-
-# Search for secret-handling code  
 grep -r "api_key\|API_KEY\|secret\|password\|token" src/ --include="*.py"
-
-# Search for error handling that might expose data
-grep -r "str(e)\|except.*as.*e" src/ --include="*.py" 
+grep -r "str(e)\|except.*as.*e" src/ --include="*.py"
 ```
+
+### **SAST Results Interpretation**
+- **HIGH Severity**: Immediate fix required, blocks all development
+- **MEDIUM Severity**: Fix within current session, document if delayed
+- **LOW Severity**: Address during next refactoring cycle
+- **Dependency CVEs**: Update immediately if exploit exists
 
 ### Phase 2: Manual Code Review Checklist
 - [ ] **Logging Functions**: Every logging call reviewed for potential secret exposure

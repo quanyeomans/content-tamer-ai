@@ -23,9 +23,7 @@ class ProgressStats:
     failed: int = 0
     warnings: int = 0
     start_time: float = field(default_factory=time.time)
-    _files_with_warnings: set = field(
-        default_factory=set
-    )  # Track unique files with warnings
+    _files_with_warnings: set = field(default_factory=set)  # Track unique files with warnings
 
     @property
     def elapsed_time(self) -> float:
@@ -135,13 +133,9 @@ class ProgressDisplay:
         # Format status with color and icon
         if status == "SUCCESS":
             if self.formatter.capabilities.supports_unicode:
-                status_display = self.formatter.colorize(
-                    "✅ Success", "green", bold=True
-                )
+                status_display = self.formatter.colorize("✅ Success", "green", bold=True)
             else:
-                status_display = self.formatter.colorize(
-                    "[SUCCESS]", "green", bold=True
-                )
+                status_display = self.formatter.colorize("[SUCCESS]", "green", bold=True)
         elif status == "FAILED":
             if self.formatter.capabilities.supports_unicode:
                 status_display = self.formatter.colorize("❌ Failed", "red", bold=True)
@@ -238,9 +232,7 @@ class ProgressDisplay:
                 display_name = display_name[: max_filename_length - 3] + "..."
 
             arrow = "->" if not self.formatter.capabilities.supports_unicode else "→"
-            target_display = (
-                f" {arrow} {self.formatter.highlight_filename(display_name)}"
-            )
+            target_display = f" {arrow} {self.formatter.highlight_filename(display_name)}"
 
         # Format status indicator
         status_display = ""
@@ -327,9 +319,7 @@ class ProgressDisplay:
             stats_parts.append(self.formatter.colorize(error_text, "bright_red"))
 
         # Elapsed time
-        elapsed_display = (
-            f"⏱️ {self.formatter.format_time(self.stats.elapsed_time)} elapsed"
-        )
+        elapsed_display = f"⏱️ {self.formatter.format_time(self.stats.elapsed_time)} elapsed"
         if not self.formatter.capabilities.supports_unicode:
             elapsed_display = (
                 f"[TIME] {self.formatter.format_time(self.stats.elapsed_time)} elapsed"
@@ -349,29 +339,21 @@ class ProgressDisplay:
 
             summary_parts = [
                 f"Total: {self.stats.total}",
-                self.formatter.colorize(
-                    f"Successful: {self.stats.success_count}", "bright_green"
-                ),
+                self.formatter.colorize(f"Successful: {self.stats.success_count}", "bright_green"),
                 f"Success rate: {success_rate:.1f}%",
             ]
 
             if self.stats.warnings > 0:
                 summary_parts.append(
-                    self.formatter.colorize(
-                        f"Warnings: {self.stats.warnings}", "bright_yellow"
-                    )
+                    self.formatter.colorize(f"Warnings: {self.stats.warnings}", "bright_yellow")
                 )
 
             if self.stats.failed > 0:
                 summary_parts.append(
-                    self.formatter.colorize(
-                        f"Errors: {self.stats.failed}", "bright_red"
-                    )
+                    self.formatter.colorize(f"Errors: {self.stats.failed}", "bright_red")
                 )
 
-            summary_parts.append(
-                f"Time: {self.formatter.format_time(self.stats.elapsed_time)}"
-            )
+            summary_parts.append(f"Time: {self.formatter.format_time(self.stats.elapsed_time)}")
 
             self.file.write(" • ".join(summary_parts) + "\n")
 

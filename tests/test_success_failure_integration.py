@@ -15,9 +15,7 @@ from io import StringIO
 from unittest.mock import MagicMock, Mock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from core.application import _process_files_batch
 from core.file_processor import process_file_enhanced, process_file_enhanced_core
@@ -50,19 +48,13 @@ class TestSuccessFailureDetermination(unittest.TestCase):
         mock_organizer = Mock()
 
         # Mock the file move operation to actually move the file
-        def mock_move_file_to_category(
-            input_path, filename, target_dir, new_name, extension
-        ):
+        def mock_move_file_to_category(input_path, filename, target_dir, new_name, extension):
             """Simulate actual file moving behavior."""
             target_path = os.path.join(target_dir, new_name + extension)
             shutil.move(input_path, target_path)
-            return (
-                new_name  # Return just the basename, the success logic adds extension
-            )
+            return new_name  # Return just the basename, the success logic adds extension
 
-        mock_organizer.move_file_to_category = Mock(
-            side_effect=mock_move_file_to_category
-        )
+        mock_organizer.move_file_to_category = Mock(side_effect=mock_move_file_to_category)
         mock_organizer.progress_tracker.record_progress = Mock()
 
         # Only mock external dependencies - content extraction and AI generation
@@ -92,15 +84,9 @@ class TestSuccessFailureDetermination(unittest.TestCase):
                 )
 
                 # Verify the file was actually moved
-                expected_final_path = os.path.join(
-                    self.processed_dir, "ai_generated_name.pdf"
-                )
-                self.assertTrue(
-                    os.path.exists(expected_final_path), "Processed file should exist"
-                )
-                self.assertFalse(
-                    os.path.exists(self.test_file), "Original file should be moved"
-                )
+                expected_final_path = os.path.join(self.processed_dir, "ai_generated_name.pdf")
+                self.assertTrue(os.path.exists(expected_final_path), "Processed file should exist")
+                self.assertFalse(os.path.exists(self.test_file), "Original file should be moved")
 
     def test_successful_processing_different_file_types(self):
         """CRITICAL: Success determination should work correctly for different file extensions."""
@@ -127,18 +113,14 @@ class TestSuccessFailureDetermination(unittest.TestCase):
                     shutil.move(input_path, target_path)
                     return new_name
 
-                mock_organizer.move_file_to_category = Mock(
-                    side_effect=mock_move_file_to_category
-                )
+                mock_organizer.move_file_to_category = Mock(side_effect=mock_move_file_to_category)
                 mock_organizer.progress_tracker.record_progress = Mock()
 
                 # Only mock external dependencies
                 with patch("core.file_processor._extract_file_content") as mock_extract:
                     with patch("core.file_processor._generate_filename") as mock_gen:
                         mock_extract.return_value = (f"Content from {filename}", None)
-                        mock_gen.return_value = (
-                            f"ai_renamed_{os.path.splitext(filename)[0]}"
-                        )
+                        mock_gen.return_value = f"ai_renamed_{os.path.splitext(filename)[0]}"
 
                         mock_display_context = Mock()
 
@@ -155,9 +137,7 @@ class TestSuccessFailureDetermination(unittest.TestCase):
                             mock_display_context,
                         )
 
-                        self.assertTrue(
-                            success, f"Processing should succeed for {filename}"
-                        )
+                        self.assertTrue(success, f"Processing should succeed for {filename}")
                         self.assertEqual(
                             result,
                             f"ai_renamed_{os.path.splitext(filename)[0]}",
@@ -194,16 +174,12 @@ class TestSuccessFailureDetermination(unittest.TestCase):
         # Create mock organizer with real file operations
         mock_organizer = Mock()
 
-        def mock_move_file_to_category(
-            input_path, filename, target_dir, new_name, extension
-        ):
+        def mock_move_file_to_category(input_path, filename, target_dir, new_name, extension):
             target_path = os.path.join(target_dir, new_name + extension)
             shutil.move(input_path, target_path)
             return new_name + extension
 
-        mock_organizer.move_file_to_category = Mock(
-            side_effect=mock_move_file_to_category
-        )
+        mock_organizer.move_file_to_category = Mock(side_effect=mock_move_file_to_category)
         mock_organizer.progress_tracker.record_progress = Mock()
 
         # Only mock external dependencies
@@ -218,9 +194,7 @@ class TestSuccessFailureDetermination(unittest.TestCase):
                 # Use real retry handler for proper integration testing
                 retry_handler = create_retry_handler(max_attempts=3)
 
-                with display_manager.processing_context(
-                    total_files=1
-                ) as display_context:
+                with display_manager.processing_context(total_files=1) as display_context:
                     initial_success_count = display_manager.progress.stats.success_count
 
                     # Manually call complete_file as the integration should
@@ -292,9 +266,7 @@ class TestSuccessFailureDetermination(unittest.TestCase):
             nonlocal call_count
             call_count += 1
             if call_count <= 2:
-                raise OSError(
-                    "File temporarily locked by antivirus"
-                )  # Recoverable error
+                raise OSError("File temporarily locked by antivirus")  # Recoverable error
             return "success_result"
 
         with display_manager.processing_context(total_files=1) as display_context:
@@ -321,9 +293,7 @@ class TestSuccessFailureDetermination(unittest.TestCase):
             final_error_count = display_manager.progress.stats.failed
 
             self.assertTrue(success, "Retry should succeed after temporary failures")
-            self.assertEqual(
-                result, "success_result", "Should return the successful result"
-            )
+            self.assertEqual(result, "success_result", "Should return the successful result")
             self.assertEqual(call_count, 3, "Should have attempted 3 times")
             self.assertEqual(
                 final_success_count,
@@ -493,9 +463,7 @@ class TestBatchProcessingIntegration(unittest.TestCase):
     def test_complete_file_increments_success_count(self):
         """CRITICAL: complete_file should increment success counter."""
         output = StringIO()
-        options = DisplayOptions(
-            quiet=False, file=output
-        )  # Use full display, not simple
+        options = DisplayOptions(quiet=False, file=output)  # Use full display, not simple
         display_manager = DisplayManager(options)
 
         initial_success_count = display_manager.progress.stats.success_count
@@ -510,16 +478,12 @@ class TestBatchProcessingIntegration(unittest.TestCase):
             initial_success_count + 1,
             "complete_file should increment success count",
         )
-        self.assertEqual(
-            display_manager.progress.stats.failed, 0, "Should have no failures"
-        )
+        self.assertEqual(display_manager.progress.stats.failed, 0, "Should have no failures")
 
     def test_fail_file_increments_error_count(self):
         """CRITICAL: fail_file should increment error counter."""
         output = StringIO()
-        options = DisplayOptions(
-            quiet=False, file=output
-        )  # Use full display, not simple
+        options = DisplayOptions(quiet=False, file=output)  # Use full display, not simple
         display_manager = DisplayManager(options)
 
         initial_error_count = display_manager.progress.stats.failed
@@ -554,9 +518,7 @@ class TestBatchProcessingIntegration(unittest.TestCase):
 
         with patch(
             "builtins.open",
-            Mock(
-                return_value=Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock())
-            ),
+            Mock(return_value=Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock())),
         ):
             success, successful_count, failed_count, errors = _process_files_batch(
                 processable_files=["test.pdf"],
@@ -592,9 +554,7 @@ class TestBatchProcessingIntegration(unittest.TestCase):
 
         with patch(
             "builtins.open",
-            Mock(
-                return_value=Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock())
-            ),
+            Mock(return_value=Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock())),
         ):
             with patch("os.path.exists", return_value=True):
                 success, successful_count, failed_count, errors = _process_files_batch(
@@ -619,9 +579,7 @@ class TestBatchProcessingIntegration(unittest.TestCase):
     def test_progress_display_success_count_matches_complete_file_calls(self):
         """CRITICAL: Progress display success count should match complete_file calls."""
         output = StringIO()
-        options = DisplayOptions(
-            quiet=False, file=output
-        )  # Use full display, not simple
+        options = DisplayOptions(quiet=False, file=output)  # Use full display, not simple
         display_manager = DisplayManager(options)
 
         with display_manager.processing_context(total_files=3) as ctx:
@@ -636,9 +594,7 @@ class TestBatchProcessingIntegration(unittest.TestCase):
             2,
             "Should have exactly 2 successes",
         )
-        self.assertEqual(
-            display_manager.progress.stats.failed, 1, "Should have exactly 1 failure"
-        )
+        self.assertEqual(display_manager.progress.stats.failed, 1, "Should have exactly 1 failure")
         self.assertEqual(
             display_manager.progress.stats.completed,
             3,
@@ -676,9 +632,7 @@ class TestRetrySuccessScenarios(unittest.TestCase):
         )
 
         # This is the EXACT assertion that should have caught our bug
-        self.assertTrue(
-            success, "Files that succeed after retries MUST return success=True"
-        )
+        self.assertTrue(success, "Files that succeed after retries MUST return success=True")
         self.assertEqual(
             result,
             "successfully_processed_file.pdf",
@@ -769,9 +723,7 @@ class TestErrorHandlingFileMoves(unittest.TestCase):
                     f"File moved to unprocessed: {str(e)}", filename=filename
                 )
             else:
-                mock_display_context.show_error(
-                    f"File not found: {str(e)}", filename=filename
-                )
+                mock_display_context.show_error(f"File not found: {str(e)}", filename=filename)
 
         # Assert - should show file not found message, not try to move
         mock_organizer.file_manager.safe_move.assert_not_called()

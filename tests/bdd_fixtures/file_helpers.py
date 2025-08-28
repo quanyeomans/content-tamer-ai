@@ -35,9 +35,7 @@ class BDDTestContext:
         if self.temp_dir and os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
-    def create_pdf_file(
-        self, filename: str, content: str = "Test document content"
-    ) -> str:
+    def create_pdf_file(self, filename: str, content: str = "Test document content") -> str:
         """Create a realistic PDF file for testing."""
         filepath = os.path.join(self.input_dir, filename)
         pdf_content = f"%PDF-1.4\n{content}\n%EOF"
@@ -56,9 +54,7 @@ class BDDTestContext:
         self.test_files.append(filepath)
         return filepath
 
-    def create_txt_file(
-        self, filename: str, content: str = "Plain text content"
-    ) -> str:
+    def create_txt_file(self, filename: str, content: str = "Plain text content") -> str:
         """Create a text file for testing."""
         filepath = os.path.join(self.input_dir, filename)
         with open(filepath, "w", encoding="utf-8") as f:

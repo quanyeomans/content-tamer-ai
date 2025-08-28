@@ -13,9 +13,7 @@ from io import StringIO
 from unittest.mock import MagicMock, Mock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from core.file_processor import process_file, process_file_enhanced_core
 from file_organizer import FileOrganizer
@@ -51,9 +49,7 @@ class TestProgressRecordingFix(unittest.TestCase):
         mock_organizer.progress_tracker = Mock()
         mock_organizer.file_manager = Mock()
         mock_organizer.filename_handler = Mock()
-        mock_organizer.filename_handler.validate_and_trim_filename.return_value = (
-            "validated_name"
-        )
+        mock_organizer.filename_handler.validate_and_trim_filename.return_value = "validated_name"
         mock_organizer.move_file_to_category.return_value = "final_name.pdf"
 
         mock_ai_client = Mock()
@@ -134,9 +130,7 @@ class TestProgressRecordingFix(unittest.TestCase):
         mock_organizer.progress_tracker = Mock()
         mock_organizer.file_manager = Mock()
         mock_organizer.filename_handler = Mock()
-        mock_organizer.filename_handler.validate_and_trim_filename.return_value = (
-            "validated_name"
-        )
+        mock_organizer.filename_handler.validate_and_trim_filename.return_value = "validated_name"
         mock_organizer.move_file_to_category.return_value = "final_name.pdf"
 
         mock_ai_client = Mock()
@@ -151,9 +145,7 @@ class TestProgressRecordingFix(unittest.TestCase):
             mock_factory.get_processor.return_value = mock_processor
             mock_factory_class.return_value = mock_factory
 
-            with patch(
-                "core.file_processor.get_new_filename_with_retry"
-            ) as mock_get_name:
+            with patch("core.file_processor.get_new_filename_with_retry") as mock_get_name:
                 mock_get_name.return_value = "ai_generated_name"
 
                 # Call legacy function

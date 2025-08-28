@@ -14,9 +14,7 @@ from io import StringIO
 from unittest.mock import Mock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from core.application import _process_files_batch
 from utils.display_manager import DisplayManager, DisplayOptions
@@ -78,29 +76,23 @@ class TestCurrentSuccessFailureBug(unittest.TestCase):
         ):
             with patch(
                 "builtins.open",
-                Mock(
-                    return_value=Mock(
-                        __enter__=Mock(return_value=Mock()), __exit__=Mock()
-                    )
-                ),
+                Mock(return_value=Mock(__enter__=Mock(return_value=Mock()), __exit__=Mock())),
             ):
                 with patch(
                     "os.path.exists", return_value=True
                 ):  # Make sure file exists check passes
-                    success, successful_count, failed_count, error_details = (
-                        _process_files_batch(
-                            processable_files=test_files,
-                            processed_files=set(),
-                            input_dir=self.input_dir,
-                            unprocessed_dir=self.unprocessed_dir,
-                            renamed_dir=self.processed_dir,
-                            progress_file="test.progress",
-                            ocr_lang="eng",
-                            ai_client=mock_ai_client,
-                            organizer=mock_organizer,
-                            display_manager=display_manager,
-                            session_retry_handler=mock_retry_handler,
-                        )
+                    success, successful_count, failed_count, error_details = _process_files_batch(
+                        processable_files=test_files,
+                        processed_files=set(),
+                        input_dir=self.input_dir,
+                        unprocessed_dir=self.unprocessed_dir,
+                        renamed_dir=self.processed_dir,
+                        progress_file="test.progress",
+                        ocr_lang="eng",
+                        ai_client=mock_ai_client,
+                        organizer=mock_organizer,
+                        display_manager=display_manager,
+                        session_retry_handler=mock_retry_handler,
                     )
 
         # CRITICAL ASSERTIONS: These should pass when bug is fixed
@@ -110,12 +102,8 @@ class TestCurrentSuccessFailureBug(unittest.TestCase):
             1,
             "Should report 1 successful file (the ultimate outcome)",
         )
-        self.assertEqual(
-            failed_count, 0, "Should report 0 failed files (retry succeeded)"
-        )
-        self.assertEqual(
-            len(error_details), 0, "Should have no error details for successful files"
-        )
+        self.assertEqual(failed_count, 0, "Should report 0 failed files (retry succeeded)")
+        self.assertEqual(len(error_details), 0, "Should have no error details for successful files")
 
         # Check progress display stats if available
         if hasattr(display_manager.progress, "stats"):
@@ -128,9 +116,7 @@ class TestCurrentSuccessFailureBug(unittest.TestCase):
 
         # Check output contains success indicator
         output_content = output.getvalue()
-        self.assertIn(
-            "SUCCESS", output_content, "Output should contain success indicator"
-        )
+        self.assertIn("SUCCESS", output_content, "Output should contain success indicator")
 
 
 if __name__ == "__main__":

@@ -36,9 +36,7 @@ def progress_context():
 
 
 # Scenario imports
-@scenario(
-    "../progress_display.feature", "User sees progress counters increment correctly"
-)
+@scenario("../progress_display.feature", "User sees progress counters increment correctly")
 def test_user_sees_progress_counters_increment_correctly():
     pass
 
@@ -57,23 +55,15 @@ def test_user_sees_clear_file_status_progression():
 @given("I have a clean progress environment")
 def clean_progress_environment(progress_context):
     """Set up clean progress environment."""
-    progress_context.initial_success = (
-        progress_context.display_manager.progress.stats.success_count
-    )
-    progress_context.initial_failed = (
-        progress_context.display_manager.progress.stats.failed
-    )
-    progress_context.initial_completed = (
-        progress_context.display_manager.progress.stats.completed
-    )
+    progress_context.initial_success = progress_context.display_manager.progress.stats.success_count
+    progress_context.initial_failed = progress_context.display_manager.progress.stats.failed
+    progress_context.initial_completed = progress_context.display_manager.progress.stats.completed
 
 
 @when("I process 2 files successfully")
 def process_two_files_successfully(progress_context):
     """Simulate processing 2 files successfully."""
-    with progress_context.display_manager.processing_context(
-        total_files=2
-    ) as display_context:
+    with progress_context.display_manager.processing_context(total_files=2) as display_context:
         # Process 2 files successfully
         display_context.complete_file("file1.pdf", "renamed_file1.pdf")
         display_context.complete_file("file2.pdf", "renamed_file2.pdf")
@@ -83,9 +73,7 @@ def process_two_files_successfully(progress_context):
 @when("I complete a full processing session with 3 successes and 1 failure")
 def complete_full_processing_session(progress_context):
     """Simulate a complete processing session with mixed outcomes."""
-    with progress_context.display_manager.processing_context(
-        total_files=4
-    ) as display_context:
+    with progress_context.display_manager.processing_context(total_files=4) as display_context:
         # Process 3 files successfully
         display_context.complete_file("success1.pdf", "renamed_success1.pdf")
         display_context.complete_file("success2.pdf", "renamed_success2.pdf")
@@ -100,9 +88,7 @@ def complete_full_processing_session(progress_context):
 @when("I track file processing status changes")
 def track_file_processing_status_changes(progress_context):
     """Track file status changes during processing."""
-    with progress_context.display_manager.processing_context(
-        total_files=1
-    ) as display_context:
+    with progress_context.display_manager.processing_context(total_files=1) as display_context:
         # Simulate the progression of file status
         progress_context.status_progression = []
 
@@ -176,9 +162,7 @@ def verify_final_failure_statistics(progress_context, num):
     ), f"Final statistics should show {num} failed file. Expected: {expected_failed}, Got: {current_failed}"
 
 
-@then(
-    parsers.parse("I should see final statistics showing {num:d} total files processed")
-)
+@then(parsers.parse("I should see final statistics showing {num:d} total files processed"))
 def verify_total_files_processed_statistics(progress_context, num):
     """Verify final statistics show correct total processed count."""
     current_completed = progress_context.display_manager.progress.stats.completed

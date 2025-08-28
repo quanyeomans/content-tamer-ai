@@ -9,9 +9,7 @@ from io import StringIO
 from unittest.mock import Mock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from utils.display_manager import DisplayManager, DisplayOptions
 
@@ -23,9 +21,7 @@ class TestSimpleTDD(unittest.TestCase):
         """Test that complete_file actually increments success count."""
         # Use a configuration that forces full progress display
         output = StringIO()
-        display_manager = DisplayManager(
-            DisplayOptions(quiet=False, no_color=True, file=output)
-        )
+        display_manager = DisplayManager(DisplayOptions(quiet=False, no_color=True, file=output))
 
         # Force creation of full progress display
         with patch("utils.display_manager.create_rich_display") as mock_create_rich:

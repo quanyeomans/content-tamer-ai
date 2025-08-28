@@ -38,9 +38,7 @@ def error_context():
 
 
 # Scenario imports
-@scenario(
-    "../error_handling.feature", "User sees clear feedback for file processing failures"
-)
+@scenario("../error_handling.feature", "User sees clear feedback for file processing failures")
 def test_user_sees_clear_feedback_for_file_processing_failures():
     pass
 
@@ -66,24 +64,16 @@ def test_user_sees_accurate_progress_statistics_during_mixed_outcomes():
 def clean_test_environment(error_context):
     """Set up clean test environment for error handling tests."""
     # Environment is already clean from fixture
-    error_context.initial_success_count = (
-        error_context.display_manager.progress.stats.success_count
-    )
-    error_context.initial_error_count = (
-        error_context.display_manager.progress.stats.failed
-    )
+    error_context.initial_success_count = error_context.display_manager.progress.stats.success_count
+    error_context.initial_error_count = error_context.display_manager.progress.stats.failed
 
 
 @when("I simulate a file processing failure")
 def simulate_file_processing_failure(error_context):
     """Simulate a file that fails processing."""
-    with error_context.display_manager.processing_context(
-        total_files=1
-    ) as display_context:
+    with error_context.display_manager.processing_context(total_files=1) as display_context:
         # Simulate what happens when a file fails processing
-        display_context.fail_file(
-            "test_file.pdf", "Processing failed due to corruption"
-        )
+        display_context.fail_file("test_file.pdf", "Processing failed due to corruption")
         error_context.processing_context = display_context
 
 
@@ -102,9 +92,7 @@ def simulate_retry_success(error_context):
             raise OSError("File temporarily locked by antivirus")
         return "successfully_processed_file.pdf"
 
-    with error_context.display_manager.processing_context(
-        total_files=1
-    ) as display_context:
+    with error_context.display_manager.processing_context(total_files=1) as display_context:
         # Execute retry operation
         success, result, error_classification = retry_handler.execute_with_retry(
             operation=mock_operation,
@@ -128,9 +116,7 @@ def simulate_retry_success(error_context):
 @when("I simulate processing 3 successful files and 2 failed files")
 def simulate_mixed_processing_outcomes(error_context):
     """Simulate batch processing with mixed outcomes."""
-    with error_context.display_manager.processing_context(
-        total_files=5
-    ) as display_context:
+    with error_context.display_manager.processing_context(total_files=5) as display_context:
         # Process 3 successful files
         display_context.complete_file("success1.pdf", "renamed_success1.pdf")
         display_context.complete_file("success2.pdf", "renamed_success2.pdf")
@@ -170,13 +156,9 @@ def verify_error_understanding(error_context):
 
     # Look for error indicators that user can see
     error_indicators = ["failed", "error", "✗"]
-    has_error_indicator = any(
-        indicator in display_output.lower() for indicator in error_indicators
-    )
+    has_error_indicator = any(indicator in display_output.lower() for indicator in error_indicators)
 
-    assert (
-        has_error_indicator
-    ), f"Should see clear error indicators. Output: {display_output}"
+    assert has_error_indicator, f"Should see clear error indicators. Output: {display_output}"
 
 
 @then("I should see recovery success information")

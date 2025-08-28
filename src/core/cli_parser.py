@@ -9,33 +9,19 @@ import os
 import sys
 from typing import Any
 
-try:
-    from utils.expert_mode import prompt_expert_mode_if_needed
-except ImportError:
-    import os
-    import sys
+# Centralized imports and path management
+from utils.imports import safe_import_with_fallback
+from utils.paths import get_default_directories, get_project_root
 
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from utils.expert_mode import prompt_expert_mode_if_needed
+# Import required modules using shared utility
+modules = safe_import_with_fallback(["utils.expert_mode", "ai_providers"])
+prompt_expert_mode_if_needed = modules["utils.expert_mode"].prompt_expert_mode_if_needed
+AI_PROVIDERS = modules["ai_providers"].AI_PROVIDERS
+AIProviderFactory = modules["ai_providers"].AIProviderFactory
 
-
-# Import AI providers for validation
-try:
-    from ai_providers import AI_PROVIDERS, AIProviderFactory
-except ImportError:
-    import os
-    import sys
-
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from ai_providers import AI_PROVIDERS, AIProviderFactory
-
-# Default directories
-PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
-DEFAULT_INPUT_DIR = os.path.join(DEFAULT_DATA_DIR, "input")
-DEFAULT_PROCESSED_DIR = os.path.join(DEFAULT_DATA_DIR, "processed")
+# Use centralized path management
+PROJECT_ROOT = get_project_root()
+DEFAULT_DATA_DIR, DEFAULT_INPUT_DIR, DEFAULT_PROCESSED_DIR, _, _ = get_default_directories()
 
 
 def parse_arguments():

@@ -13,9 +13,7 @@ from io import StringIO
 from unittest.mock import MagicMock, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from utils.error_handling import (
     ErrorClassification,
@@ -133,16 +131,12 @@ class TestRetryHandler(unittest.TestCase):
         self.assertEqual(result, "success_after_retry")
         self.assertIsNone(error)
         self.assertEqual(self.retry_handler.get_stats().successful_retries, 1)
-        self.assertEqual(
-            self.retry_handler.get_stats().recoverable_errors_encountered, 1
-        )
+        self.assertEqual(self.retry_handler.get_stats().recoverable_errors_encountered, 1)
 
         # Verify display context was called appropriately
         self.display_context.set_status.assert_any_call("retrying")
         self.display_context.set_status.assert_any_call("recovered")
-        self.display_context.show_info.assert_any_call(
-            "✅ Successfully processed after retry"
-        )
+        self.display_context.show_info.assert_any_call("✅ Successfully processed after retry")
 
     def test_permanent_error_no_retry(self):
         """Test permanent errors are not retried."""
@@ -185,12 +179,8 @@ class TestRetryHandler(unittest.TestCase):
 
         # Should have tried 3 times (max_attempts)
         stats = self.retry_handler.get_stats()
-        self.assertEqual(
-            stats.recoverable_errors_encountered, 2
-        )  # Two retry decisions made
-        self.assertEqual(
-            stats.failed_retries, 1
-        )  # Final failure counts as failed retry
+        self.assertEqual(stats.recoverable_errors_encountered, 2)  # Two retry decisions made
+        self.assertEqual(stats.failed_retries, 1)  # Final failure counts as failed retry
 
     def test_session_summary_formatting(self):
         """Test session summary message formatting."""
@@ -298,9 +288,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.display_context.show_info.assert_any_call(
             "⏳ File temporarily locked (likely antivirus scan or sync), retrying..."
         )
-        self.display_context.show_info.assert_any_call(
-            "✅ Successfully processed after retry"
-        )
+        self.display_context.show_info.assert_any_call("✅ Successfully processed after retry")
 
     def test_onedrive_sync_scenario(self):
         """Test OneDrive sync conflict scenario."""

@@ -10,9 +10,7 @@ from io import StringIO
 from unittest.mock import MagicMock, call, patch
 
 # Add src directory to path
-sys.path.append(
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
-)
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from utils.cli_display import Colors
 from utils.progress_display import ProgressDisplay, ProgressStats
