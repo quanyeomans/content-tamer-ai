@@ -59,8 +59,27 @@ AI_PROVIDERS = {
         "gpt-4-vision-preview",
         "gpt-4o-vision",  # Vision-capable models
     ],
-    "gemini": ["gemini-pro"],
-    "claude": ["claude-3-haiku", "claude-3-sonnet", "claude-3-opus"],
+    "gemini": [
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-2.0-pro-experimental",
+        "gemini-1.5-pro",
+        "gemini-1.5-flash",
+        "gemini-pro",  # Legacy support
+    ],
+    "claude": [
+        "claude-opus-4.1",
+        "claude-sonnet-4",
+        "claude-3.7-sonnet",
+        "claude-3.5-opus",
+        "claude-3.5-sonnet",
+        "claude-3.5-haiku",
+        "claude-3-opus",
+        "claude-3-sonnet",
+        "claude-3-haiku",  # Legacy support
+    ],
     "deepseek": ["deepseek-chat"],
 }
 
@@ -84,8 +103,8 @@ SYSTEM_PROMPTS = DEFAULT_SYSTEM_PROMPTS
 # Recommended default model for each provider
 DEFAULT_MODELS = {
     "openai": "gpt-5-mini",
-    "gemini": "gemini-pro",
-    "claude": "claude-3-haiku",
+    "gemini": "gemini-2.0-flash",  # Fast, cost-efficient, generally available
+    "claude": "claude-3.5-haiku",  # Fastest, most cost-effective Claude 3.5 model
     "deepseek": "deepseek-chat",
 }
 
@@ -265,12 +284,29 @@ class GeminiProvider(AIProvider):
         try:
             if genai is None:
                 raise RuntimeError("Gemini not available")
+
+            # Build generation config with latest API specification
+            generation_config = genai.types.GenerationConfig(  # type: ignore
+                max_output_tokens=50,
+                temperature=0.2,
+                top_p=0.9,
+                top_k=1,
+                candidate_count=1,
+            )
+
+            # Disable thinking for 2.5 models to get faster responses for filename generation
+            if "2.5" in self.model:
+                try:
+                    generation_config.thinking_config = genai.types.ThinkingConfig(  # type: ignore
+                        thinking_budget=0  # Disable thinking for faster responses
+                    )
+                except (AttributeError, TypeError):
+                    # Fallback if thinking_config not available in this version
+                    pass
+
             response = self.client.generate_content(
                 [get_system_prompt("gemini"), content or ""],
-                generation_config=genai.types.GenerationConfig(  # type: ignore
-                    max_output_tokens=50,
-                    temperature=0.2,
-                ),
+                generation_config=generation_config,
             )
             if not hasattr(response, "text"):
                 raise AttributeError("Unexpected response format from Gemini API")
@@ -293,12 +329,20 @@ class ClaudeProvider(AIProvider):
         try:
             if anthropic is None:
                 raise RuntimeError("Anthropic not available")
-            message = self.client.messages.create(
-                model=self.model,
-                system=get_system_prompt("claude"),
-                max_tokens=50,
-                messages=[{"role": "user", "content": content or ""}],
-            )
+
+            # Build API parameters with temperature for consistency
+            api_params = {
+                "model": self.model,
+                "system": get_system_prompt("claude"),
+                "max_tokens": 50,
+                "messages": [{"role": "user", "content": content or ""}],
+            }
+
+            # Add temperature parameter, but avoid for Opus 4.1 models which have restrictions
+            if "opus-4.1" not in self.model.lower():
+                api_params["temperature"] = 0.2
+
+            message = self.client.messages.create(**api_params)
             # Handle new Anthropic API response format
             if hasattr(message, "content") and isinstance(message.content, list):
                 for block in message.content:

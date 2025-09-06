@@ -190,6 +190,12 @@ def get_api_details(provider: str, model: str) -> str:
     if not api_key:
         return _prompt_for_api_key(provider)
     else:
+        # Clean environment variable value (remove whitespace, quotes)
+        api_key = _clean_and_validate_input(api_key, provider)
+
+        # Check if after cleaning the key is empty
+        if not api_key:
+            return _prompt_for_api_key(provider)
         # For API keys from environment variables, still validate
         return _validate_api_key(api_key, provider)
 

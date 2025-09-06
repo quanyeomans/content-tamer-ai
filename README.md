@@ -37,8 +37,8 @@ content-tamer-ai  # Uses smart defaults - just works!
 
 ### 🤖 AI Provider Support
 - **OpenAI** ✅ **Production Ready** — GPT-5, GPT-4o with full vision support
-- **Claude** ⚠️ **Available** — Integration complete, community testing welcomed
-- **Gemini** ⚠️ **Available** — Integration complete, community testing welcomed  
+- **Claude** ✅ **Latest Models** — Claude Opus 4.1, Sonnet 4, Claude 3.5 series (Opus, Sonnet, Haiku)
+- **Gemini** ✅ **Latest Models** — Gemini 2.5 Pro/Flash, 2.0 Flash/Pro with thinking capabilities  
 - **Deepseek** ⚠️ **Available** — Cost-effective option, community testing welcomed
 
 ---
@@ -93,15 +93,19 @@ python install.py  # Smart cross-platform installer
 git clone https://github.com/quanyeomans/content-tamer-ai.git
 cd content-tamer-ai
 pip install -r requirements.txt
-pip install openai  # or your preferred AI provider
+
+# Install your preferred AI provider:
+pip install openai>=1.0.0           # For OpenAI (GPT-5, GPT-4o)
+pip install anthropic>=0.34.0       # For Claude (Opus 4.1, Sonnet 4, 3.5 series)
+pip install google-genai>=0.7.0     # For Gemini (2.5 Pro/Flash, 2.0 series)
 ```
 
 ## 🔑 API Key Setup
 
 **Get an API key from your preferred provider:**
-- [OpenAI API Keys](https://platform.openai.com/api-keys) (recommended)
-- [Anthropic Claude](https://console.anthropic.com/) 
-- [Google AI Studio](https://aistudio.google.com/)
+- [OpenAI API Keys](https://platform.openai.com/api-keys) — GPT-5, GPT-4o with vision support
+- [Anthropic Claude](https://console.anthropic.com/) — Claude Opus 4.1, Sonnet 4, Claude 3.5 series
+- [Google AI Studio](https://aistudio.google.com/) — Gemini 2.5 Pro/Flash with thinking capabilities
 
 **Set your API key:**
 ```bash
@@ -133,10 +137,13 @@ content-tamer-ai
 content-tamer-ai -m gpt-4o          # Best vision support
 content-tamer-ai -m gpt-5           # Most capable
 
-# Different providers  
-content-tamer-ai -p claude -m claude-3-sonnet
-content-tamer-ai -p gemini
-content-tamer-ai -p deepseek        # Cost-effective
+# Different providers with latest models
+content-tamer-ai -p claude -m claude-opus-4.1      # Most advanced Claude model
+content-tamer-ai -p claude -m claude-sonnet-4      # High performance Claude
+content-tamer-ai -p claude -m claude-3.5-haiku    # Fast, cost-effective Claude
+content-tamer-ai -p gemini -m gemini-2.5-pro      # Advanced reasoning Gemini
+content-tamer-ai -p gemini -m gemini-2.0-flash    # Fast, efficient Gemini (default)
+content-tamer-ai -p deepseek        # Cost-effective alternative
 
 # Custom folders
 content-tamer-ai -i ~/Downloads -r ~/Organized
@@ -282,7 +289,7 @@ Our security philosophy prioritizes **user control** over blocking. We detect an
 ## 🤝 Contributing & Community
 
 **We'd love your help! Priority areas:**
-- 🧪 **Test AI providers** — Validate Claude, Gemini, Deepseek
+- 🧪 **Test latest AI models** — Claude Opus 4.1, Gemini 2.5 Pro, validate new features  
 - 📄 **Add file types** — Office docs, new formats
 - 🏠 **Local LLM integration** — Privacy-focused processing
 - 🌍 **Internationalization** — Multi-language support

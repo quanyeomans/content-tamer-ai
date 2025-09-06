@@ -375,6 +375,55 @@ class TestCLIIntegration(unittest.TestCase):
             api_key = get_api_details("openai", "gpt-4o")
             self.assertEqual(api_key, "sk-test1234567890abcdef")
 
+    def test_get_api_details_env_var_with_whitespace(self):
+        """Test API key retrieval from environment with leading/trailing whitespace (bug fix)."""
+        # This tests the fix for the environment variable whitespace bug
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "  sk-test1234567890abcdef  "}):
+            api_key = get_api_details("openai", "gpt-4o")
+            self.assertEqual(api_key, "sk-test1234567890abcdef")
+            
+    def test_get_api_details_env_var_with_quotes(self):
+        """Test API key retrieval from environment with quotes (common copy-paste issue)."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": '"sk-test1234567890abcdef"'}):
+            api_key = get_api_details("openai", "gpt-4o")
+            self.assertEqual(api_key, "sk-test1234567890abcdef")
+
+    def test_get_api_details_env_var_with_single_quotes(self):
+        """Test API key retrieval from environment with single quotes."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "'sk-test1234567890abcdef'"}):
+            api_key = get_api_details("openai", "gpt-4o")
+            self.assertEqual(api_key, "sk-test1234567890abcdef")
+
+    def test_get_api_details_env_var_with_whitespace_and_quotes(self):
+        """Test API key retrieval with both whitespace and quotes (worst case scenario)."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": '  "sk-test1234567890abcdef"  '}):
+            api_key = get_api_details("openai", "gpt-4o")
+            self.assertEqual(api_key, "sk-test1234567890abcdef")
+
+    @patch("builtins.input")
+    def test_get_api_details_empty_env_var_prompts_user(self, mock_input):
+        """Test that empty environment variable falls back to user prompt."""
+        mock_input.return_value = "sk-user1234567890abcdef"
+        
+        # Test empty string environment variable
+        with patch.dict(os.environ, {"OPENAI_API_KEY": ""}):
+            with patch("subprocess.run"), patch("os.system"):
+                api_key = get_api_details("openai", "gpt-4o")
+                self.assertEqual(api_key, "sk-user1234567890abcdef")
+                mock_input.assert_called_once_with("\nEnter your Openai API key: ")
+
+    @patch("builtins.input")
+    def test_get_api_details_whitespace_only_env_var_prompts_user(self, mock_input):
+        """Test that whitespace-only environment variable falls back to user prompt."""
+        mock_input.return_value = "sk-user1234567890abcdef"
+        
+        # Test whitespace-only environment variable
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "   "}):
+            with patch("subprocess.run"), patch("os.system"):
+                api_key = get_api_details("openai", "gpt-4o")
+                self.assertEqual(api_key, "sk-user1234567890abcdef")
+                mock_input.assert_called_once_with("\nEnter your Openai API key: ")
+
     def test_get_api_details_invalid_provider(self):
         """Test error handling for invalid provider."""
         with self.assertRaises(ValueError) as context:

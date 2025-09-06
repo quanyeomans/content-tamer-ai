@@ -11,8 +11,8 @@ rich>=13.7.0
 
 # AI Provider dependencies (install based on your needs)
 # openai>=1.0.0              # For OpenAI models (recommended)
-# anthropic>=0.3.0           # For Claude models (needs testing)  
-# google-genai>=0.3.0        # For Gemini models (needs testing)
+# anthropic>=0.34.0          # For Claude models (Opus 4.1, Sonnet 4, Claude 3.5 series)  
+# google-genai>=0.7.0        # For Gemini models (2.5 Pro/Flash, 2.0 Flash/Pro - new unified SDK)
 
 # Development dependencies (optional)
 # pytest>=8.4.1              # For running tests
