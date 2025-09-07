@@ -308,6 +308,7 @@ def organize_content(
     ocr_lang: str = "eng",
     display_options: Optional[dict] = None,
     enable_post_processing: bool = False,
+    ml_enhancement_level: int = 2,
 ) -> bool:
     """
     Organize and intelligently rename documents using AI analysis.
@@ -408,15 +409,17 @@ def organize_content(
                         processed_files.append(file_path)
             
             if processed_files:
-                # Run post-processing organization
+                # Run post-processing organization with ML level
                 organization_result = organizer.run_post_processing_organization(
-                    processed_files, renamed_dir, enable_organization=True
+                    processed_files, renamed_dir, enable_organization=True,
+                    ml_enhancement_level=ml_enhancement_level
                 )
                 
                 if organization_result.get("success", False):
                     if organization_result.get("organization_applied", False):
                         docs_organized = organization_result.get("documents_organized", 0)
-                        display_manager.info(f"✅ Post-processing organization completed: {docs_organized} documents analyzed")
+                        engine_type = organization_result.get("engine_type", "Unknown")
+                        display_manager.info(f"✅ Post-processing organization completed: {docs_organized} documents analyzed ({engine_type})")
                         
                         # Show organization summary if available
                         org_result = organization_result.get("organization_result", {})
@@ -424,6 +427,12 @@ def organize_content(
                         if quality_metrics:
                             accuracy = quality_metrics.get("accuracy", 0) * 100
                             display_manager.info(f"📊 Organization quality: {accuracy:.1f}% classification accuracy")
+                            
+                            # Show ML enhancement details if available
+                            if ml_enhancement_level >= 2 and quality_metrics.get("ml_enhancement_applied"):
+                                ml_refined = quality_metrics.get("ml_refined_documents", 0)
+                                if ml_refined > 0:
+                                    display_manager.info(f"🤖 ML enhancement: {ml_refined} documents refined with modern NLP")
                     else:
                         reason = organization_result.get("reason", "Unknown")
                         display_manager.info(f"ℹ️  Post-processing organization skipped: {reason}")

@@ -261,15 +261,17 @@ class FileOrganizer:
         self, 
         processed_files: List[str], 
         target_folder: str, 
-        enable_organization: bool = True
+        enable_organization: bool = True,
+        ml_enhancement_level: int = 2
     ) -> Dict[str, Any]:
         """
-        Run post-processing document organization using Phase 1 balanced architecture.
+        Run post-processing document organization with configurable ML enhancement.
         
         Args:
             processed_files: List of file paths that have been processed
             target_folder: Target directory for organization
             enable_organization: Feature flag to enable/disable organization
+            ml_enhancement_level: 1=Phase1 only, 2=Phase2 ML enhancement
             
         Returns:
             Dictionary with organization results and status
@@ -282,11 +284,15 @@ class FileOrganizer:
             }
         
         try:
-            # Import Phase 1 organization engine
-            from organization.organization_engine import BasicOrganizationEngine
-            
-            # Initialize organization engine
-            engine = BasicOrganizationEngine(target_folder)
+            # Import appropriate organization engine based on ML level
+            if ml_enhancement_level >= 2:
+                from organization.enhanced_organization_engine import EnhancedOrganizationEngine
+                engine = EnhancedOrganizationEngine(target_folder, ml_enhancement_level)
+                engine_type = f"Enhanced (Level {ml_enhancement_level})"
+            else:
+                from organization.organization_engine import BasicOrganizationEngine
+                engine = BasicOrganizationEngine(target_folder)
+                engine_type = "Basic (Level 1)"
             
             # Prepare document info for organization
             processed_docs = []
@@ -315,7 +321,9 @@ class FileOrganizer:
                     "success": True,
                     "organization_applied": True,
                     "organization_result": organization_result,
-                    "documents_organized": len(processed_docs)
+                    "documents_organized": len(processed_docs),
+                    "engine_type": engine_type,
+                    "ml_enhancement_level": ml_enhancement_level
                 }
             else:
                 return {

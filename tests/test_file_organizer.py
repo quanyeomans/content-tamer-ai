@@ -418,5 +418,285 @@ class TestPostProcessingOrganization(unittest.TestCase):
         self.assertFalse(should_not_reorganize)  # Only 10% improvement
 
 
+class TestPhase2MLEnhancement(unittest.TestCase):
+    """Test Phase 2 ML enhancement features."""
+
+    def setUp(self):
+        """Set up temporary directory and test documents for ML testing."""
+        self.temp_dir = tempfile.mkdtemp()
+        
+        # Create more diverse sample documents for ML testing
+        self.sample_docs = [
+            {
+                "filename": "clear_contract_agreement_2024.pdf",
+                "content": "This service agreement is entered into between Acme Corporation and the Client. Terms and conditions apply. The parties agree to be bound by these terms. Effective date: January 15, 2024.",
+                "expected_category": "contracts",
+                "expected_confidence": "high"  # Should be certain
+            },
+            {
+                "filename": "mixed_business_document.pdf",
+                "content": "Dear team, this document contains various business topics. There are some contract discussions, meeting notes, and project updates. Please review the attached materials.",
+                "expected_category": "correspondence", 
+                "expected_confidence": "low"  # Should be uncertain, good for ML
+            },
+            {
+                "filename": "financial_summary_unclear.pdf",
+                "content": "Summary of items: Revenue, expenses, costs. Analysis needed. Various data points. Further review required.",
+                "expected_category": "reports",
+                "expected_confidence": "low"  # Should be uncertain
+            },
+            {
+                "filename": "invoice_123_clear.pdf",
+                "content": "Invoice #12345 dated March 20, 2024. Amount due: $1,500.00. Payment terms: Net 30 days. Please remit payment to the address below.",
+                "expected_category": "invoices",
+                "expected_confidence": "high"  # Should be certain
+            }
+        ]
+
+    def tearDown(self):
+        """Clean up temporary directory."""
+        shutil.rmtree(self.temp_dir)
+
+    def test_uncertainty_detector_basic_functionality(self):
+        """Test uncertainty detector identifies low-confidence documents."""
+        from content_analysis.uncertainty_detector import UncertaintyDetector
+        
+        detector = UncertaintyDetector(confidence_threshold=0.7)
+        
+        # Create mock classified documents with different confidence levels
+        mock_classified = [
+            {"filename": "high_conf.pdf", "confidence": 0.9, "category": "contracts"},
+            {"filename": "low_conf.pdf", "confidence": 0.4, "category": "other"},
+            {"filename": "medium_conf.pdf", "confidence": 0.6, "category": "reports"}
+        ]
+        
+        certain_docs, uncertain_docs = detector.detect_uncertain_documents(mock_classified)
+        
+        # High confidence should be certain
+        self.assertEqual(len(certain_docs), 1)
+        self.assertEqual(certain_docs[0]["filename"], "high_conf.pdf")
+        
+        # Low and medium confidence should be uncertain  
+        self.assertEqual(len(uncertain_docs), 2)
+        uncertain_filenames = {doc["filename"] for doc in uncertain_docs}
+        self.assertIn("low_conf.pdf", uncertain_filenames)
+        self.assertIn("medium_conf.pdf", uncertain_filenames)
+
+    def test_ml_refiner_availability_check(self):
+        """Test ML refiner handles missing dependencies gracefully."""
+        from content_analysis.ml_refiner import SelectiveMLRefinement
+        
+        refiner = SelectiveMLRefinement()
+        
+        # Should not crash even if dependencies are missing
+        ml_stats = refiner.get_ml_stats()
+        self.assertIsInstance(ml_stats, dict)
+        self.assertIn("ml_available", ml_stats)
+
+    def test_ml_refiner_with_small_document_set(self):
+        """Test ML refiner skips processing for small document sets."""
+        from content_analysis.ml_refiner import SelectiveMLRefinement
+        
+        refiner = SelectiveMLRefinement()
+        
+        # Small set should be skipped
+        small_docs = [{"filename": "test.pdf", "content_preview": "test content"}]
+        result = refiner.refine_uncertain_classifications(small_docs, small_docs)
+        
+        # Should return empty result for small sets
+        self.assertEqual(len(result), 0)
+
+    def test_hybrid_state_manager_initialization(self):
+        """Test hybrid state manager initializes properly."""
+        from organization.hybrid_state_manager import HybridStateManager
+        
+        # Should initialize without errors
+        manager = HybridStateManager(self.temp_dir)
+        
+        # Should inherit all SimpleStateManager functionality
+        self.assertTrue(hasattr(manager, 'save_preferences'))
+        self.assertTrue(hasattr(manager, 'load_preferences'))
+        
+        # Should have additional hybrid functionality
+        self.assertTrue(hasattr(manager, 'save_enhanced_session_data'))
+        self.assertTrue(hasattr(manager, 'get_advanced_insights'))
+
+    def test_hybrid_state_manager_enhanced_session_data(self):
+        """Test saving and retrieving enhanced session data."""
+        from organization.hybrid_state_manager import HybridStateManager
+        
+        manager = HybridStateManager(self.temp_dir)
+        
+        # Test enhanced session data
+        session_data = {
+            "session_id": "test_session_123",
+            "document_count": 4,
+            "quality_metrics": {
+                "accuracy": 0.85,
+                "rule_accuracy": 0.80,
+                "ml_accuracy": 0.90,
+                "uncertain_documents": 2,
+                "ml_refined_documents": 2
+            },
+            "classified_documents": [
+                {
+                    "filename": "test1.pdf",
+                    "category": "contracts",
+                    "confidence": 0.9,
+                    "classification_method": "rule_based"
+                },
+                {
+                    "filename": "test2.pdf", 
+                    "category": "reports",
+                    "confidence": 0.75,
+                    "classification_method": "ml_refinement"
+                }
+            ]
+        }
+        
+        # Should save successfully
+        success = manager.save_enhanced_session_data(session_data, processing_time=5.2)
+        self.assertTrue(success)
+
+    def test_enhanced_organization_engine_level_1(self):
+        """Test enhanced engine works in Phase 1 compatibility mode."""
+        from organization.enhanced_organization_engine import EnhancedOrganizationEngine
+        
+        # Level 1 should work like BasicOrganizationEngine
+        engine = EnhancedOrganizationEngine(self.temp_dir, ml_enhancement_level=1)
+        self.assertEqual(engine.ml_enhancement_level, 1)
+        
+        # Should still organize documents successfully
+        processed_docs = []
+        for doc in self.sample_docs:
+            doc_info = {
+                "filename": doc["filename"],
+                "content": doc["content"], 
+                "path": os.path.join(self.temp_dir, doc["filename"])
+            }
+            processed_docs.append(doc_info)
+        
+        result = engine.organize_documents(processed_docs)
+        
+        self.assertIn("success", result)
+        self.assertTrue(result["success"])
+        self.assertIn("quality_metrics", result)
+
+    def test_enhanced_organization_engine_level_2(self):
+        """Test enhanced engine with Phase 2 ML capabilities."""
+        from organization.enhanced_organization_engine import EnhancedOrganizationEngine
+        
+        # Level 2 should include ML enhancement
+        engine = EnhancedOrganizationEngine(self.temp_dir, ml_enhancement_level=2)
+        self.assertEqual(engine.ml_enhancement_level, 2)
+        
+        # Should have ML components
+        self.assertTrue(hasattr(engine, 'uncertainty_detector'))
+        self.assertTrue(hasattr(engine, 'ml_refiner'))
+        
+        # Test ML stats
+        ml_stats = engine.get_ml_stats()
+        self.assertIsInstance(ml_stats, dict)
+        self.assertEqual(ml_stats["enhancement_level"], 2)
+
+    def test_enhanced_organization_engine_with_ml_documents(self):
+        """Test enhanced engine processes documents with ML refinement."""
+        from organization.enhanced_organization_engine import EnhancedOrganizationEngine
+        
+        engine = EnhancedOrganizationEngine(self.temp_dir, ml_enhancement_level=2)
+        
+        # Process documents
+        processed_docs = []
+        for doc in self.sample_docs:
+            doc_info = {
+                "filename": doc["filename"],
+                "content": doc["content"],
+                "path": os.path.join(self.temp_dir, doc["filename"])
+            }
+            processed_docs.append(doc_info)
+        
+        result = engine.organize_documents(processed_docs)
+        
+        # Should complete successfully
+        self.assertTrue(result["success"])
+        
+        # Should include ML metrics
+        self.assertIn("ml_metrics", result)
+        ml_metrics = result["ml_metrics"]
+        
+        # ML should be attempted
+        if ml_metrics.get("ml_applied", False):
+            self.assertIn("total_documents", ml_metrics)
+            self.assertIn("uncertain_documents", ml_metrics)
+        
+        # Should include enhanced quality metrics
+        quality_metrics = result["quality_metrics"]
+        self.assertIn("accuracy", quality_metrics)
+
+    def test_uncertainty_detector_threshold_analysis(self):
+        """Test uncertainty detector threshold analysis functionality."""
+        from content_analysis.uncertainty_detector import UncertaintyDetector
+        
+        detector = UncertaintyDetector()
+        
+        # Create documents with various confidence levels
+        test_docs = [
+            {"filename": f"doc_{i}.pdf", "confidence": i * 0.1, "category": "test"}
+            for i in range(1, 11)  # 0.1 to 1.0 confidence
+        ]
+        
+        analysis = detector.get_threshold_analysis(test_docs)
+        
+        # Should return analysis for different thresholds
+        self.assertIsInstance(analysis, dict)
+        
+        # Should have data for different threshold levels
+        threshold_keys = [k for k in analysis.keys() if k.startswith("threshold_")]
+        self.assertGreater(len(threshold_keys), 0)
+
+    def test_enhanced_organization_graceful_degradation(self):
+        """Test enhanced organization handles ML failures gracefully."""
+        from organization.enhanced_organization_engine import EnhancedOrganizationEngine
+        
+        engine = EnhancedOrganizationEngine(self.temp_dir, ml_enhancement_level=2)
+        
+        # Even if ML components fail, should still work
+        processed_docs = [
+            {
+                "filename": "test.pdf",
+                "content": "test content",
+                "path": os.path.join(self.temp_dir, "test.pdf")
+            }
+        ]
+        
+        result = engine.organize_documents(processed_docs)
+        
+        # Should not crash even if ML fails
+        self.assertIsInstance(result, dict)
+        self.assertIn("success", result)
+
+    def test_integration_with_file_organizer_ml_levels(self):
+        """Test FileOrganizer integration works with different ML levels."""
+        from file_organizer import FileOrganizer
+        
+        organizer = FileOrganizer()
+        
+        # Create test files
+        processed_files = []
+        for doc in self.sample_docs[:2]:  # Just test with 2 docs
+            file_path = os.path.join(self.temp_dir, doc["filename"])
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(doc["content"])
+            processed_files.append(file_path)
+        
+        # Should work with ML enhancement
+        result = organizer.run_post_processing_organization(
+            processed_files, self.temp_dir, enable_organization=True
+        )
+        
+        self.assertIsInstance(result, dict)
+        self.assertIn("success", result)
+
+
 if __name__ == "__main__":
     unittest.main()
