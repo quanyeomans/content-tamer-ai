@@ -189,6 +189,11 @@ def get_ai_provider_options():
             "description": "Google Gemini models (2.5 Pro/Flash, 2.0 Flash/Pro)",
             "status": "[OK] Latest Models",
         },
+        "local": {
+            "package": "psutil>=5.9.0",
+            "description": "🏠 Local LLM (offline processing, no API keys required)",
+            "status": "[NEW] Complete Privacy",
+        },
         "dev": {
             "package": "pytest>=8.4.1",
             "description": "Development and testing tools",
@@ -436,16 +441,25 @@ def print_completion_summary(tesseract_available):
 
     print()
     print("Next steps:")
-    print(f"  1. Set up API key: {Colors.BOLD}export OPENAI_API_KEY='your-key-here'{Colors.END}")
-    print(f"  2. Run the application: {Colors.BOLD}python run.py{Colors.END}")
-    print(f"  3. Place files in: {Colors.BOLD}data/input/{Colors.END}")
-    print(f"  4. Find results in: {Colors.BOLD}data/processed/{Colors.END}")
+    print(f"  {Colors.BOLD}Option A: Cloud AI (API key required){Colors.END}")
+    print(f"    1. Set up API key: {Colors.BOLD}export OPENAI_API_KEY='your-key-here'{Colors.END}")
+    print(f"    2. Run: {Colors.BOLD}python run.py{Colors.END}")
+    print()
+    print(f"  {Colors.BOLD}Option B: Local LLM (no API key, complete privacy){Colors.END}")
+    print(f"    1. Setup: {Colors.BOLD}python run.py --setup-local-llm{Colors.END}")
+    print(f"    2. Run: {Colors.BOLD}python run.py --provider local{Colors.END}")
+    print()
+    print(f"  {Colors.BOLD}File Processing:{Colors.END}")
+    print(f"    • Place files in: {Colors.BOLD}data/input/{Colors.END}")
+    print(f"    • Find results in: {Colors.BOLD}data/processed/{Colors.END}")
     print()
 
     print("Documentation:")
     print("  • README.md - Complete usage guide")
     print("  • Run tests: python -m pytest tests/ -v")
-    print("  • List models: python run.py --list-models")
+    print("  • List all models: python run.py --list-models")
+    print("  • List local models: python run.py --list-local-models")
+    print("  • Check local requirements: python run.py --check-local-requirements")
 
 
 def main():

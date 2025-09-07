@@ -270,3 +270,12 @@ data/processed/unprocessed/*
 data/input/*
 data/.processing/*
 
+# ===== Local LLM and AI Model Files =====
+# Ollama model cache (user's home directory, but just in case)
+.ollama/
+ollama_models/
+*.gguf
+*.bin
+models/
+model_cache/
+

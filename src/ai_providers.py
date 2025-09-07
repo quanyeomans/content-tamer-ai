@@ -89,6 +89,12 @@ AI_PROVIDERS = {
         "claude-3-haiku",  # Legacy support
     ],
     "deepseek": ["deepseek-chat"],
+    "local": [
+        "gemma-2-2b",  # Ultra-lightweight (4GB RAM)
+        "llama3.2-3b",  # Standard (6GB RAM)
+        "mistral-7b",  # Enhanced (8GB RAM)
+        "llama3.1-8b",  # Premium (10GB+ RAM)
+    ],
 }
 
 # Note: System prompts now imported from centralized configuration
@@ -101,6 +107,7 @@ DEFAULT_MODELS = {
     "gemini": "gemini-2.0-flash",  # Fast, cost-efficient, generally available
     "claude": "claude-3.5-haiku",  # Fastest, most cost-effective Claude 3.5 model
     "deepseek": "deepseek-chat",
+    "local": "llama3.2-3b",  # Balanced performance for most systems
 }
 
 
@@ -395,11 +402,104 @@ class DeepseekProvider(AIProvider):
             raise RuntimeError(f"Deepseek API error: {str(e)}") from e
 
 
+class LocalLLMProvider(AIProvider):
+    """Local LLM provider using Ollama backend for offline processing."""
+
+    def __init__(self, model: str, host: str = "localhost:11434") -> None:
+        # Local providers don't need API keys
+        super().__init__(api_key="", model=model)
+        self.model_name = model
+        self.host = host
+        self.base_url = f"http://{host}/api/generate"
+
+        # Create a session for HTTP requests
+        self.session = requests.Session()
+
+        # Verify Ollama is available
+        self._verify_ollama_connection()
+
+    def _verify_ollama_connection(self) -> None:
+        """Verify that Ollama service is running and accessible."""
+        try:
+            health_url = f"http://{self.host}/api/tags"
+            response = self.session.get(health_url, timeout=5)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise RuntimeError(
+                f"Cannot connect to Ollama service at {self.host}. "
+                f"Please ensure Ollama is running. Error: {str(e)}"
+            ) from e
+
+    def is_local(self) -> bool:
+        """Return True since this is a local provider."""
+        return True
+
+    def generate_filename(self, content: str, image_b64: Optional[str] = None) -> str:
+        """Generate filename using local Ollama model."""
+        try:
+            # Get the system prompt for local provider
+            system_prompt = get_secure_filename_prompt_template("local")
+
+            # Prepare the prompt combining system instructions and content
+            prompt = f"{system_prompt}\n\nDocument content:\n{content}"
+
+            # Add image context if provided
+            if image_b64:
+                prompt += "\n\nNote: This document also contains visual elements that may be relevant to the filename."
+
+            # Make request to Ollama
+            data = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.3,  # Lower temperature for more consistent naming
+                    "num_predict": 50,  # Limit response length for filenames
+                    "stop": ["\n", ".", "!"],  # Stop at common filename endings
+                },
+            }
+
+            response = self.session.post(self.base_url, json=data, timeout=60)
+            response.raise_for_status()
+
+            result = response.json()
+            generated_text = result.get("response", "").strip()
+
+            if not generated_text:
+                raise RuntimeError("Ollama returned empty response")
+
+            # Validate and clean the filename
+            return validate_generated_filename(generated_text)
+
+        except requests.ConnectionError as e:
+            raise RuntimeError(
+                f"Connection to Ollama failed. Is Ollama running on {self.host}? "
+                f"Error: {str(e)}"
+            ) from e
+        except requests.HTTPError as e:
+            if "404" in str(e):
+                raise RuntimeError(
+                    f"Model '{self.model_name}' not found in Ollama. "
+                    f"Please download it first with: ollama pull {self.model_name}"
+                ) from e
+            else:
+                raise RuntimeError(f"Ollama API error: {str(e)}") from e
+        except requests.Timeout as e:
+            raise RuntimeError(
+                f"Ollama request timed out. The model might be loading for the first time. "
+                f"Please try again in a few moments."
+            ) from e
+        except (KeyError, json.JSONDecodeError) as e:
+            raise RuntimeError(f"Invalid response from Ollama: {str(e)}") from e
+        except Exception as e:
+            raise RuntimeError(f"Local LLM error: {str(e)}") from e
+
+
 class AIProviderFactory:
     """Factory for creating and managing AI provider instances."""
 
     @staticmethod
-    def create(provider: str, model: str, api_key: str) -> AIProvider:
+    def create(provider: str, model: str, api_key: str = None) -> AIProvider:
         """Create AI provider instance for specified provider and model."""
         if provider == "openai":
             return OpenAIProvider(api_key, model)
@@ -409,6 +509,9 @@ class AIProviderFactory:
             return ClaudeProvider(api_key, model)
         elif provider == "deepseek":
             return DeepseekProvider(api_key, model)
+        elif provider == "local":
+            # Local provider doesn't require API key
+            return LocalLLMProvider(model)
         else:
             raise ValueError(f"Unsupported AI provider: {provider}")
 

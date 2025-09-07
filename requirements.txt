@@ -14,6 +14,10 @@ rich>=13.7.0
 # anthropic>=0.34.0          # For Claude models (Opus 4.1, Sonnet 4, Claude 3.5 series)  
 # google-genai>=0.7.0        # For Gemini models (2.5 Pro/Flash, 2.0 Flash/Pro - new unified SDK)
 
+# Local LLM dependencies (for offline processing)
+psutil>=5.9.0               # For system hardware detection
+# ollama                    # Ollama client library (optional - HTTP requests used by default)
+
 # Development dependencies (optional)
 # pytest>=8.4.1              # For running tests
 # pytest-bdd>=6.0.0          # For BDD testing framework

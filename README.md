@@ -40,6 +40,7 @@ content-tamer-ai  # Uses smart defaults - just works!
 - **Claude** ✅ **Latest Models** — Claude Opus 4.1, Sonnet 4, Claude 3.5 series (Opus, Sonnet, Haiku)
 - **Gemini** ✅ **Latest Models** — Gemini 2.5 Pro/Flash, 2.0 Flash/Pro with thinking capabilities  
 - **Deepseek** ⚠️ **Available** — Cost-effective option, community testing welcomed
+- **🏠 Local LLM** ✅ **NEW** — Complete offline processing with Ollama backend
 
 ---
 
@@ -98,9 +99,15 @@ pip install -r requirements.txt
 pip install openai>=1.0.0           # For OpenAI (GPT-5, GPT-4o)
 pip install anthropic>=0.34.0       # For Claude (Opus 4.1, Sonnet 4, 3.5 series)
 pip install google-genai>=0.7.0     # For Gemini (2.5 Pro/Flash, 2.0 series)
+
+# For Local LLM support (offline processing)
+pip install psutil>=5.9.0           # System hardware detection
+# Note: Ollama installation handled automatically by --setup-local-llm
 ```
 
 ## 🔑 API Key Setup
+
+### Cloud Providers (Optional)
 
 **Get an API key from your preferred provider:**
 - [OpenAI API Keys](https://platform.openai.com/api-keys) — GPT-5, GPT-4o with vision support
@@ -114,6 +121,15 @@ export OPENAI_API_KEY="your-key-here"        # macOS/Linux
 set OPENAI_API_KEY=your-key-here             # Windows
 
 # Method 2: The app will prompt you if no key is found
+```
+
+### Local LLM (No API Key Required)
+
+**For complete offline processing:**
+```bash
+# No API key setup needed!
+content-tamer-ai --setup-local-llm    # One-time setup
+content-tamer-ai -p local              # Use local processing
 ```
 
 ---
@@ -144,6 +160,11 @@ content-tamer-ai -p claude -m claude-3.5-haiku    # Fast, cost-effective Claude
 content-tamer-ai -p gemini -m gemini-2.5-pro      # Advanced reasoning Gemini
 content-tamer-ai -p gemini -m gemini-2.0-flash    # Fast, efficient Gemini (default)
 content-tamer-ai -p deepseek        # Cost-effective alternative
+
+# 🏠 Local LLM (offline processing) - NEW!
+content-tamer-ai --setup-local-llm                    # Interactive setup with hardware detection
+content-tamer-ai -p local -m llama3.2-3b             # Use local model (no API key needed)
+content-tamer-ai -p local -m gemma-2-2b              # Lightweight option for 4GB RAM systems
 
 # Custom folders
 content-tamer-ai -i ~/Downloads -r ~/Organized
@@ -234,10 +255,85 @@ data/
 
 ---
 
+## 🏠 Local LLM Processing (NEW!)
+
+**Complete offline document processing with no API keys required**
+
+### ✨ Why Local LLMs?
+
+- **🔒 Complete Privacy** — Your documents never leave your machine
+- **💰 Zero API Costs** — No per-document or monthly fees
+- **🚀 Always Available** — No internet connection required
+- **⚡ Fast Processing** — Direct hardware acceleration
+
+### 🛠️ Quick Setup
+
+```bash
+# 1. Check if your system is ready
+content-tamer-ai --check-local-requirements
+
+# 2. Automatic setup with hardware detection
+content-tamer-ai --setup-local-llm
+
+# 3. Start processing offline!
+content-tamer-ai --provider local --model llama3.2-3b
+```
+
+### 🎯 Hardware-Optimized Models
+
+| Model | RAM Required | Download Size | Best For | Performance |
+|-------|-------------|---------------|----------|-------------|
+| **gemma-2-2b** | 2.5GB | 1.7GB | 4GB RAM laptops | 15-30 seconds |
+| **llama3.2-3b** | 4.5GB | 2.2GB | Standard desktops | 8-15 seconds |
+| **mistral-7b** | 6.5GB | 4.4GB | Quality-focused | 5-12 seconds |
+| **llama3.1-8b** | 7.5GB | 4.7GB | High-end systems | 3-8 seconds |
+
+### 📋 Local LLM Commands
+
+```bash
+# Setup and Management
+content-tamer-ai --setup-local-llm              # Interactive setup
+content-tamer-ai --list-local-models            # Show available models
+content-tamer-ai --check-local-requirements     # System compatibility check
+
+# Model Management
+content-tamer-ai --download-model gemma-2-2b    # Download specific model
+content-tamer-ai --remove-model mistral-7b      # Remove model to save space
+content-tamer-ai --local-model-info llama3.2-3b # Detailed model information
+
+# Usage Examples
+content-tamer-ai -p local -m llama3.2-3b        # Standard usage (most systems)
+content-tamer-ai -p local -m gemma-2-2b         # Lightweight (4GB RAM)
+content-tamer-ai -p local -m mistral-7b         # High quality (8GB+ RAM)
+```
+
+### 💡 Smart Hardware Detection
+
+The setup process automatically:
+- **🔍 Analyzes your system** — RAM, CPU, GPU detection
+- **🎯 Recommends optimal models** — Based on available resources  
+- **📊 Shows performance estimates** — Expected processing speeds
+- **⚠️ Warns about limitations** — Memory pressure, compatibility issues
+
+### 🔧 Behind the Scenes
+
+**Powered by [Ollama](https://ollama.com/)**
+- Production-ready model management
+- Automatic quantization and optimization
+- Cross-platform compatibility  
+- GPU acceleration when available
+
+**No Configuration Required**
+- Ollama installation handled automatically
+- Models downloaded with progress tracking
+- Robust error handling and recovery
+- Graceful fallback to cloud providers
+
+---
+
 ## 🚀 Roadmap & Vision
 
-### 🎯 Next Major Features
-- **🏠 Local LLM Support** — Process documents offline with Ollama/GPT4All
+### 🎯 Next Major Features  
 - **🗂️ Smart Folder Organization** — Auto-create folders by content type
 - **📅 Date-Based Sorting** — Extract dates for chronological organization  
 - **🏢 Domain Classification** — Separate work, personal, financial documents

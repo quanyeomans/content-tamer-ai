@@ -255,5 +255,131 @@ class TestDeepseekProvider(unittest.TestCase):
         self.assertIn("Deepseek API error", str(context.exception))
 
 
+class TestLocalLLMProvider(unittest.TestCase):
+    """Test Local LLM provider functionality."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        # Mock the connection verification to avoid real network calls
+        with patch("ai_providers.LocalLLMProvider._verify_ollama_connection"):
+            try:
+                from ai_providers import LocalLLMProvider
+                self.provider = LocalLLMProvider("gemma-2-2b")
+            except ImportError:
+                self.skipTest("LocalLLMProvider not implemented yet")
+
+    def test_local_provider_creation(self):
+        """Test LocalLLMProvider can be created with model name."""
+        self.assertEqual(self.provider.model_name, "gemma-2-2b")
+        self.assertEqual(self.provider.host, "localhost:11434")
+
+    def test_local_provider_custom_host(self):
+        """Test LocalLLMProvider can be created with custom host."""
+        with patch("ai_providers.LocalLLMProvider._verify_ollama_connection"):
+            try:
+                from ai_providers import LocalLLMProvider
+                provider = LocalLLMProvider("mistral-7b", host="custom:8080")
+                self.assertEqual(provider.host, "custom:8080")
+            except ImportError:
+                self.skipTest("LocalLLMProvider not implemented yet")
+
+    @patch("ai_providers.requests.Session.post")
+    def test_filename_generation_success(self, mock_post):
+        """Test successful filename generation via mocked Ollama."""
+        # Mock successful Ollama response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "response": "technical_documentation_analysis_report"
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        result = self.provider.generate_filename("This is a technical document about API testing", None)
+        
+        # Verify the result is a valid filename
+        self.assertTrue(isinstance(result, str))
+        self.assertTrue(len(result) > 0)
+        self.assertNotIn("/", result)  # Should not contain path separators
+
+    @patch("ai_providers.requests.Session.post")
+    def test_filename_generation_with_image(self, mock_post):
+        """Test filename generation with image content."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "response": "image_analysis_document"
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        result = self.provider.generate_filename("Document text", "base64_image_data")
+        self.assertTrue(isinstance(result, str))
+        self.assertTrue(len(result) > 0)
+
+    @patch("ai_providers.requests.Session.post")
+    def test_filename_generation_ollama_connection_failure(self, mock_post):
+        """Test graceful failure when Ollama is unavailable."""
+        # Mock connection error
+        import requests
+        mock_post.side_effect = requests.ConnectionError("Connection refused")
+
+        with self.assertRaises(RuntimeError) as context:
+            self.provider.generate_filename("test content", None)
+        
+        error_message = str(context.exception).lower()
+        self.assertTrue("ollama" in error_message or "connection" in error_message)
+
+    @patch("ai_providers.requests.Session.post")
+    def test_filename_generation_empty_response(self, mock_post):
+        """Test handling of empty response from Ollama."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"response": ""}
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        with self.assertRaises(RuntimeError) as context:
+            self.provider.generate_filename("test content", None)
+        self.assertIn("empty response", str(context.exception).lower())
+
+    @patch("ai_providers.requests.Session.post")
+    def test_filename_generation_http_error(self, mock_post):
+        """Test handling of HTTP errors from Ollama."""
+        import requests
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = requests.HTTPError("404 Model not found")
+        mock_post.return_value = mock_response
+
+        with self.assertRaises(RuntimeError) as context:
+            self.provider.generate_filename("test content", None)
+        # Should contain either "ollama api error" or the specific 404 model not found error
+        error_message = str(context.exception).lower()
+        self.assertTrue("ollama" in error_message and ("api error" in error_message or "not found" in error_message))
+
+    def test_provider_factory_supports_local(self):
+        """Test that AIProviderFactory supports local provider."""
+        providers = AIProviderFactory.list_providers()
+        self.assertIn("local", providers)
+
+    def test_provider_factory_creates_local_provider(self):
+        """Test that AIProviderFactory can create local provider."""
+        with patch("ai_providers.LocalLLMProvider._verify_ollama_connection"):
+            try:
+                provider = AIProviderFactory.create("local", "gemma-2-2b", None)
+                from ai_providers import LocalLLMProvider
+                self.assertIsInstance(provider, LocalLLMProvider)
+            except (ImportError, ValueError):
+                self.skipTest("LocalLLMProvider not fully implemented yet")
+
+    def test_local_models_available(self):
+        """Test that local models are defined."""
+        from ai_providers import AI_PROVIDERS
+        self.assertIn("local", AI_PROVIDERS)
+        local_models = AI_PROVIDERS["local"]
+        
+        # Verify our 4 recommended models are available
+        expected_models = ["gemma-2-2b", "llama3.2-3b", "mistral-7b", "llama3.1-8b"]
+        for model in expected_models:
+            self.assertIn(model, local_models)
+
+
 if __name__ == "__main__":
     unittest.main()

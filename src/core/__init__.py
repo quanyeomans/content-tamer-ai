@@ -8,10 +8,8 @@ This package contains the core business logic components:
 - application: Main application orchestration logic
 """
 
-from .application import organize_content
-from .cli_parser import parse_arguments
-from .directory_manager import ensure_default_directories
-from .file_processor import process_file_enhanced
+# Remove direct imports to prevent circular dependencies
+# Import these modules as needed in specific functions
 
 __all__ = [
     "organize_content",
