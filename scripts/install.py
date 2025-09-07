@@ -168,6 +168,9 @@ def get_core_requirements():
         "pillow>=11.3.0",
         "pytesseract>=0.3.13",
         "pdfid>=1.1.0",
+        "rich>=13.7.0",
+        "defusedxml>=0.7.1",      # For secure XML parsing (XXE protection)
+        "psutil>=5.9.0",          # For system hardware detection
     ]
 
 

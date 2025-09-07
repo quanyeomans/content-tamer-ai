@@ -337,7 +337,7 @@ def setup_local_llm() -> None:
         if not ollama_installed:
             console.print("❌ Ollama not found. Installing Ollama is required for local LLM support.", style="red")
             if Confirm.ask("Would you like to install Ollama now?"):
-                install_ollama()
+                install_ollama_secure()
             else:
                 console.print("❌ Setup cancelled. Ollama is required for local LLM functionality.")
                 return
@@ -388,42 +388,140 @@ def setup_local_llm() -> None:
         print(f"❌ Setup failed: {e}")
 
 
-def install_ollama() -> None:
-    """Install Ollama based on the current platform."""
+def install_ollama_secure() -> None:
+    """Securely install Ollama without command injection vulnerabilities."""
     import platform
     import subprocess
+    import requests
+    import tempfile
+    import hashlib
+    import os
+    import shutil
     from rich.console import Console
+    from utils.security import SecurityError, InstallationError
     
     console = Console()
     system = platform.system()
     
-    console.print("📦 Installing Ollama...", style="blue")
+    # Expected hashes for script integrity validation (should be updated regularly)
+    EXPECTED_HASHES = {
+        "Darwin": "placeholder_hash_for_macos",  # TODO: Update with actual hash
+        "Linux": "placeholder_hash_for_linux",  # TODO: Update with actual hash
+    }
+    INSTALL_URL = "https://ollama.com/install.sh"
+    
+    console.print("📦 Installing Ollama securely...", style="blue")
     
     try:
-        if system == "Darwin":  # macOS
-            subprocess.run(["curl", "-fsSL", "https://ollama.com/install.sh", "|", "sh"], 
-                         shell=True, check=True)
-        elif system == "Linux":
-            subprocess.run(["curl", "-fsSL", "https://ollama.com/install.sh", "|", "sh"], 
-                         shell=True, check=True)
-        elif system == "Windows":
+        if system == "Windows":
             console.print("Please download Ollama from https://ollama.com/download/windows", style="yellow")
             console.print("After installation, restart this setup process.", style="yellow")
             return
-        else:
+        elif system not in ["Darwin", "Linux"]:
             console.print(f"❌ Unsupported platform: {system}", style="red")
             return
+        
+        # Download script securely
+        console.print("Downloading installation script...", style="blue")
+        response = requests.get(INSTALL_URL, verify=True, timeout=30)
+        response.raise_for_status()
+        
+        # Verify script integrity (commented out for initial implementation)
+        # TODO: Enable hash verification once we have reliable hashes
+        # script_hash = hashlib.sha256(response.text.encode()).hexdigest()
+        # expected_hash = EXPECTED_HASHES.get(system)
+        # if expected_hash != "placeholder_hash_for_" + system.lower() and script_hash != expected_hash:
+        #     raise SecurityError(f"Ollama install script hash mismatch for {system}")
+        
+        # Write to temporary file
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.sh') as f:
+            f.write(response.text)
+            temp_script = f.name
+        
+        try:
+            # Make executable and run without shell=True
+            os.chmod(temp_script, 0o755)
+            bash_path = shutil.which("bash")
+            if not bash_path:
+                raise InstallationError("bash executable not found in PATH")
             
+            console.print("Running installation script...", style="blue")
+            subprocess.run([bash_path, temp_script], 
+                          shell=False, 
+                          check=True,
+                          capture_output=True,
+                          timeout=300)
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_script):
+                os.unlink(temp_script)
+                
         console.print("✅ Ollama installed successfully!", style="green")
         console.print("Starting Ollama service...", style="blue")
         
-        # Start Ollama service
-        subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Start Ollama service securely
+        start_ollama_secure()
         
+    except requests.RequestException as e:
+        console.print(f"❌ Failed to download Ollama installer: {e}", style="red")
+        raise InstallationError(f"Download failed: {e}")
     except subprocess.CalledProcessError as e:
-        console.print(f"❌ Failed to install Ollama: {e}", style="red")
+        console.print(f"❌ Installation script failed: {e}", style="red")
+        raise InstallationError(f"Installation failed: {e}")
+    except (SecurityError, InstallationError):
+        raise
     except Exception as e:
         console.print(f"❌ Unexpected error: {e}", style="red")
+        raise InstallationError(f"Unexpected error: {e}")
+
+
+def start_ollama_secure() -> None:
+    """Start Ollama service securely without command injection vulnerabilities."""
+    import subprocess
+    import shutil
+    from rich.console import Console
+    from utils.security import InstallationError
+    
+    console = Console()
+    
+    # Validate ollama executable exists and get full path
+    ollama_path = shutil.which("ollama")
+    if not ollama_path:
+        raise InstallationError("Ollama executable not found in PATH")
+    
+    # Validate executable is in expected locations (optional hardening)
+    safe_paths = ["/usr/local/bin", "/usr/bin", "/bin", "/opt/homebrew/bin"]
+    if not any(ollama_path.startswith(path) for path in safe_paths):
+        console.print(f"⚠️ Ollama found in unexpected location: {ollama_path}", style="yellow")
+    
+    try:
+        # Start service without shell=True
+        subprocess.Popen([ollama_path, "serve"], 
+                         stdout=subprocess.DEVNULL, 
+                         stderr=subprocess.DEVNULL,
+                         shell=False)
+        console.print("✅ Ollama service started!", style="green")
+    except subprocess.SubprocessError as e:
+        raise InstallationError(f"Failed to start Ollama service: {e}")
+
+
+def install_ollama() -> None:
+    """Install Ollama based on the current platform. Deprecated - use install_ollama_secure()."""
+    import warnings
+    from rich.console import Console
+    
+    console = Console()
+    console.print("⚠️ Using deprecated insecure installation method", style="yellow")
+    
+    warnings.warn(
+        "install_ollama() is deprecated due to command injection vulnerabilities. "
+        "Use install_ollama_secure() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
+    # For backward compatibility, call the secure version
+    install_ollama_secure()
 
 
 def setup_model(model_name: str) -> None:

@@ -56,7 +56,63 @@ INJECTION_REGEX = re.compile("|".join(PROMPT_INJECTION_PATTERNS), re.IGNORECASE)
 class SecurityError(Exception):
     """Raised when a security validation fails."""
 
-    pass
+
+class InstallationError(Exception):
+    """Raised when a secure installation fails."""
+
+
+def run_system_command_safe(command: list, **kwargs) -> 'subprocess.CompletedProcess':
+    """
+    Run system command safely with full path validation to prevent PATH injection.
+    
+    Args:
+        command: List of command and arguments (e.g., ['sysctl', '-n', 'hw.memsize'])
+        **kwargs: Additional arguments to pass to subprocess.run()
+        
+    Returns:
+        subprocess.CompletedProcess: Result of the command execution
+        
+    Raises:
+        SecurityError: If executable not found or in unsafe location
+        subprocess.SubprocessError: If command execution fails
+    """
+    import subprocess
+    import shutil
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    if not command:
+        raise ValueError("Empty command list")
+    
+    # Get full path to executable
+    executable_name = command[0]
+    executable_path = shutil.which(executable_name)
+    if not executable_path:
+        raise SecurityError(f"Executable '{executable_name}' not found in PATH")
+    
+    # Validate executable is in expected system locations (security hardening)
+    safe_paths = [
+        "/usr/bin", "/bin", "/usr/sbin", "/sbin",  # Standard Linux/macOS paths
+        "/System/Library", "/usr/local/bin",       # macOS system paths
+        "/opt/homebrew/bin",                       # Homebrew on Apple Silicon
+        "C:\\Windows\\System32",                   # Windows system path
+        "C:\\Windows\\SysWOW64"                    # Windows 32-bit on 64-bit
+    ]
+    
+    if not any(executable_path.startswith(path) for path in safe_paths):
+        logger.warning("Executable in unexpected location: %s", executable_path)
+        # Continue execution but log the warning for security monitoring
+    
+    # Run with full path and ensure shell=False
+    full_command = [executable_path] + command[1:]
+    kwargs['shell'] = False  # Force shell=False for security
+    
+    try:
+        return subprocess.run(full_command, check=kwargs.get('check', False), **kwargs)
+    except subprocess.SubprocessError as e:
+        logger.warning("System command failed safely: %s - %s", executable_name, e)
+        raise
 
 
 class InputSanitizer:
@@ -419,15 +475,9 @@ class PDFAnalyzer:
         try:
             from defusedxml import ElementTree as ET
         except ImportError:
-            # Fallback to standard library with warnings
-            import warnings
-            import xml.etree.ElementTree as ET
-
-            warnings.warn(
-                "defusedxml not available, using potentially unsafe XML parsing. "
-                "Install defusedxml for improved security: pip install defusedxml",
-                UserWarning,
-                stacklevel=2,
+            raise SecurityError(
+                "defusedxml is required for secure XML parsing. "
+                "Install it with: pip install defusedxml>=0.7.1"
             )
 
         try:

@@ -18,10 +18,12 @@ Content Tamer AI processes potentially sensitive documents and must maintain the
 - **Secure Input**: Use secure input methods for API key entry
 
 ### File System Security
-- **Path Validation**: All file paths validated to prevent directory traversal
+- **Path Validation**: All file paths validated to prevent directory traversal attacks
 - **Permission Checks**: Verify file permissions before processing
-- **Temporary Files**: Secure handling and cleanup of temporary files
+- **Temporary Files**: Secure handling and cleanup of temporary files with proper permissions
 - **Sandboxing**: Process files in isolated contexts where possible
+- **Command Injection Prevention**: All subprocess calls use full path validation and shell=False
+- **Path Injection Protection**: Secure subprocess utility validates executable paths
 
 ## Input Validation
 
@@ -36,6 +38,8 @@ Content Tamer AI processes potentially sensitive documents and must maintain the
 - **Encoding Validation**: Validate character encoding to prevent injection
 - **Content Filtering**: Remove potentially dangerous content patterns
 - **Length Limits**: Enforce reasonable content length limits
+- **XML Security**: Use defusedxml for secure XML parsing to prevent XXE attacks
+- **Prompt Injection Detection**: Advanced pattern matching to detect AI manipulation attempts
 
 ## Network Security
 

@@ -8,6 +8,7 @@ pillow>=11.3.0
 pytesseract>=0.3.13
 pdfid>=1.1.0
 rich>=13.7.0
+defusedxml>=0.7.1              # For secure XML parsing (XXE protection)
 
 # AI Provider dependencies (install based on your needs)
 # openai>=1.0.0              # For OpenAI models (recommended)

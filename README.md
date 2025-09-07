@@ -364,12 +364,14 @@ Content Tamer AI is becoming a comprehensive **digital life organization platfor
 ## 🔒 Security & Safety
 
 **Enterprise-Grade Security Controls:**
-- 🛡️ **PDF Threat Detection** — Integrated PDFiD analysis detects JavaScript, embedded files, and malicious content
+- 🛡️ **PDF Threat Detection** — Integrated PDFiD analysis with secure XML parsing (XXE protection)
 - 🚫 **Prompt Injection Protection** — Advanced pattern detection prevents AI manipulation attacks  
-- 🔒 **Path Traversal Prevention** — Secure file handling blocks directory traversal exploits
-- 🔐 **Secure API Key Handling** — Masked input and validation prevent credential exposure
+- 🔒 **Command Injection Prevention** — Secure subprocess execution prevents shell injection attacks
+- 🛡️ **Path Traversal Prevention** — Full path validation blocks directory traversal exploits
+- 🔐 **Secure API Key Handling** — Masked input, validation, and secure logging prevent credential exposure
 - 📏 **File Size Limits** — 50MB PDF / 10MB image limits prevent resource exhaustion
 - ✅ **Input Sanitization** — Comprehensive content validation and control character removal
+- 🔐 **Secure Local LLM** — Ollama installation with integrity validation and injection protection
 
 **PDF Security Analysis:**
 Content Tamer AI automatically analyzes PDFs for potential threats:

@@ -124,22 +124,22 @@ class HardwareDetector:
             elif platform.system() == "Darwin":  # macOS
                 # Try sysctl (if available)
                 try:
-                    import subprocess
+                    from utils.security import run_system_command_safe
 
-                    result = subprocess.run(
+                    result = run_system_command_safe(
                         ["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=5
                     )
                     if result.returncode == 0:
                         bytes_ram = int(result.stdout.strip())
                         return bytes_ram / (1024**3)
-                except (subprocess.SubprocessError, ValueError, FileNotFoundError):
+                except (Exception, ValueError, FileNotFoundError):
                     pass
             elif platform.system() == "Windows":
                 # Try wmic (if available)
                 try:
-                    import subprocess
+                    from utils.security import run_system_command_safe
 
-                    result = subprocess.run(
+                    result = run_system_command_safe(
                         ["wmic", "computersystem", "get", "TotalPhysicalMemory"],
                         capture_output=True,
                         text=True,
@@ -151,7 +151,7 @@ class HardwareDetector:
                             if line.strip() and not "TotalPhysicalMemory" in line:
                                 bytes_ram = int(line.strip())
                                 return bytes_ram / (1024**3)
-                except (subprocess.SubprocessError, ValueError, FileNotFoundError):
+                except (Exception, ValueError, FileNotFoundError):
                     pass
         except (IOError, OSError, ValueError):
             pass
@@ -193,9 +193,9 @@ class HardwareDetector:
             elif platform.system() == "Darwin":  # macOS
                 # macOS always has integrated graphics, check for discrete
                 try:
-                    import subprocess
+                    from utils.security import run_system_command_safe
 
-                    result = subprocess.run(
+                    result = run_system_command_safe(
                         ["system_profiler", "SPDisplaysDataType"],
                         capture_output=True,
                         text=True,
@@ -204,15 +204,15 @@ class HardwareDetector:
                     if result.returncode == 0 and "GPU" in result.stdout:
                         has_gpu = True
                         gpu_info = "macOS GPU (detected)"
-                except (subprocess.SubprocessError, FileNotFoundError):
+                except (Exception, FileNotFoundError):
                     pass
 
             elif platform.system() == "Windows":
                 # Check for common GPU registry entries or wmic
                 try:
-                    import subprocess
+                    from utils.security import run_system_command_safe
 
-                    result = subprocess.run(
+                    result = run_system_command_safe(
                         ["wmic", "path", "win32_VideoController", "get", "name"],
                         capture_output=True,
                         text=True,
@@ -229,12 +229,19 @@ class HardwareDetector:
                                 has_gpu = True
                                 gpu_info = line.strip()
                                 break
-                except (subprocess.SubprocessError, FileNotFoundError):
+                except (Exception, FileNotFoundError):
                     pass
 
-        except Exception:
-            # If all detection fails, assume no GPU
-            pass
+        except (ImportError, OSError, PermissionError) as e:
+            # Log specific failures for security monitoring
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("GPU detection failed: %s: %s", type(e).__name__, e)
+        except Exception as e:
+            # Log unexpected exceptions for security monitoring  
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error("Unexpected error in GPU detection: %s: %s", type(e).__name__, e)
 
         return has_gpu, gpu_info
 

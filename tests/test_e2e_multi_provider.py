@@ -22,9 +22,10 @@ from ai_providers import (
     GeminiProvider, 
     LocalLLMProvider
 )
-from core.file_processor import FileProcessor
-from core.directory_manager import DirectoryManager
-from utils.display_manager import DisplayManager
+from file_organizer import FileOrganizer
+from utils.display_manager import DisplayManager, DisplayOptions
+from core.file_processor import process_file
+from core.directory_manager import ensure_default_directories, get_api_details
 
 
 class TestE2EMultiProviderCompatibility(unittest.TestCase):
