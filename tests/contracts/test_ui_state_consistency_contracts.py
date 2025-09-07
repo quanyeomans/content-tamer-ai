@@ -274,7 +274,7 @@ class TestUIStateConsistencyContracts(unittest.TestCase):
             expected_success_rate = (2 / 3) * 100  # 66.7%
             self.assertAlmostEqual(
                 final_state.success_rate, expected_success_rate, places=1,
-                "Success rate calculation incorrect after error recovery"
+                msg="Success rate calculation incorrect after error recovery"
             )
 
 
