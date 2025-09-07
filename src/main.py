@@ -11,36 +11,57 @@ Licensed under MIT License - see LICENSE file for details.
 
 import sys
 
-from core.application import organize_content
-from core.cli_parser import (
-    _print_capabilities,
-    list_available_models,
-    parse_arguments,
-    restore_api_key,
-    setup_api_key,
-    setup_environment_and_args,
-)
-from core.directory_manager import (
-    DEFAULT_DATA_DIR,
-    DEFAULT_INPUT_DIR,
-    DEFAULT_PROCESSED_DIR,
-    DEFAULT_PROCESSING_DIR,
-    DEFAULT_UNPROCESSED_DIR,
-    ensure_default_directories,
-    get_api_details,
-    setup_directories,
-)
-from core.file_processor import (
-    get_filename_from_ai,
-    get_new_filename_with_retry,
-    get_new_filename_with_retry_enhanced,
-    pdfs_to_text_string,
-    process_file,
-    process_file_enhanced,
-)
+# Handle both package and direct execution imports
+try:
+    from core.application import organize_content
+    from core.cli_parser import (
+        _print_capabilities,
+        restore_api_key,
+        setup_api_key,
+        setup_environment_and_args,
+    )
+    from core.directory_manager import setup_directories
+except ImportError:
+    import os
+    sys.path.insert(0, os.path.dirname(__file__))
+    from core.application import organize_content
+    from core.cli_parser import (
+        _print_capabilities,
+        restore_api_key,
+        setup_api_key,
+        setup_environment_and_args,
+    )
+    from core.directory_manager import setup_directories
 
 # Public API - only main function is exported
 __all__ = ["main"]
+
+
+def _validate_organization_settings(enable_post_processing: bool, ml_enhancement_level: int, quiet: bool):
+    """Validate organization settings against feature flags."""
+    if not enable_post_processing:
+        return enable_post_processing, ml_enhancement_level
+
+    try:
+        from utils.feature_flags import get_feature_manager
+        feature_manager = get_feature_manager()
+
+        # Check if organization is available
+        if not feature_manager.is_organization_enabled():
+            if not quiet:
+                print("⚠️  Organization features are currently disabled via feature flags")
+            return False, ml_enhancement_level
+
+        # Validate ML level against feature flags
+        validated_ml_level = feature_manager.validate_ml_level(ml_enhancement_level)
+        if validated_ml_level != ml_enhancement_level and not quiet:
+            print(f"ℹ️  Adjusted ML level to {validated_ml_level} (closest available level)")
+
+        return enable_post_processing, validated_ml_level
+
+    except ImportError:
+        # Feature flags not available, continue with original values
+        return enable_post_processing, ml_enhancement_level
 
 
 def main() -> int:
@@ -66,6 +87,20 @@ def main() -> int:
             if args.verbose:
                 _print_capabilities(args.ocr_lang)
 
+            # Determine organization settings from CLI arguments with feature flag validation
+            # Note: If neither --organize nor --no-organize specified, guided navigation will handle it
+            enable_post_processing = getattr(args, 'organize', False)
+            ml_enhancement_level = getattr(args, 'ml_level', 2)
+
+            # Force disable if --no-organize was specified
+            if getattr(args, 'no_organize', False):
+                enable_post_processing = False
+
+            # Validate settings against feature flags
+            enable_post_processing, ml_enhancement_level = _validate_organization_settings(
+                enable_post_processing, ml_enhancement_level, args.quiet
+            )
+
             # Start the main content organization task with enhanced display
             success = organize_content(
                 input_dir,
@@ -76,16 +111,18 @@ def main() -> int:
                 reset_progress=args.reset_progress,
                 ocr_lang=args.ocr_lang,
                 display_options=display_options,
+                enable_post_processing=enable_post_processing,
+                ml_enhancement_level=ml_enhancement_level,
             )
 
             if not success:
                 if not args.quiet:
                     print("Content organization failed.")
                 return 1
-            else:
-                if not args.quiet:
-                    print("Content organization completed successfully.")
-                return 0
+
+            if not args.quiet:
+                print("Content organization completed successfully.")
+            return 0
         finally:
             # Restore the original API key environment variable if it was changed.
             restore_api_key(api_key_set, original_env)

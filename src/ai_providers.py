@@ -11,13 +11,24 @@ from typing import TYPE_CHECKING, Optional
 
 import requests
 
-# Import centralized filename configuration
-from core.filename_config import (
-    DEFAULT_SYSTEM_PROMPTS,
-    get_secure_filename_prompt_template,
-    validate_generated_filename,
-    get_token_limit_for_provider,
-)
+# Import centralized filename configuration - handle both package and direct execution
+try:
+    from core.filename_config import (
+        DEFAULT_SYSTEM_PROMPTS,
+        get_secure_filename_prompt_template,
+        validate_generated_filename,
+        get_token_limit_for_provider,
+    )
+except ImportError:
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(__file__))
+    from core.filename_config import (
+        DEFAULT_SYSTEM_PROMPTS,
+        get_secure_filename_prompt_template,
+        validate_generated_filename,
+        get_token_limit_for_provider,
+    )
 
 # Import API clients conditionally to avoid hard dependencies
 # Use TYPE_CHECKING to prevent Pyright "possibly unbound" errors
@@ -131,7 +142,6 @@ class AIProvider(ABC):
     @abstractmethod
     def generate_filename(self, content: str, image_b64: Optional[str] = None) -> str:
         """Generate filename from document content and optional image data."""
-        pass
 
     def is_local(self) -> bool:
         """Return True if provider runs locally without API calls."""
@@ -153,9 +163,6 @@ class OpenAIProvider(AIProvider):
         try:
             from utils.security import InputSanitizer, SecurityError
         except ImportError:
-            import os
-            import sys
-
             sys.path.insert(0, os.path.dirname(__file__))
             from utils.security import InputSanitizer, SecurityError
 
@@ -264,7 +271,7 @@ class OpenAIProvider(AIProvider):
             # Validate and sanitize the generated filename
             return validate_generated_filename(raw)
         except Exception as e:
-            raise Exception(f"OpenAI API error: {str(e)}")
+            raise Exception(f"OpenAI API error: {str(e)}") from e
 
 
 class GeminiProvider(AIProvider):
@@ -348,7 +355,7 @@ class ClaudeProvider(AIProvider):
                 for block in message.content:
                     if hasattr(block, "text"):
                         return validate_generated_filename(block.text)  # type: ignore
-                    elif (
+                    if (
                         hasattr(block, "type")
                         and getattr(block, "type", None) == "text"
                         and hasattr(block, "text")
@@ -358,7 +365,7 @@ class ClaudeProvider(AIProvider):
             if hasattr(message, "content"):
                 if isinstance(message.content, str):
                     return validate_generated_filename(message.content)
-                elif isinstance(message.content, dict) and "text" in message.content:
+                if isinstance(message.content, dict) and "text" in message.content:
                     return validate_generated_filename(message.content["text"])  # type: ignore
             raise ValueError("Unable to extract text from Claude API response")
         except Exception as e:
@@ -482,12 +489,11 @@ class LocalLLMProvider(AIProvider):
                     f"Model '{self.model_name}' not found in Ollama. "
                     f"Please download it first with: ollama pull {self.model_name}"
                 ) from e
-            else:
-                raise RuntimeError(f"Ollama API error: {str(e)}") from e
+            raise RuntimeError(f"Ollama API error: {str(e)}") from e
         except requests.Timeout as e:
             raise RuntimeError(
-                f"Ollama request timed out. The model might be loading for the first time. "
-                f"Please try again in a few moments."
+                "Ollama request timed out. The model might be loading for the first time. "
+                "Please try again in a few moments."
             ) from e
         except (KeyError, json.JSONDecodeError) as e:
             raise RuntimeError(f"Invalid response from Ollama: {str(e)}") from e
@@ -503,17 +509,17 @@ class AIProviderFactory:
         """Create AI provider instance for specified provider and model."""
         if provider == "openai":
             return OpenAIProvider(api_key, model)
-        elif provider == "gemini":
+        if provider == "gemini":
             return GeminiProvider(api_key, model)
-        elif provider == "claude":
+        if provider == "claude":
             return ClaudeProvider(api_key, model)
-        elif provider == "deepseek":
+        if provider == "deepseek":
             return DeepseekProvider(api_key, model)
-        elif provider == "local":
+        if provider == "local":
             # Local provider doesn't require API key
             return LocalLLMProvider(model)
-        else:
-            raise ValueError(f"Unsupported AI provider: {provider}")
+
+        raise ValueError(f"Unsupported AI provider: {provider}")
 
     @staticmethod
     def list_providers():

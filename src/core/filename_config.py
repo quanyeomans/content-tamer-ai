@@ -5,7 +5,7 @@ This module defines all constraints and settings for AI-powered filename generat
 ensuring consistency across all providers and eliminating hardcoded values.
 """
 
-from typing import Tuple
+# Removed unused import: from typing import Tuple
 import math
 
 # =============================================================================
@@ -52,7 +52,7 @@ FALLBACK_TOKENS = calculate_optimal_tokens(80)  # Fallback for short filenames
 # SYSTEM PROMPT TEMPLATES
 # =============================================================================
 
-def get_filename_prompt_template(provider: str = "generic") -> str:
+def get_filename_prompt_template(provider: str = "generic") -> str:  # pylint: disable=unused-argument
     """
     Generate standardized filename generation prompt.
 
@@ -71,7 +71,7 @@ def get_filename_prompt_template(provider: str = "generic") -> str:
         f"Include key topics, dates, document type when relevant."
     )
 
-def get_secure_filename_prompt_template(provider: str = "generic") -> str:
+def get_secure_filename_prompt_template(provider: str = "generic") -> str:  # pylint: disable=unused-argument
     """
     Generate secure filename generation prompt for sanitized content.
 
@@ -140,7 +140,7 @@ def validate_generated_filename(filename: str) -> str:
 
     return sanitized or "document"
 
-def get_token_limit_for_provider(provider: str) -> int:
+def get_token_limit_for_provider(provider: str) -> int:  # pylint: disable=unused-argument
     """
     Get appropriate token limit for specific AI provider.
 

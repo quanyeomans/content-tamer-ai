@@ -122,12 +122,12 @@ def _move_and_record_file(
 
 
 def _handle_processing_error_no_progress(
-    error: Exception,
+    error: Exception,  # pylint: disable=unused-argument
     filename: str,
     input_path: str,
     unprocessed_folder: str,
     organizer,
-    display_context,
+    display_context,  # pylint: disable=unused-argument
 ) -> tuple:
     """Handle processing errors by moving to unprocessed folder (progress recording handled separately)."""
     try:

@@ -40,8 +40,8 @@ class TestDefaultDirectories(unittest.TestCase):
 
     def test_ensure_default_directories(self):
         """Test that default directories are created correctly."""
-        with patch("core.directory_manager.DEFAULT_DATA_DIR", tempfile.mkdtemp()) as temp_data_dir:
-            with patch(
+        with tempfile.TemporaryDirectory() as temp_data_dir:
+            with patch("core.directory_manager.DEFAULT_DATA_DIR", temp_data_dir), patch(
                 "core.directory_manager.DEFAULT_INPUT_DIR",
                 os.path.join(temp_data_dir, "input"),
             ), patch(
@@ -65,13 +65,10 @@ class TestDefaultDirectories(unittest.TestCase):
                 # Verify unprocessed is subfolder of processed
                 self.assertTrue(unprocessed_dir.startswith(processed_dir))
 
-                # Clean up
-                shutil.rmtree(temp_data_dir)
-
     def test_subfolder_structure(self):
         """Test that unprocessed folder is correctly nested under processed."""
-        with patch("core.directory_manager.DEFAULT_DATA_DIR", tempfile.mkdtemp()) as temp_data_dir:
-            with patch(
+        with tempfile.TemporaryDirectory() as temp_data_dir:
+            with patch("core.directory_manager.DEFAULT_DATA_DIR", temp_data_dir), patch(
                 "core.directory_manager.DEFAULT_PROCESSED_DIR",
                 os.path.join(temp_data_dir, "processed"),
             ), patch(
@@ -85,19 +82,16 @@ class TestDefaultDirectories(unittest.TestCase):
                 self.assertEqual(os.path.dirname(unprocessed_dir), processed_dir)
                 self.assertTrue(os.path.basename(unprocessed_dir) == "unprocessed")
 
-                # Clean up
-                shutil.rmtree(temp_data_dir)
-
 
 class TestIntegrationWorkflow(unittest.TestCase):
     """Test end-to-end processing workflow."""
 
     def setUp(self):
         """Set up temporary directory structure for integration testing."""
-        self.temp_dir = None
+        self.temp_dir_obj = tempfile.TemporaryDirectory()
+        self.temp_dir = self.temp_dir_obj.name
         self.test_files = []
         try:
-            self.temp_dir = tempfile.mkdtemp()
             self.input_dir = os.path.join(self.temp_dir, "input")
             self.unprocessed_dir = os.path.join(self.temp_dir, "unprocessed")
             self.renamed_dir = os.path.join(self.temp_dir, "renamed")
@@ -133,18 +127,12 @@ class TestIntegrationWorkflow(unittest.TestCase):
             except (OSError, PermissionError):
                 pass
         
-        # Clean up temp directory
-        if hasattr(self, 'temp_dir') and self.temp_dir and os.path.exists(self.temp_dir):
+        # Clean up temp directory using TemporaryDirectory
+        if hasattr(self, 'temp_dir_obj'):
             try:
-                shutil.rmtree(self.temp_dir, ignore_errors=True)
-            except (OSError, PermissionError):
-                # Try again with more aggressive cleanup
-                import time
-                time.sleep(0.1)
-                try:
-                    shutil.rmtree(self.temp_dir, ignore_errors=True)
-                except:
-                    pass  # Best effort cleanup
+                self.temp_dir_obj.cleanup()
+            except Exception:
+                pass  # Best effort cleanup
 
     @patch("core.application.get_api_details")
     @patch("core.application.AIProviderFactory.create")
