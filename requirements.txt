@@ -19,6 +19,10 @@ defusedxml>=0.7.1              # For secure XML parsing (XXE protection)
 psutil>=5.9.0               # For system hardware detection
 # ollama                    # Ollama client library (optional - HTTP requests used by default)
 
+# Post-processing organization dependencies (Phase 1)
+spacy>=3.7.0                # Enhanced NLP for document classification
+python-dateutil>=2.8.0     # Date parsing and temporal analysis
+
 # Development dependencies (optional)
 # pytest>=8.4.1              # For running tests
 # pytest-bdd>=6.0.0          # For BDD testing framework
