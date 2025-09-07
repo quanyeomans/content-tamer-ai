@@ -306,6 +306,128 @@ class RichDisplayManager:
         
         self.print_error_summary(error_details)
 
+    def show_organization_progress(self, phase: str, current: int, total: int, details: str = "") -> None:
+        """Display organization progress with Rich styling."""
+        if self.options.quiet:
+            return
+        
+        phase_emojis = {
+            "analyzing": "🔍",
+            "classifying": "📋",
+            "ml_refinement": "🤖", 
+            "temporal_analysis": "🕒",
+            "organizing": "🗂️",
+            "complete": "✅"
+        }
+        
+        emoji = phase_emojis.get(phase, "⚡")
+        phase_name = phase.replace("_", " ").title()
+        
+        if total > 0:
+            percentage = (current / total) * 100
+            progress_msg = f"{emoji} {phase_name}: {current}/{total} ({percentage:.1f}%)"
+        else:
+            progress_msg = f"{emoji} {phase_name}"
+            
+        if details:
+            progress_msg += f" - {details}"
+            
+        self.info(progress_msg)
+
+    def show_organization_results(self, results: Dict[str, Any]) -> None:
+        """Display organization results with Rich styling."""
+        if self.options.quiet or not results:
+            return
+            
+        docs_organized = results.get("documents_organized", 0)
+        engine_type = results.get("engine_type", "Unknown")
+        ml_level = results.get("ml_enhancement_level", 0)
+        
+        self.success(f"🗂️  Organization completed: {docs_organized} documents analyzed ({engine_type})")
+        
+        # Show detailed quality metrics if available
+        org_result = results.get("organization_result", {})
+        quality_metrics = org_result.get("quality_metrics", {})
+        
+        if quality_metrics:
+            accuracy = quality_metrics.get("accuracy", 0) * 100
+            self.info(f"📊 Classification accuracy: {accuracy:.1f}%")
+            
+            # ML enhancement details
+            if ml_level >= 2 and quality_metrics.get("ml_enhancement_applied"):
+                ml_refined = quality_metrics.get("ml_refined_documents", 0)
+                if ml_refined > 0:
+                    self.info(f"🤖 ML enhancement: {ml_refined} documents refined with advanced NLP")
+            
+            # Temporal intelligence details  
+            if ml_level >= 3 and quality_metrics.get("temporal_enhancement_applied"):
+                temporal_confidence = quality_metrics.get("temporal_confidence", 0.0)
+                organization_type = quality_metrics.get("temporal_organization_type", "chronological")
+                self.info(f"🕒 Temporal intelligence: {temporal_confidence:.1f} confidence, {organization_type} structure")
+        
+        # Show folder structure if available
+        folder_structure = org_result.get("folder_structure", {})
+        if folder_structure:
+            self.info("📁 Folder structure created:")
+            for folder, count in folder_structure.items():
+                self.info(f"   • {folder}: {count} documents")
+
+    def show_organization_error(self, error_msg: str, details: Dict[str, Any] = None) -> None:
+        """Display organization error with Rich styling and recovery suggestions."""
+        if self.options.quiet:
+            return
+        
+        # Determine severity and icon based on error type
+        error_type = details.get("error_type", "unknown") if details else "unknown"
+        is_recoverable = details.get("is_recoverable", False) if details else False
+        retry_recommended = details.get("retry_recommended", False) if details else False
+        context = details.get("context", "") if details else ""
+        
+        # Choose appropriate severity level and icon
+        if is_recoverable:
+            icon = "⚠️"
+            self.warning(f"{icon} Organization issue: {error_msg}")
+            
+            # Show recovery suggestions for recoverable errors
+            if retry_recommended:
+                self.info("💡 This issue may resolve automatically on retry")
+                
+            if error_type == "org_ml_unavailable":
+                self.info("💡 Consider installing ML dependencies: pip install spacy sentence-transformers")
+            elif error_type == "org_config_error":
+                self.info("💡 Organization will continue with default settings")
+            elif error_type == "org_folder_error":
+                self.info("💡 Check folder permissions and disk space")
+        else:
+            icon = "❌"
+            self.error(f"{icon} Organization failed: {error_msg}")
+        
+        # Show context and technical details in verbose mode
+        if self.options.verbose and details:
+            if context:
+                self.debug(f"Context: {context}")
+            if error_type != "unknown":
+                self.debug(f"Error type: {error_type}")
+                
+            # Show specific guidance based on error type
+            if error_type == "org_insufficient_data":
+                self.debug("Suggestion: Try processing more files or use simpler organization")
+            elif error_type == "org_classifier_error":
+                self.debug("Suggestion: Reducing ML level may help with classification issues")
+
+    @contextmanager
+    def organization_context(self, total_docs: int, ml_level: int = 2):
+        """Create organization progress context."""
+        level_names = {1: "Basic Rules", 2: "Selective ML", 3: "Temporal Intelligence"}
+        engine_name = level_names.get(ml_level, f"Level {ml_level}")
+        
+        self.info(f"🗂️  Starting document organization ({engine_name})...")
+        
+        try:
+            yield self
+        finally:
+            pass  # Completion handled by show_organization_results
+
 
 # Backward compatibility: Create alias for existing import patterns
 DisplayManager = RichDisplayManager

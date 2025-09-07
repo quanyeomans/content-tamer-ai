@@ -257,6 +257,49 @@ class FileOrganizer:
             "reasoning": "Based on file types and content analysis",
         }
 
+    def _handle_organization_error(self, error: Exception, context: str = "") -> Dict[str, Any]:
+        """Handle organization errors with unified messaging using error classification."""
+        try:
+            from utils.error_handling import ErrorClassifier
+        except ImportError:
+            # Fallback without error classification
+            return {
+                "success": False,
+                "organization_applied": False,
+                "reason": f"Organization error: {str(error)}",
+                "error": str(error),
+                "error_type": "unknown"
+            }
+        
+        # Classify the organization error
+        classification = ErrorClassifier.classify_error(error)
+        
+        # Create unified error response based on classification
+        error_response = {
+            "success": False,
+            "organization_applied": False,
+            "reason": classification.user_message,
+            "error": str(error),
+            "error_type": classification.error_type.value,
+            "is_recoverable": classification.is_recoverable,
+            "retry_recommended": classification.retry_recommended
+        }
+        
+        # Add context if provided
+        if context:
+            error_response["context"] = context
+            
+        # Log the error with proper sanitization
+        import logging
+        try:
+            from utils.security import sanitize_log_message
+            sanitized_error = sanitize_log_message(str(error))
+            logging.warning(f"Organization error in {context}: {sanitized_error}")
+        except ImportError:
+            logging.warning(f"Organization error in {context}: {str(error)}")
+            
+        return error_response
+
     def run_post_processing_organization(
         self, 
         processed_files: List[str], 
@@ -339,21 +382,10 @@ class FileOrganizer:
                 
         except ImportError as e:
             # Graceful degradation - organization components not available
-            return {
-                "success": True,
-                "organization_applied": False,
-                "reason": f"Organization components not available: {e}"
-            }
+            return self._handle_organization_error(e, "import phase - ML components unavailable")
         except Exception as e:
-            # Log error but don't fail the entire workflow
-            import logging
-            logging.warning(f"Post-processing organization failed: {e}")
-            return {
-                "success": False,
-                "organization_applied": False,
-                "reason": "Unexpected error during organization",
-                "error": str(e)
-            }
+            # Use unified error handling for all other exceptions
+            return self._handle_organization_error(e, "organization execution")
     
     def _extract_file_content_for_organization(self, file_path: str) -> str:
         """

@@ -119,6 +119,46 @@ Examples:
         help="Show detailed information about a specific local model",
     )
 
+    # Organization options
+    organization_group = parser.add_argument_group("Organization Options", 
+                                                   "Post-processing document organization with AI-powered categorization")
+    organization_group.add_argument(
+        "--organize",
+        action="store_true",
+        help="Enable post-processing document organization with intelligent categorization",
+    )
+    organization_group.add_argument(
+        "--no-organize",
+        action="store_true", 
+        help="Disable post-processing document organization (default behavior)",
+    )
+    organization_group.add_argument(
+        "--ml-level",
+        type=int,
+        choices=[1, 2, 3],
+        default=2,
+        help="ML enhancement level: 1=Basic rules, 2=Selective ML, 3=Temporal intelligence (default: 2)",
+    )
+
+    # Feature management
+    feature_group = parser.add_argument_group("Feature Management",
+                                              "Control experimental and rollout features")
+    feature_group.add_argument(
+        "--show-feature-flags",
+        action="store_true",
+        help="Display current feature flag configuration and exit",
+    )
+    feature_group.add_argument(
+        "--enable-organization-features",
+        action="store_true", 
+        help="Enable organization features via feature flags (persists to config)",
+    )
+    feature_group.add_argument(
+        "--disable-organization-features",
+        action="store_true",
+        help="Disable organization features via feature flags (persists to config)",
+    )
+
     # Display options
     parser.add_argument(
         "--quiet",
@@ -180,6 +220,20 @@ def setup_environment_and_args():
 
     # Parse arguments (including any expert mode additions)
     args = parse_arguments()
+    
+    # Validate organization arguments
+    if args.organize and args.no_organize:
+        print("Error: Cannot specify both --organize and --no-organize")
+        sys.exit(1)
+
+    # Handle feature flag management commands
+    if args.show_feature_flags:
+        show_feature_flags()
+        sys.exit(0)
+        
+    if args.enable_organization_features or args.disable_organization_features:
+        manage_organization_features(args.enable_organization_features, args.disable_organization_features)
+        sys.exit(0)
 
     # Set the OCR language from the command-line argument.
     if not args.quiet:
@@ -439,8 +493,8 @@ def install_ollama_secure() -> None:
             temp_script = f.name
         
         try:
-            # Make executable and run without shell=True
-            os.chmod(temp_script, 0o755)
+            # Make executable with restricted permissions (owner only)
+            os.chmod(temp_script, 0o700)  # More secure: owner read/write/execute only
             bash_path = shutil.which("bash")
             if not bash_path:
                 raise InstallationError("bash executable not found in PATH")
@@ -652,6 +706,111 @@ def list_local_models() -> None:
         print("❌ Missing dependencies. Install with: pip install psutil rich")
     except Exception as e:
         print(f"❌ Failed to list local models: {e}")
+
+
+def show_feature_flags() -> None:
+    """Display current feature flag configuration."""
+    try:
+        from utils.feature_flags import get_feature_manager
+        from rich.console import Console
+        from rich.table import Table
+        from rich.panel import Panel
+        
+        console = Console()
+        manager = get_feature_manager()
+        flags = manager.load_flags()
+        org_flags = flags.organization
+        
+        console.print(Panel.fit("🚩 Feature Flag Configuration", style="bold blue"))
+        
+        # Organization features table
+        org_table = Table(title="Organization Features", show_header=True)
+        org_table.add_column("Feature", style="cyan", no_wrap=True)
+        org_table.add_column("Enabled", style="green")
+        org_table.add_column("Description", style="white")
+        
+        org_table.add_row("Main Organization", "✅" if org_flags.enable_organization else "❌", 
+                         "Enable post-processing organization")
+        org_table.add_row("Guided Navigation", "✅" if org_flags.enable_guided_navigation else "❌",
+                         "Show organization prompts in UI")
+        org_table.add_row("Auto-enablement", "✅" if org_flags.enable_auto_enablement else "❌",
+                         "Auto-suggest organization for multi-file batches")
+        
+        console.print(org_table)
+        console.print()
+        
+        # ML levels table
+        ml_table = Table(title="ML Enhancement Levels", show_header=True)
+        ml_table.add_column("Level", style="cyan")
+        ml_table.add_column("Enabled", style="green")
+        ml_table.add_column("Description", style="white")
+        
+        ml_table.add_row("Level 1", "✅" if org_flags.enable_ml_level_1 else "❌",
+                        "Basic rule-based classification")
+        ml_table.add_row("Level 2", "✅" if org_flags.enable_ml_level_2 else "❌", 
+                        "Selective ML refinement")
+        ml_table.add_row("Level 3", "✅" if org_flags.enable_ml_level_3 else "❌",
+                        "Advanced temporal intelligence")
+        
+        console.print(ml_table)
+        console.print()
+        
+        # Safety settings
+        safety_table = Table(title="Safety Settings", show_header=True)
+        safety_table.add_column("Setting", style="cyan")
+        safety_table.add_column("Value", style="yellow")
+        safety_table.add_column("Description", style="white")
+        
+        safety_table.add_row("Max Files Auto-enable", str(org_flags.max_files_for_auto_enable),
+                           "Maximum files before requiring explicit confirmation")
+        safety_table.add_row("Rollout Percentage", f"{org_flags.rollout_percentage}%",
+                           "Percentage of users with access to features")
+        
+        console.print(safety_table)
+        console.print()
+        
+        console.print("💡 Use --enable-organization-features or --disable-organization-features to change settings")
+        console.print("💡 Or set environment variables like CONTENT_TAMER_ENABLE_ORGANIZATION=true")
+        
+    except ImportError:
+        print("❌ Feature flag system not available")
+    except Exception as e:
+        print(f"❌ Error displaying feature flags: {e}")
+
+
+def manage_organization_features(enable: bool, disable: bool) -> None:
+    """Enable or disable organization features via feature flags."""
+    if enable and disable:
+        print("Error: Cannot both enable and disable organization features")
+        return
+        
+    try:
+        from utils.feature_flags import get_feature_manager
+        
+        manager = get_feature_manager()
+        flags = manager.load_flags()
+        
+        if enable:
+            flags.organization.enable_organization = True
+            flags.organization.enable_guided_navigation = True
+            flags.organization.enable_auto_enablement = True
+            action = "enabled"
+        else:  # disable
+            flags.organization.enable_organization = False
+            flags.organization.enable_guided_navigation = False
+            flags.organization.enable_auto_enablement = False
+            action = "disabled"
+        
+        if manager.save_flags(flags):
+            print(f"✅ Organization features {action} successfully")
+            print("💡 Changes will take effect on next application run")
+        else:
+            print(f"❌ Failed to save feature flag changes")
+            
+    except ImportError:
+        print("❌ Feature flag system not available")
+    except Exception as e:
+        print(f"❌ Error managing organization features: {e}")
 
 
 def check_local_requirements() -> None:

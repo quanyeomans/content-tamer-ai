@@ -28,6 +28,13 @@ class ErrorType(Enum):
     NETWORK_ISSUE = "network_issue"  # Network-related problems
     PERMANENT_ERROR = "permanent"  # Genuine failures
     UNSUPPORTED_FORMAT = "unsupported"  # File format issues
+    
+    # Organization-specific errors
+    ORGANIZATION_ML_UNAVAILABLE = "org_ml_unavailable"  # ML dependencies missing
+    ORGANIZATION_CONFIG_ERROR = "org_config_error"  # Configuration issues
+    ORGANIZATION_INSUFFICIENT_DATA = "org_insufficient_data"  # Not enough data for organization
+    ORGANIZATION_CLASSIFIER_ERROR = "org_classifier_error"  # Classification failures
+    ORGANIZATION_FOLDER_ERROR = "org_folder_error"  # Folder creation/access issues
 
 
 @dataclass
@@ -116,6 +123,68 @@ class ErrorClassifier:
                 suggested_wait_time=0.0,
                 user_message="Unsupported or corrupted file format",
                 retry_recommended=False,
+            )
+
+        # Organization-specific error classification
+        return ErrorClassifier._classify_organization_error(error_str, exception)
+
+    @staticmethod
+    def _classify_organization_error(error_str: str, exception: Exception) -> ErrorClassification:
+        """Classify organization-specific errors."""
+        
+        # ML/NLP dependencies missing
+        ml_indicators = ["spacy", "sentence", "transformers", "sklearn", "nltk", "model", "no module named"]
+        if any(indicator in error_str for indicator in ml_indicators):
+            return ErrorClassification(
+                error_type=ErrorType.ORGANIZATION_ML_UNAVAILABLE,
+                is_recoverable=False,
+                suggested_wait_time=0.0,
+                user_message="ML dependencies not available, falling back to basic organization",
+                retry_recommended=False,
+            )
+        
+        # Configuration errors
+        config_indicators = ["configuration", "invalid config", "missing config", "preferences"]
+        if any(indicator in error_str for indicator in config_indicators):
+            return ErrorClassification(
+                error_type=ErrorType.ORGANIZATION_CONFIG_ERROR,
+                is_recoverable=True,
+                suggested_wait_time=1.0,
+                user_message="Organization configuration issue, using defaults",
+                retry_recommended=True,
+            )
+        
+        # Insufficient data for organization
+        data_indicators = ["no documents", "empty content", "insufficient data", "no valid documents"]
+        if any(indicator in error_str for indicator in data_indicators):
+            return ErrorClassification(
+                error_type=ErrorType.ORGANIZATION_INSUFFICIENT_DATA,
+                is_recoverable=False,
+                suggested_wait_time=0.0,
+                user_message="Insufficient data for intelligent organization",
+                retry_recommended=False,
+            )
+            
+        # Classification failures
+        classifier_indicators = ["classification", "categorization", "clustering", "similarity"]
+        if any(indicator in error_str for indicator in classifier_indicators):
+            return ErrorClassification(
+                error_type=ErrorType.ORGANIZATION_CLASSIFIER_ERROR,
+                is_recoverable=True,
+                suggested_wait_time=2.0,
+                user_message="Classification temporarily failed, retrying with simpler approach",
+                retry_recommended=True,
+            )
+        
+        # Folder creation/access issues
+        folder_indicators = ["mkdir", "folder", "directory", "makedirs", "cannot create"]
+        if any(indicator in error_str for indicator in folder_indicators):
+            return ErrorClassification(
+                error_type=ErrorType.ORGANIZATION_FOLDER_ERROR,
+                is_recoverable=True,
+                suggested_wait_time=1.0,
+                user_message="Folder access issue, checking permissions",
+                retry_recommended=True,
             )
 
         # Default to permanent error

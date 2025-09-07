@@ -1,6 +1,27 @@
 # Content Tamer AI - Product Backlog
 
-## 🚀 Near Term (Next 3 Months)
+## 🚨 CRITICAL PRIORITY: Test Infrastructure Recovery
+
+**Status**: BLOCKING ALL DEVELOPMENT  
+**Timeline**: Immediate (1-3 weeks)  
+**Impact**: Cannot safely develop or deploy without reliable test coverage
+
+### **Current Crisis**
+- **Test Coverage**: 86% failure rate (905 errors vs 146 passing)
+- **Integration Tests**: 39 critical errors blocking E2E validation
+- **Security Tests**: 1 failure creating regression risk
+- **Development Impact**: Cannot confidently make any changes
+
+### **Recovery Plan**
+1. **Week 1**: Fix security test + top 5 integration errors
+2. **Week 2**: Resolve pytest infrastructure issues 
+3. **Week 3**: Restore reliable CI/CD pipeline
+
+**Success Criteria**: 80%+ test pass rate, 0 integration errors
+
+---
+
+## 🚀 Near Term (Next 3 Months) - *BLOCKED UNTIL TESTS FIXED*
 
 ### Enhanced AI Features
 - **Custom Prompting**: Allow users to define custom filename patterns and styles
