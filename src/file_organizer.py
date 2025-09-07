@@ -271,7 +271,7 @@ class FileOrganizer:
             processed_files: List of file paths that have been processed
             target_folder: Target directory for organization
             enable_organization: Feature flag to enable/disable organization
-            ml_enhancement_level: 1=Phase1 only, 2=Phase2 ML enhancement
+            ml_enhancement_level: 1=Phase1 only, 2=Phase2 ML, 3=Phase3 temporal intelligence
             
         Returns:
             Dictionary with organization results and status
@@ -285,7 +285,11 @@ class FileOrganizer:
         
         try:
             # Import appropriate organization engine based on ML level
-            if ml_enhancement_level >= 2:
+            if ml_enhancement_level >= 3:
+                from organization.temporal_organization_engine import TemporalOrganizationEngine
+                engine = TemporalOrganizationEngine(target_folder, ml_enhancement_level)
+                engine_type = f"Temporal Intelligence (Level {ml_enhancement_level})"
+            elif ml_enhancement_level >= 2:
                 from organization.enhanced_organization_engine import EnhancedOrganizationEngine
                 engine = EnhancedOrganizationEngine(target_folder, ml_enhancement_level)
                 engine_type = f"Enhanced (Level {ml_enhancement_level})"

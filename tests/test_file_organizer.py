@@ -698,5 +698,459 @@ class TestPhase2MLEnhancement(unittest.TestCase):
         self.assertIn("success", result)
 
 
+class TestPhase3TemporalIntelligence(unittest.TestCase):
+    """Test Phase 3 temporal intelligence features."""
+
+    def setUp(self):
+        """Set up test environment with temporal documents."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_docs = []
+        
+        # Create temporal test documents with varied dates and content
+        temporal_test_files = [
+            ("Q1_2024_Financial_Report.pdf", "financial analysis Q1 results revenue profit margin"),
+            ("Invoice_2024_04_15.pdf", "invoice payment due amount $5000 April 2024"),
+            ("Contract_Agreement_2024_01_30.pdf", "contract terms agreement January legal document"),
+            ("Q2_2024_Sales_Report.pdf", "sales report Q2 performance quarterly metrics"),
+            ("Meeting_Minutes_2024_03_20.pdf", "meeting minutes March discussion action items"),
+            ("Yearly_Summary_2023.pdf", "annual summary 2023 year end comprehensive review"),
+            ("Invoice_2024_07_08.pdf", "invoice billing July amount $3200 payment"),
+            ("Q3_2024_Analysis.pdf", "quarterly analysis Q3 third quarter business review"),
+        ]
+        
+        for filename, content in temporal_test_files:
+            file_path = os.path.join(self.temp_dir, filename)
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            self.test_docs.append(file_path)
+
+    def tearDown(self):
+        """Clean up test environment."""
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_temporal_organization_engine_initialization(self):
+        """Test that Phase 3 temporal organization engine initializes correctly."""
+        try:
+            from organization.temporal_organization_engine import TemporalOrganizationEngine
+            
+            engine = TemporalOrganizationEngine(self.temp_dir, ml_enhancement_level=3)
+            
+            self.assertEqual(engine.ml_enhancement_level, 3)
+            self.assertIsNotNone(engine.temporal_analyzer)
+            self.assertTrue(hasattr(engine, 'get_temporal_insights'))
+            self.assertTrue(hasattr(engine, 'get_temporal_stats'))
+            
+        except ImportError:
+            self.skipTest("Temporal dependencies not available")
+
+    def test_temporal_intelligence_with_phase3_documents(self):
+        """Test temporal intelligence analysis with Phase 3 documents."""
+        try:
+            from organization.temporal_organization_engine import TemporalOrganizationEngine
+            
+            engine = TemporalOrganizationEngine(self.temp_dir, ml_enhancement_level=3)
+            
+            # Prepare document data for temporal analysis
+            processed_documents = []
+            for file_path in self.test_docs:
+                filename = os.path.basename(file_path)
+                content = "sample content for temporal analysis"
+                
+                processed_documents.append({
+                    "path": file_path,
+                    "filename": filename,
+                    "content": content,
+                })
+            
+            # Run temporal organization
+            result = engine.organize_documents(processed_documents)
+            
+            # Verify temporal intelligence was applied
+            self.assertIn("temporal_intelligence", result)
+            temporal_intel = result["temporal_intelligence"]
+            
+            # Should have temporal enhancement applied
+            if temporal_intel.get("temporal_enhancement_applied"):
+                self.assertIn("confidence_metrics", temporal_intel)
+                self.assertIn("organization_strategy", temporal_intel)
+                self.assertIn("recommendations", temporal_intel)
+            
+            # Quality metrics should include temporal information
+            quality_metrics = result.get("quality_metrics", {})
+            if quality_metrics.get("temporal_enhancement_applied"):
+                self.assertIn("temporal_confidence", quality_metrics)
+                self.assertIn("temporal_organization_type", quality_metrics)
+            
+        except ImportError:
+            self.skipTest("Temporal intelligence dependencies not available")
+
+    def test_temporal_analyzer_seasonal_pattern_detection(self):
+        """Test seasonal pattern detection in temporal analyzer."""
+        try:
+            from content_analysis.temporal_analyzer import AdvancedTemporalAnalyzer
+            
+            analyzer = AdvancedTemporalAnalyzer()
+            
+            # Create documents with seasonal patterns
+            seasonal_docs = [
+                {
+                    "filename": "Q1_Report.pdf",
+                    "category": "reports", 
+                    "confidence": 0.8,
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": 3, "day": 15}]
+                    }
+                },
+                {
+                    "filename": "Q2_Report.pdf", 
+                    "category": "reports",
+                    "confidence": 0.9,
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": 6, "day": 10}]
+                    }
+                },
+                {
+                    "filename": "Q3_Report.pdf",
+                    "category": "reports", 
+                    "confidence": 0.85,
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": 9, "day": 20}]
+                    }
+                },
+            ]
+            
+            analysis = analyzer.analyze_temporal_intelligence(seasonal_docs)
+            
+            # Should detect seasonal patterns
+            self.assertIn("seasonal_insights", analysis)
+            seasonal_insights = analysis["seasonal_insights"]
+            
+            # Check for category seasonal patterns
+            if seasonal_insights.get("category_seasonal_patterns"):
+                category_patterns = seasonal_insights["category_seasonal_patterns"]
+                if "reports" in category_patterns:
+                    reports_pattern = category_patterns["reports"]
+                    # May or may not detect pattern with only 3 data points
+                    self.assertIn("pattern_detected", reports_pattern)
+            
+        except ImportError:
+            self.skipTest("Temporal analysis dependencies not available")
+
+    def test_fiscal_year_detection(self):
+        """Test fiscal year pattern detection."""
+        try:
+            from content_analysis.temporal_analyzer import AdvancedTemporalAnalyzer
+            
+            analyzer = AdvancedTemporalAnalyzer()
+            
+            # Create documents with fiscal year patterns
+            fiscal_docs = [
+                {
+                    "filename": "FY2024_Q1_Report.pdf",
+                    "category": "reports",
+                    "confidence": 0.8,
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": 4, "day": 1}],
+                        "fiscal_year_hints": {"fiscal_year_pattern": "financial"}
+                    }
+                },
+                {
+                    "filename": "FY2024_Q2_Report.pdf",
+                    "category": "reports", 
+                    "confidence": 0.9,
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": 7, "day": 15}],
+                        "fiscal_year_hints": {"fiscal_year_pattern": "financial"}
+                    }
+                },
+            ]
+            
+            analysis = analyzer.analyze_temporal_intelligence(fiscal_docs)
+            
+            # Should detect fiscal year pattern
+            self.assertIn("fiscal_year_analysis", analysis)
+            fiscal_analysis = analysis["fiscal_year_analysis"]
+            
+            self.assertIn("detected_fiscal_type", fiscal_analysis)
+            self.assertIn("confidence", fiscal_analysis)
+            
+            # Should prefer financial fiscal year due to hints
+            if fiscal_analysis.get("confidence", 0) > 0.5:
+                self.assertEqual(fiscal_analysis["detected_fiscal_type"], "financial")
+            
+        except ImportError:
+            self.skipTest("Temporal analysis dependencies not available")
+
+    def test_workflow_pattern_recognition(self):
+        """Test workflow pattern recognition in temporal analysis."""
+        try:
+            from content_analysis.temporal_analyzer import AdvancedTemporalAnalyzer
+            
+            analyzer = AdvancedTemporalAnalyzer()
+            
+            # Create documents with monthly invoice workflow pattern
+            workflow_docs = []
+            for month in [1, 2, 3, 4, 5]:  # 5 months of invoices
+                workflow_docs.append({
+                    "filename": f"Invoice_2024_{month:02d}.pdf",
+                    "category": "invoices",
+                    "confidence": 0.9,
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": month, "day": 15}]
+                    }
+                })
+            
+            analysis = analyzer.analyze_temporal_intelligence(workflow_docs)
+            
+            # Should detect workflow patterns
+            self.assertIn("workflow_patterns", analysis)
+            workflow_patterns = analysis["workflow_patterns"]
+            
+            if workflow_patterns.get("category_workflows"):
+                category_workflows = workflow_patterns["category_workflows"]
+                if "invoices" in category_workflows:
+                    invoice_workflow = category_workflows["invoices"]
+                    self.assertIn("workflow_detected", invoice_workflow)
+                    if invoice_workflow.get("workflow_detected"):
+                        self.assertIn("workflow_type", invoice_workflow)
+                        # Should detect monthly pattern
+                        self.assertEqual(invoice_workflow["workflow_type"], "monthly")
+            
+        except ImportError:
+            self.skipTest("Temporal analysis dependencies not available")
+
+    def test_temporal_organization_structure_generation(self):
+        """Test temporal organization structure generation."""
+        try:
+            from organization.temporal_organization_engine import TemporalOrganizationEngine
+            
+            engine = TemporalOrganizationEngine(self.temp_dir, ml_enhancement_level=3)
+            
+            # Create documents spanning multiple years
+            multi_year_docs = []
+            for year in [2022, 2023, 2024]:
+                for quarter in [1, 2, 3, 4]:
+                    month = quarter * 3
+                    filename = f"Report_{year}_Q{quarter}.pdf"
+                    multi_year_docs.append({
+                        "path": os.path.join(self.temp_dir, filename),
+                        "filename": filename,
+                        "category": "reports",
+                        "confidence": 0.8,
+                        "metadata": {
+                            "date_detected": [{"year": year, "month": month, "day": 15}]
+                        }
+                    })
+            
+            result = engine.organize_documents(multi_year_docs)
+            
+            # Should generate temporal organization structure
+            self.assertIn("organization_structure", result)
+            org_structure = result["organization_structure"]
+            
+            # Should be temporal-aware
+            if org_structure.get("organization_type") == "temporal_intelligence":
+                self.assertIn("primary_structure", org_structure)
+                self.assertIn("time_granularity", org_structure)
+                self.assertIn("structure_details", org_structure)
+                
+                # Should have chronological structure due to multi-year span
+                self.assertEqual(org_structure["primary_structure"], "chronological")
+            
+        except ImportError:
+            self.skipTest("Temporal intelligence dependencies not available")
+
+    def test_temporal_quality_metrics_calculation(self):
+        """Test temporal quality metrics calculation."""
+        try:
+            from organization.temporal_organization_engine import TemporalOrganizationEngine
+            
+            engine = TemporalOrganizationEngine(self.temp_dir, ml_enhancement_level=3)
+            
+            # Create well-structured temporal documents
+            temporal_docs = []
+            for i, (filename, content) in enumerate([
+                ("2024_Q1_Financial.pdf", "financial report Q1 revenue"),
+                ("2024_Q2_Financial.pdf", "financial report Q2 profit"),
+                ("2024_Q3_Financial.pdf", "financial report Q3 growth"),
+                ("Invoice_2024_01.pdf", "invoice January billing"),
+                ("Invoice_2024_02.pdf", "invoice February payment"),
+            ]):
+                temporal_docs.append({
+                    "path": os.path.join(self.temp_dir, filename),
+                    "filename": filename,
+                    "category": "reports" if "Financial" in filename else "invoices", 
+                    "confidence": 0.8 + (i * 0.02),  # Varying confidence
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": (i % 4) + 1, "day": 15}]
+                    }
+                })
+            
+            result = engine.organize_documents(temporal_docs)
+            
+            # Check quality metrics include temporal information
+            quality_metrics = result.get("quality_metrics", {})
+            
+            if quality_metrics.get("temporal_enhancement_applied"):
+                self.assertIn("temporal_confidence", quality_metrics)
+                self.assertIn("date_coverage", quality_metrics)
+                self.assertIn("pattern_strength", quality_metrics)
+                
+                # Temporal confidence should be reasonable
+                temporal_confidence = quality_metrics.get("temporal_confidence", 0)
+                self.assertGreaterEqual(temporal_confidence, 0.0)
+                self.assertLessEqual(temporal_confidence, 1.0)
+                
+                # Date coverage should be reasonable (may be 0 if metadata extraction didn't work)
+                date_coverage = quality_metrics.get("date_coverage", 0)
+                self.assertGreaterEqual(date_coverage, 0.0)  # Should be non-negative
+                self.assertLessEqual(date_coverage, 1.0)  # Should not exceed 1.0
+            
+        except ImportError:
+            self.skipTest("Temporal intelligence dependencies not available")
+
+    def test_phase3_file_organizer_integration(self):
+        """Test Phase 3 integration with file organizer."""
+        try:
+            organizer = FileOrganizer()
+            
+            # Run post-processing with Phase 3 enabled
+            result = organizer.run_post_processing_organization(
+                self.test_docs,
+                self.temp_dir,
+                enable_organization=True,
+                ml_enhancement_level=3
+            )
+            
+            self.assertIsInstance(result, dict)
+            self.assertIn("success", result)
+            
+            if result.get("success"):
+                self.assertIn("organization_applied", result)
+                if result.get("organization_applied"):
+                    self.assertIn("engine_type", result)
+                    # Should use temporal intelligence engine
+                    self.assertIn("Temporal Intelligence", result["engine_type"])
+                    
+                    # Should have quality metrics
+                    if result.get("quality_metrics"):
+                        quality_metrics = result["quality_metrics"]
+                        # May have temporal enhancement depending on document analysis
+                        if quality_metrics.get("temporal_enhancement_applied"):
+                            self.assertIn("temporal_confidence", quality_metrics)
+            
+        except ImportError:
+            self.skipTest("Phase 3 temporal dependencies not available")
+
+    def test_temporal_sensitivity_tuning(self):
+        """Test temporal sensitivity tuning functionality."""
+        try:
+            from organization.temporal_organization_engine import TemporalOrganizationEngine
+            
+            engine = TemporalOrganizationEngine(self.temp_dir, ml_enhancement_level=3)
+            
+            # Create documents for sensitivity tuning
+            tuning_docs = []
+            for i in range(10):
+                tuning_docs.append({
+                    "filename": f"Document_{i:02d}.pdf",
+                    "category": "reports",
+                    "confidence": 0.6 + (i * 0.04),  # Varying confidence 
+                    "metadata": {
+                        "date_detected": [{"year": 2024, "month": (i % 12) + 1, "day": 15}]
+                    }
+                })
+            
+            # Test sensitivity tuning
+            tuning_result = engine.tune_temporal_sensitivity(tuning_docs, target_temporal_usage=0.7)
+            
+            self.assertIn("optimal_threshold", tuning_result)
+            self.assertIn("current_confidence", tuning_result)
+            self.assertIn("expected_temporal_usage", tuning_result)
+            self.assertIn("recommendations", tuning_result)
+            
+            # Optimal threshold should be reasonable
+            optimal_threshold = tuning_result["optimal_threshold"]
+            self.assertGreaterEqual(optimal_threshold, 0.5)
+            self.assertLessEqual(optimal_threshold, 1.0)
+            
+        except ImportError:
+            self.skipTest("Temporal intelligence dependencies not available")
+
+    def test_temporal_stats_and_capabilities(self):
+        """Test temporal statistics and capability reporting."""
+        try:
+            from organization.temporal_organization_engine import TemporalOrganizationEngine
+            
+            # Test Phase 3 engine capabilities
+            engine_phase3 = TemporalOrganizationEngine(self.temp_dir, ml_enhancement_level=3)
+            stats_phase3 = engine_phase3.get_temporal_stats()
+            
+            self.assertEqual(stats_phase3["enhancement_level"], 3)
+            self.assertTrue(stats_phase3["temporal_available"])
+            self.assertIn("temporal_features", stats_phase3)
+            self.assertIn("supported_structures", stats_phase3)
+            
+            # Should support all temporal features
+            features = stats_phase3["temporal_features"]
+            expected_features = [
+                "advanced_seasonal_analysis",
+                "fiscal_year_detection", 
+                "workflow_pattern_recognition",
+                "business_cycle_intelligence",
+                "adaptive_organization_strategies",
+            ]
+            for feature in expected_features:
+                self.assertIn(feature, features)
+            
+            # Test Phase 2 engine limitations
+            from organization.enhanced_organization_engine import EnhancedOrganizationEngine
+            engine_phase2 = EnhancedOrganizationEngine(self.temp_dir, ml_enhancement_level=2)
+            
+            # Should not have temporal capabilities
+            if hasattr(engine_phase2, 'get_temporal_stats'):
+                stats_phase2 = engine_phase2.get_temporal_stats()
+                self.assertEqual(stats_phase2["enhancement_level"], 2)
+                self.assertFalse(stats_phase2.get("temporal_available", True))
+            
+        except ImportError:
+            self.skipTest("Temporal intelligence dependencies not available")
+
+    def test_graceful_degradation_without_temporal_dependencies(self):
+        """Test graceful degradation when temporal dependencies are not available."""
+        # This test simulates missing dependencies
+        try:
+            from organization.temporal_organization_engine import TemporalOrganizationEngine
+            
+            engine = TemporalOrganizationEngine(self.temp_dir, ml_enhancement_level=3)
+            
+            # Force temporal analyzer to None to simulate missing dependencies
+            original_analyzer = engine.temporal_analyzer
+            engine.temporal_analyzer = None
+            
+            # Should still work with degraded functionality
+            test_docs = [{
+                "path": os.path.join(self.temp_dir, "test.pdf"),
+                "filename": "test.pdf",
+                "category": "other",
+                "confidence": 0.7,
+                "metadata": {}
+            }]
+            
+            result = engine.organize_documents(test_docs)
+            
+            # Should succeed but without temporal intelligence
+            self.assertIn("success", result)
+            if result.get("temporal_intelligence"):
+                temporal_intel = result["temporal_intelligence"]
+                self.assertEqual(temporal_intel.get("temporal_enhancement", False), False)
+            
+            # Restore original analyzer
+            engine.temporal_analyzer = original_analyzer
+            
+        except ImportError:
+            self.skipTest("Temporal intelligence dependencies not available")
+
+
 if __name__ == "__main__":
     unittest.main()

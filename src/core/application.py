@@ -433,6 +433,12 @@ def organize_content(
                                 ml_refined = quality_metrics.get("ml_refined_documents", 0)
                                 if ml_refined > 0:
                                     display_manager.info(f"🤖 ML enhancement: {ml_refined} documents refined with modern NLP")
+                            
+                            # Show temporal intelligence details if available
+                            if ml_enhancement_level >= 3 and quality_metrics.get("temporal_enhancement_applied"):
+                                temporal_confidence = quality_metrics.get("temporal_confidence", 0.0)
+                                organization_type = quality_metrics.get("temporal_organization_type", "chronological")
+                                display_manager.info(f"🕒 Temporal intelligence: {temporal_confidence:.1f} confidence, {organization_type} structure")
                     else:
                         reason = organization_result.get("reason", "Unknown")
                         display_manager.info(f"ℹ️  Post-processing organization skipped: {reason}")
