@@ -256,3 +256,113 @@ class FileOrganizer:
             "confidence": 0.8,
             "reasoning": "Based on file types and content analysis",
         }
+
+    def run_post_processing_organization(
+        self, 
+        processed_files: List[str], 
+        target_folder: str, 
+        enable_organization: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Run post-processing document organization using Phase 1 balanced architecture.
+        
+        Args:
+            processed_files: List of file paths that have been processed
+            target_folder: Target directory for organization
+            enable_organization: Feature flag to enable/disable organization
+            
+        Returns:
+            Dictionary with organization results and status
+        """
+        if not enable_organization:
+            return {
+                "success": True,
+                "organization_applied": False,
+                "reason": "Organization disabled via feature flag"
+            }
+        
+        try:
+            # Import Phase 1 organization engine
+            from organization.organization_engine import BasicOrganizationEngine
+            
+            # Initialize organization engine
+            engine = BasicOrganizationEngine(target_folder)
+            
+            # Prepare document info for organization
+            processed_docs = []
+            for file_path in processed_files:
+                if os.path.exists(file_path):
+                    # Extract document info
+                    doc_info = {
+                        "filename": os.path.basename(file_path),
+                        "path": file_path,
+                        "content": self._extract_file_content_for_organization(file_path)
+                    }
+                    processed_docs.append(doc_info)
+            
+            if not processed_docs:
+                return {
+                    "success": True,
+                    "organization_applied": False,
+                    "reason": "No valid documents found for organization"
+                }
+            
+            # Run organization
+            organization_result = engine.organize_documents(processed_docs)
+            
+            if organization_result.get("success", False):
+                return {
+                    "success": True,
+                    "organization_applied": True,
+                    "organization_result": organization_result,
+                    "documents_organized": len(processed_docs)
+                }
+            else:
+                return {
+                    "success": False,
+                    "organization_applied": False,
+                    "reason": "Organization engine failed",
+                    "error": organization_result.get("error", "Unknown error")
+                }
+                
+        except ImportError as e:
+            # Graceful degradation - organization components not available
+            return {
+                "success": True,
+                "organization_applied": False,
+                "reason": f"Organization components not available: {e}"
+            }
+        except Exception as e:
+            # Log error but don't fail the entire workflow
+            import logging
+            logging.warning(f"Post-processing organization failed: {e}")
+            return {
+                "success": False,
+                "organization_applied": False,
+                "reason": "Unexpected error during organization",
+                "error": str(e)
+            }
+    
+    def _extract_file_content_for_organization(self, file_path: str) -> str:
+        """
+        Extract content from processed files for organization analysis.
+        
+        This method reuses OCR content when possible to avoid reprocessing.
+        """
+        try:
+            # For text files, read content directly
+            if file_path.lower().endswith(('.txt', '.md')):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            
+            # For other file types, we would typically reuse OCR content
+            # For Phase 1, we'll use filename and basic file info
+            filename = os.path.basename(file_path)
+            file_size = os.path.getsize(file_path)
+            
+            # Generate basic content description for classification
+            return f"Document: {filename}, Size: {file_size} bytes"
+            
+        except (IOError, UnicodeDecodeError, OSError):
+            # Fallback to filename only
+            return os.path.basename(file_path)

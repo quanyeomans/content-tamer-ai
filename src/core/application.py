@@ -307,6 +307,7 @@ def organize_content(
     reset_progress: bool = False,
     ocr_lang: str = "eng",
     display_options: Optional[dict] = None,
+    enable_post_processing: bool = False,
 ) -> bool:
     """
     Organize and intelligently rename documents using AI analysis.
@@ -392,5 +393,48 @@ def organize_content(
         session_retry_handler,
         error_details,
     )
+
+    # Run post-processing organization if enabled and there were successful files
+    if enable_post_processing and successful_count > 0:
+        display_manager.info("🗂️  Starting post-processing document organization...")
+        
+        try:
+            # Get list of processed files in the renamed directory
+            processed_files = []
+            if os.path.exists(renamed_dir):
+                for filename in os.listdir(renamed_dir):
+                    file_path = os.path.join(renamed_dir, filename)
+                    if os.path.isfile(file_path):
+                        processed_files.append(file_path)
+            
+            if processed_files:
+                # Run post-processing organization
+                organization_result = organizer.run_post_processing_organization(
+                    processed_files, renamed_dir, enable_organization=True
+                )
+                
+                if organization_result.get("success", False):
+                    if organization_result.get("organization_applied", False):
+                        docs_organized = organization_result.get("documents_organized", 0)
+                        display_manager.info(f"✅ Post-processing organization completed: {docs_organized} documents analyzed")
+                        
+                        # Show organization summary if available
+                        org_result = organization_result.get("organization_result", {})
+                        quality_metrics = org_result.get("quality_metrics", {})
+                        if quality_metrics:
+                            accuracy = quality_metrics.get("accuracy", 0) * 100
+                            display_manager.info(f"📊 Organization quality: {accuracy:.1f}% classification accuracy")
+                    else:
+                        reason = organization_result.get("reason", "Unknown")
+                        display_manager.info(f"ℹ️  Post-processing organization skipped: {reason}")
+                else:
+                    error_msg = organization_result.get("reason", "Unknown error")
+                    display_manager.warning(f"⚠️  Post-processing organization failed: {error_msg}")
+            else:
+                display_manager.info("ℹ️  No processed files found for post-processing organization")
+                
+        except Exception as e:
+            display_manager.warning(f"⚠️  Post-processing organization error: {e}")
+            # Don't fail the entire workflow due to post-processing issues
 
     return True
