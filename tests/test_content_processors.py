@@ -161,10 +161,10 @@ class TestPDFProcessor(unittest.TestCase):
     @patch.object(PDFProcessor, "_fitz_text")
     @patch.object(PDFProcessor, "_pypdf_text")
     @patch.object(PDFProcessor, "_ocr_tesseract_from_pdf")
-    def test_extract_text_and_image_ocr_fallback(self, mock_ocr, mock_pypdf2, mock_fitz):
+    def test_extract_text_and_image_ocr_fallback(self, mock_ocr, mock_pypdf, mock_fitz):
         """Test OCR fallback for short text."""
         mock_fitz.return_value = "Short"  # Less than min_len
-        mock_pypdf2.return_value = "Short"
+        mock_pypdf.return_value = "Short"
         mock_ocr.return_value = "Much longer OCR extracted text content"
 
         text, image = self.processor._extract_text_and_image("test.pdf", min_len=20)

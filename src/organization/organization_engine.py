@@ -5,15 +5,16 @@ Core engine that integrates classification, metadata extraction, and state manag
 to provide intelligent document organization following the balanced architecture.
 """
 
-import os
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, date
 import logging
+import os
 from collections import defaultdict
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+from content_analysis.metadata_extractor import ContentMetadataExtractor
 
 # Import our Phase 1 components
 from content_analysis.rule_classifier import EnhancedRuleBasedClassifier
-from content_analysis.metadata_extractor import ContentMetadataExtractor
 from organization.state_manager import SimpleStateManager
 
 
@@ -37,7 +38,9 @@ class BasicOrganizationEngine:
         # Load preferences
         self.preferences = self.state_manager.load_preferences()
 
-    def organize_documents(self, processed_documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def organize_documents(
+        self, processed_documents: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Organize processed documents using Phase 1 balanced architecture.
 
@@ -64,7 +67,9 @@ class BasicOrganizationEngine:
                 )
 
                 # Extract metadata
-                metadata = self.metadata_extractor.extract_metadata(content, doc_info["filename"])
+                metadata = self.metadata_extractor.extract_metadata(
+                    content, doc_info["filename"]
+                )
 
                 # Create classified document record
                 classified_doc = {
@@ -73,7 +78,9 @@ class BasicOrganizationEngine:
                     "category": category,
                     "confidence": confidence,
                     "metadata": metadata,
-                    "content_preview": content[:200] + "..." if len(content) > 200 else content,
+                    "content_preview": (
+                        content[:200] + "..." if len(content) > 200 else content
+                    ),
                 }
 
                 classified_docs.append(classified_doc)
@@ -103,7 +110,9 @@ class BasicOrganizationEngine:
         )
 
         # Step 4: Calculate quality metrics
-        quality_metrics = self._calculate_quality_metrics(classified_docs, classification_stats)
+        quality_metrics = self._calculate_quality_metrics(
+            classified_docs, classification_stats
+        )
 
         # Step 5: Determine if reorganization should be applied
         should_reorganize = self._should_apply_reorganization_logic(quality_metrics)
@@ -121,8 +130,47 @@ class BasicOrganizationEngine:
 
         self.state_manager.save_session_data(session_data)
 
-        # Return comprehensive results
-        return {
+        # Step 7: Execute organization plan if recommended
+        execution_result = None
+        if should_reorganize:
+            try:
+                from organization.file_executor import OrganizationFileExecutor
+                executor = OrganizationFileExecutor(self.target_folder)
+                
+                # Validate plan before execution
+                validation_result = executor.validate_organization_plan({
+                    "success": True,
+                    "organization_structure": organization_structure
+                })
+                
+                if validation_result['valid']:
+                    # Execute the organization plan
+                    execution_result = executor.execute_organization_plan({
+                        "success": True,
+                        "organization_structure": organization_structure
+                    })
+                else:
+                    execution_result = {
+                        "success": False,
+                        "reason": "Organization plan validation failed",
+                        "validation_issues": validation_result['issues']
+                    }
+                    
+            except ImportError as e:
+                logging.warning(f"File executor not available: {e}")
+                execution_result = {
+                    "success": False,
+                    "reason": "File execution components not available"
+                }
+            except Exception as e:
+                logging.error(f"Organization execution failed: {e}")
+                execution_result = {
+                    "success": False,
+                    "reason": f"Execution error: {str(e)}"
+                }
+
+        # Return comprehensive results including execution
+        result = {
             "success": True,
             "organization_structure": organization_structure,
             "quality_metrics": quality_metrics,
@@ -131,6 +179,12 @@ class BasicOrganizationEngine:
             "should_reorganize": should_reorganize,
             "session_data": session_data,
         }
+        
+        if execution_result:
+            result["execution_result"] = execution_result
+            result["files_organized"] = execution_result.get("files_moved", 0)
+        
+        return result
 
     def _extract_content_for_classification(self, doc_info: Dict[str, Any]) -> str:
         """Extract content from document info, handling various input formats."""
@@ -278,7 +332,9 @@ class BasicOrganizationEngine:
                             else str(year)
                         )
                     else:  # year-month
-                        subfolder_name = str(year)  # Month subfolders would be created dynamically
+                        subfolder_name = str(
+                            year
+                        )  # Month subfolders would be created dynamically
 
                     folders[category_folder]["subfolders"][subfolder_name] = {
                         "type": "time",
@@ -340,7 +396,11 @@ class BasicOrganizationEngine:
         return years
 
     def _determine_folder_path(
-        self, doc: Dict, hierarchy_type: str, time_granularity: str, temporal_analysis: Dict
+        self,
+        doc: Dict,
+        hierarchy_type: str,
+        time_granularity: str,
+        temporal_analysis: Dict,
     ) -> str:
         """Determine the target folder path for a document."""
         category = doc["category"].title()
@@ -380,11 +440,15 @@ class BasicOrganizationEngine:
             return {"accuracy": 0.0, "total_documents": 0}
 
         # Calculate confidence-based accuracy
-        high_confidence_count = sum(1 for doc in classified_docs if doc.get("confidence", 0) >= 0.7)
+        high_confidence_count = sum(
+            1 for doc in classified_docs if doc.get("confidence", 0) >= 0.7
+        )
         medium_confidence_count = sum(
             1 for doc in classified_docs if 0.4 <= doc.get("confidence", 0) < 0.7
         )
-        low_confidence_count = sum(1 for doc in classified_docs if doc.get("confidence", 0) < 0.4)
+        low_confidence_count = sum(
+            1 for doc in classified_docs if doc.get("confidence", 0) < 0.4
+        )
 
         # Weighted accuracy calculation
         weighted_accuracy = (
@@ -405,11 +469,15 @@ class BasicOrganizationEngine:
             "medium_confidence": medium_confidence_count,
             "low_confidence": low_confidence_count,
             "classification_distribution": dict(classification_stats),
-            "average_confidence": sum(doc.get("confidence", 0) for doc in classified_docs)
+            "average_confidence": sum(
+                doc.get("confidence", 0) for doc in classified_docs
+            )
             / total_docs,
         }
 
-    def should_apply_reorganization(self, current_quality: float, proposed_quality: float) -> bool:
+    def should_apply_reorganization(
+        self, current_quality: float, proposed_quality: float
+    ) -> bool:
         """
         Determine if reorganization should be applied based on quality improvement threshold.
 
@@ -422,7 +490,9 @@ class BasicOrganizationEngine:
         """
         threshold = self.preferences.get("quality_threshold", 0.15)  # 15% default
         improvement = proposed_quality - current_quality
-        improvement_percentage = improvement / current_quality if current_quality > 0 else 1.0
+        improvement_percentage = (
+            improvement / current_quality if current_quality > 0 else 1.0
+        )
 
         return improvement_percentage >= threshold
 

@@ -130,7 +130,9 @@ class PDFProcessor(ContentProcessor):
 
             # Validate extracted content for security
             if content and not content.startswith("Error:"):
-                content = ContentValidator.validate_extracted_content(content, file_path)
+                content = ContentValidator.validate_extracted_content(
+                    content, file_path
+                )
 
             return content, image_b64
 
@@ -245,7 +247,9 @@ class PDFProcessor(ContentProcessor):
                 img = Image.open(io.BytesIO(pix.tobytes("png")))
                 angle = self._detect_osd_angle(img)
                 img = self._rotate_image(img, angle)
-                text = pytesseract.image_to_string(img, lang=lang, config="--psm 6 --oem 1")
+                text = pytesseract.image_to_string(
+                    img, lang=lang, config="--psm 6 --oem 1"
+                )
                 out.append(text or "")
             except (RuntimeError, IOError, ValueError, pytesseract.TesseractError):
                 continue
@@ -300,11 +304,35 @@ class PDFProcessor(ContentProcessor):
         """Uses Tesseract's Orientation and Script Detection (OSD) to find out if an image is rotated."""
         if not HAVE_TESSERACT or not OCR_USE_OSD:
             return 0
+        
+        # Try multiple PSM modes for better orientation detection
+        for psm_mode in [0, 1, 3, 6]:  # Different page segmentation modes
+            try:
+                osd = pytesseract.image_to_osd(img, config=f'--psm {psm_mode}')
+                
+                # Try different regex patterns for orientation parsing
+                patterns = [
+                    r"Rotate:\s*(\d+)",
+                    r"Orientation in degrees:\s*(\d+)",
+                    r"Rotate degrees:\s*(\d+)"
+                ]
+                
+                for pattern in patterns:
+                    m = re.search(pattern, osd)
+                    if m:
+                        angle = int(m.group(1)) % 360
+                        if angle != 0:  # Found valid rotation
+                            return angle
+                            
+            except (pytesseract.TesseractError, ValueError, AttributeError):
+                continue
+        
+        # Fallback: try basic OSD without specific PSM
         try:
             osd = pytesseract.image_to_osd(img)
             m = re.search(r"Rotate:\s*(\d+)", osd)
             return (int(m.group(1)) % 360) if m else 0
-        except pytesseract.TesseractError:
+        except (pytesseract.TesseractError, ValueError, AttributeError):
             return 0
 
     def _rotate_image(self, img: Any, angle: int) -> Any:

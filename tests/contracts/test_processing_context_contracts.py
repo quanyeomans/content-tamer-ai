@@ -18,16 +18,25 @@ import unittest
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
 
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestProcessingContextStateContracts(unittest.TestCase):
+class TestProcessingContextStateContracts(unittest.TestCase, RichTestCase):
     """Contracts for processing context state management."""
+    
+    def setUp(self):
+        """Set up Rich testing environment for each test."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
     
     @pytest.mark.contract
     @pytest.mark.critical
     def test_complete_file_updates_progress_stats_contract(self):
         """CONTRACT: complete_file must increment succeeded count."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(2, "Contract Test") as ctx:
             initial_succeeded = ctx.display.progress.stats.succeeded
@@ -46,7 +55,7 @@ class TestProcessingContextStateContracts(unittest.TestCase):
     @pytest.mark.critical  
     def test_processing_context_maintains_total_count_contract(self):
         """CONTRACT: processing context must maintain accurate total throughout lifecycle."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         expected_total = 3
         
         with manager.processing_context(expected_total, "Contract Test") as ctx:
@@ -73,7 +82,7 @@ class TestProcessingContextStateContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_fail_file_updates_progress_stats_contract(self):
         """CONTRACT: fail_file must increment failed count correctly."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(2, "Contract Test") as ctx:
             initial_failed = ctx.display.progress.stats.failed
@@ -92,7 +101,7 @@ class TestProcessingContextStateContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_progress_counters_remain_consistent_contract(self):
         """CONTRACT: Progress counters (succeeded + failed) must never exceed total."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         total_files = 3
         
         with manager.processing_context(total_files, "Contract Test") as ctx:
@@ -119,7 +128,7 @@ class TestProcessingContextStateContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_processing_context_exit_preserves_final_state_contract(self):
         """CONTRACT: Processing context exit must preserve final statistics."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Capture stats after context closes
         final_stats = None

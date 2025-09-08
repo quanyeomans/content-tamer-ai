@@ -21,16 +21,25 @@ import time
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
 
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestUserExperienceContracts(unittest.TestCase):
+class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
     """Contracts ensuring user experience remains consistent and high-quality."""
+    
+    def setUp(self):
+        """Set up Rich testing environment for each test."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
     
     @pytest.mark.contract
     @pytest.mark.regression
     def test_progress_feedback_meaningfulness_contract(self):
         """UX CONTRACT: Progress feedback must provide meaningful information to users."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(3, "User Experience Test") as ctx:
             # Contract: Users must see progress at each stage
@@ -71,7 +80,7 @@ class TestUserExperienceContracts(unittest.TestCase):
     @pytest.mark.regression  
     def test_completion_clarity_contract(self):
         """UX CONTRACT: Processing completion must clearly indicate success or failure."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Test clear success indication
         with manager.processing_context(2, "Success Clarity Test") as ctx:
@@ -99,7 +108,7 @@ class TestUserExperienceContracts(unittest.TestCase):
     @pytest.mark.regression
     def test_mixed_results_clarity_contract(self):
         """UX CONTRACT: Mixed success/failure results must be clearly communicated."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(4, "Mixed Results Clarity Test") as ctx:
             # Process mixed results that should be clear to user
@@ -124,7 +133,7 @@ class TestUserExperienceContracts(unittest.TestCase):
     @pytest.mark.regression
     def test_target_filename_visibility_contract(self):
         """UX CONTRACT: Users must be able to see what their files will be named."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         meaningful_filenames = [
             ("contract_draft.pdf", "ai_organized_legal_contract_draft_2024.pdf"),
@@ -153,7 +162,7 @@ class TestUserExperienceContracts(unittest.TestCase):
     @pytest.mark.regression
     def test_processing_time_feedback_contract(self):
         """UX CONTRACT: Users must receive reasonable processing time feedback."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(1, "Processing Time Test") as ctx:
             start_time = time.time()
@@ -182,7 +191,7 @@ class TestUserExperienceContracts(unittest.TestCase):
     @pytest.mark.regression
     def test_error_information_usefulness_contract(self):
         """UX CONTRACT: Error information must be useful and actionable for users."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(2, "Error Information Test") as ctx:
             # Test that error information is preserved for user
@@ -209,7 +218,7 @@ class TestUserExperienceContracts(unittest.TestCase):
     @pytest.mark.regression
     def test_completion_stats_user_comprehension_contract(self):
         """UX CONTRACT: Completion statistics must be comprehensible to users."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Test completion stats format that users expect
         completion_scenarios = [
@@ -270,7 +279,7 @@ class TestUserExperienceContracts(unittest.TestCase):
     @pytest.mark.regression  
     def test_progress_consistency_during_processing_contract(self):
         """UX CONTRACT: Progress information must remain consistent during processing."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(5, "Progress Consistency Test") as ctx:
             # Track progress at each step from user perspective

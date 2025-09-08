@@ -65,14 +65,20 @@ class FileManager:
             os.remove(src)
         except OSError as e:
             # Raise the current error, or the last error if current is None
-            raise (e if e is not None else (last_err or OSError("Unknown file operation error")))
+            raise (
+                e
+                if e is not None
+                else (last_err or OSError("Unknown file operation error"))
+            )
 
 
 class ProgressTracker:
     """Progress tracking for resumable batch processing."""
 
     @staticmethod
-    def load_progress(progress_file: str, input_dir: str, reset_progress: bool = False) -> Set[str]:
+    def load_progress(
+        progress_file: str, input_dir: str, reset_progress: bool = False
+    ) -> Set[str]:
         """Load processed files list with optional reset."""
         if reset_progress and os.path.exists(progress_file):
             try:
@@ -143,7 +149,9 @@ class FilenameHandler:
         return cleaned_filename[:160]  # Limit length for filesystem compatibility
 
     @staticmethod
-    def handle_duplicate_filename(filename: str, folder: str, extension: str = ".pdf") -> str:
+    def handle_duplicate_filename(
+        filename: str, folder: str, extension: str = ".pdf"
+    ) -> str:
         """Resolve filename collisions by appending numeric suffix."""
         base_filename = filename
         counter = 1
@@ -207,7 +215,9 @@ class FileOrganizer:
 
     # Future domain organization features
 
-    def organize_by_content_type(self, files: List[str], base_dir: str) -> Dict[str, List[str]]:
+    def organize_by_content_type(
+        self, files: List[str], base_dir: str
+    ) -> Dict[str, List[str]]:
         """Organize files by content type (placeholder for AI-powered categorization)."""
         # Future: AI analysis for document types (invoices, contracts, reports, etc.)
 
@@ -224,7 +234,9 @@ class FileOrganizer:
 
         return organization_map
 
-    def organize_by_date_pattern(self, files: List[str], base_dir: str) -> Dict[str, List[str]]:
+    def organize_by_date_pattern(
+        self, files: List[str], base_dir: str
+    ) -> Dict[str, List[str]]:
         """Organize files by temporal patterns (placeholder for date extraction)."""
         # Future: Extract dates from content/filenames for chronological organization
 
@@ -235,7 +247,9 @@ class FileOrganizer:
 
         return organization_map
 
-    def create_domain_folders(self, base_dir: str, domains: List[str]) -> Dict[str, str]:
+    def create_domain_folders(
+        self, base_dir: str, domains: List[str]
+    ) -> Dict[str, str]:
         """Create domain-specific folder structure."""
         domain_paths = {}
         for domain in domains:
@@ -257,7 +271,9 @@ class FileOrganizer:
             "reasoning": "Based on file types and content analysis",
         }
 
-    def _handle_organization_error(self, error: Exception, context: str = "") -> Dict[str, Any]:
+    def _handle_organization_error(
+        self, error: Exception, context: str = ""
+    ) -> Dict[str, Any]:
         """Handle organization errors with unified messaging using error classification."""
         try:
             from utils.error_handling import ErrorClassifier
@@ -268,12 +284,12 @@ class FileOrganizer:
                 "organization_applied": False,
                 "reason": f"Organization error: {str(error)}",
                 "error": str(error),
-                "error_type": "unknown"
+                "error_type": "unknown",
             }
-        
+
         # Classify the organization error
         classification = ErrorClassifier.classify_error(error)
-        
+
         # Create unified error response based on classification
         error_response = {
             "success": False,
@@ -282,40 +298,42 @@ class FileOrganizer:
             "error": str(error),
             "error_type": classification.error_type.value,
             "is_recoverable": classification.is_recoverable,
-            "retry_recommended": classification.retry_recommended
+            "retry_recommended": classification.retry_recommended,
         }
-        
+
         # Add context if provided
         if context:
             error_response["context"] = context
-            
+
         # Log the error with proper sanitization
         import logging
+
         try:
             from utils.security import sanitize_log_message
+
             sanitized_error = sanitize_log_message(str(error))
             logging.warning(f"Organization error in {context}: {sanitized_error}")
         except ImportError:
             logging.warning(f"Organization error in {context}: {str(error)}")
-            
+
         return error_response
 
     def run_post_processing_organization(
-        self, 
-        processed_files: List[str], 
-        target_folder: str, 
+        self,
+        processed_files: List[str],
+        target_folder: str,
         enable_organization: bool = True,
-        ml_enhancement_level: int = 2
+        ml_enhancement_level: int = 2,
     ) -> Dict[str, Any]:
         """
         Run post-processing document organization with configurable ML enhancement.
-        
+
         Args:
             processed_files: List of file paths that have been processed
             target_folder: Target directory for organization
             enable_organization: Feature flag to enable/disable organization
             ml_enhancement_level: 1=Phase1 only, 2=Phase2 ML, 3=Phase3 temporal intelligence
-            
+
         Returns:
             Dictionary with organization results and status
         """
@@ -323,24 +341,31 @@ class FileOrganizer:
             return {
                 "success": True,
                 "organization_applied": False,
-                "reason": "Organization disabled via feature flag"
+                "reason": "Organization disabled via feature flag",
             }
-        
+
         try:
             # Import appropriate organization engine based on ML level
             if ml_enhancement_level >= 3:
-                from organization.temporal_organization_engine import TemporalOrganizationEngine
+                from organization.temporal_organization_engine import (
+                    TemporalOrganizationEngine,
+                )
+
                 engine = TemporalOrganizationEngine(target_folder, ml_enhancement_level)
                 engine_type = f"Temporal Intelligence (Level {ml_enhancement_level})"
             elif ml_enhancement_level >= 2:
-                from organization.enhanced_organization_engine import EnhancedOrganizationEngine
+                from organization.enhanced_organization_engine import (
+                    EnhancedOrganizationEngine,
+                )
+
                 engine = EnhancedOrganizationEngine(target_folder, ml_enhancement_level)
                 engine_type = f"Enhanced (Level {ml_enhancement_level})"
             else:
                 from organization.organization_engine import BasicOrganizationEngine
+
                 engine = BasicOrganizationEngine(target_folder)
                 engine_type = "Basic (Level 1)"
-            
+
             # Prepare document info for organization
             processed_docs = []
             for file_path in processed_files:
@@ -349,20 +374,22 @@ class FileOrganizer:
                     doc_info = {
                         "filename": os.path.basename(file_path),
                         "path": file_path,
-                        "content": self._extract_file_content_for_organization(file_path)
+                        "content": self._extract_file_content_for_organization(
+                            file_path
+                        ),
                     }
                     processed_docs.append(doc_info)
-            
+
             if not processed_docs:
                 return {
                     "success": True,
                     "organization_applied": False,
-                    "reason": "No valid documents found for organization"
+                    "reason": "No valid documents found for organization",
                 }
-            
+
             # Run organization
             organization_result = engine.organize_documents(processed_docs)
-            
+
             if organization_result.get("success", False):
                 return {
                     "success": True,
@@ -370,43 +397,45 @@ class FileOrganizer:
                     "organization_result": organization_result,
                     "documents_organized": len(processed_docs),
                     "engine_type": engine_type,
-                    "ml_enhancement_level": ml_enhancement_level
+                    "ml_enhancement_level": ml_enhancement_level,
                 }
             else:
                 return {
                     "success": False,
                     "organization_applied": False,
                     "reason": "Organization engine failed",
-                    "error": organization_result.get("error", "Unknown error")
+                    "error": organization_result.get("error", "Unknown error"),
                 }
-                
+
         except ImportError as e:
             # Graceful degradation - organization components not available
-            return self._handle_organization_error(e, "import phase - ML components unavailable")
+            return self._handle_organization_error(
+                e, "import phase - ML components unavailable"
+            )
         except Exception as e:
             # Use unified error handling for all other exceptions
             return self._handle_organization_error(e, "organization execution")
-    
+
     def _extract_file_content_for_organization(self, file_path: str) -> str:
         """
         Extract content from processed files for organization analysis.
-        
+
         This method reuses OCR content when possible to avoid reprocessing.
         """
         try:
             # For text files, read content directly
-            if file_path.lower().endswith(('.txt', '.md')):
-                with open(file_path, 'r', encoding='utf-8') as f:
+            if file_path.lower().endswith((".txt", ".md")):
+                with open(file_path, "r", encoding="utf-8") as f:
                     return f.read()
-            
+
             # For other file types, we would typically reuse OCR content
             # For Phase 1, we'll use filename and basic file info
             filename = os.path.basename(file_path)
             file_size = os.path.getsize(file_path)
-            
+
             # Generate basic content description for classification
             return f"Document: {filename}, Size: {file_size} bytes"
-            
+
         except (IOError, UnicodeDecodeError, OSError):
             # Fallback to filename only
             return os.path.basename(file_path)

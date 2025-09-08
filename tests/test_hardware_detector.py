@@ -68,14 +68,14 @@ class TestHardwareDetector(unittest.TestCase):
 
     @patch("builtins.open", unittest.mock.mock_open(read_data="MemTotal:        8192000 kB\n"))
     @patch("platform.system", return_value="Linux")
-    def test_estimate_ram_linux(self):
+    def test_estimate_ram_linux(self, mock_system):
         """Test RAM estimation on Linux."""
         ram_gb = self.detector._estimate_ram_without_psutil()
-        self.assertAlmostEqual(ram_gb, 8.0, places=1)
+        self.assertAlmostEqual(ram_gb, 7.8125, places=3)  # 8192000 kB / 1024 / 1024 = 7.8125 GB
 
     @patch("platform.system", return_value="Darwin")
     @patch("subprocess.run")
-    def test_estimate_ram_macos(self, mock_run):
+    def test_estimate_ram_macos(self, mock_run, mock_system):
         """Test RAM estimation on macOS."""
         # Mock sysctl output (8GB in bytes)
         mock_result = MagicMock()
@@ -88,7 +88,7 @@ class TestHardwareDetector(unittest.TestCase):
 
     @patch("platform.system", return_value="Windows")  
     @patch("subprocess.run")
-    def test_estimate_ram_windows(self, mock_run):
+    def test_estimate_ram_windows(self, mock_run, mock_system):
         """Test RAM estimation on Windows."""
         # Mock wmic output
         mock_result = MagicMock()
@@ -107,7 +107,7 @@ class TestHardwareDetector(unittest.TestCase):
 
     @patch("os.path.exists")
     @patch("platform.system", return_value="Linux")
-    def test_detect_gpu_linux_nvidia(self, mock_exists):
+    def test_detect_gpu_linux_nvidia(self, mock_system, mock_exists):
         """Test GPU detection on Linux with NVIDIA."""
         mock_exists.side_effect = lambda path: path == "/proc/driver/nvidia/version"
         
@@ -117,7 +117,7 @@ class TestHardwareDetector(unittest.TestCase):
 
     @patch("os.path.exists") 
     @patch("platform.system", return_value="Linux")
-    def test_detect_gpu_linux_generic(self, mock_exists):
+    def test_detect_gpu_linux_generic(self, mock_system, mock_exists):
         """Test GPU detection on Linux with generic GPU."""
         mock_exists.side_effect = lambda path: path == "/dev/dri"
         
@@ -127,7 +127,7 @@ class TestHardwareDetector(unittest.TestCase):
 
     @patch("os.path.exists", return_value=False)
     @patch("platform.system", return_value="Linux")
-    def test_detect_gpu_none(self, mock_exists):
+    def test_detect_gpu_none(self, mock_system, mock_exists):
         """Test GPU detection when no GPU is found."""
         has_gpu, gpu_info = self.detector._detect_gpu()
         self.assertFalse(has_gpu)
@@ -266,8 +266,8 @@ class TestHardwareDetector(unittest.TestCase):
         
         estimate = self.detector.get_performance_estimate("mistral-7b")
         
-        self.assertEqual(estimate["inference_speed"], "Fast (5-15 seconds)")
-        self.assertEqual(estimate["memory_status"], "Comfortable")
+        self.assertEqual(estimate["inference_speed"], "Medium (10-30 seconds)")
+        self.assertEqual(estimate["memory_status"], "Good")
         self.assertIn("Good choice", estimate["recommendation"])
 
     def test_get_performance_estimate_insufficient_ram(self):

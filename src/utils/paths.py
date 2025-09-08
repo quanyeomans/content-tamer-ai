@@ -8,7 +8,9 @@ import os
 from typing import Tuple
 
 # Calculate PROJECT_ROOT once - shared across all modules
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 
 # Default directory structure
 DEFAULT_DATA_DIR = os.path.join(_PROJECT_ROOT, "data")

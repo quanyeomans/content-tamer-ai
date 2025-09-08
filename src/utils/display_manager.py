@@ -57,7 +57,9 @@ class ProcessingContext:
 
     def skip_file(self, filename: str) -> None:
         """Mark file as skipped."""
-        self.display.progress.update(filename=filename, status="skipped", increment=True)
+        self.display.progress.update(
+            filename=filename, status="skipped", increment=True
+        )
         if not self.display.options.quiet:
             self.display.messages.debug(f"Skipping {filename} (already processed)")
 
@@ -163,7 +165,9 @@ class DisplayManager:
         )
 
     @contextmanager
-    def processing_context(self, total_files: int, description: str = "Processing Files"):
+    def processing_context(
+        self, total_files: int, description: str = "Processing Files"
+    ):
         """Create a processing context for batch file operations."""
         self.messages.set_progress_active(True)
 
@@ -212,14 +216,18 @@ class DisplayManager:
 
         if "total_files" in stats and stats["total_files"] > 0:
             success_rate = (stats.get("successful", 0) / stats["total_files"]) * 100
-            self.messages.success(f"Processing complete: {success_rate:.1f}% success rate")
+            self.messages.success(
+                f"Processing complete: {success_rate:.1f}% success rate"
+            )
 
         # Note: Retry/recovery statistics are shown by the retry handler summary
         # to avoid duplicate reporting
 
         # Show warning count if any warnings occurred
         if stats.get("warnings", 0) > 0:
-            self.messages.warning(f"⚠️ {stats['warnings']} warnings were issued during processing")
+            self.messages.warning(
+                f"⚠️ {stats['warnings']} warnings were issued during processing"
+            )
 
         if stats.get("errors", 0) > 0:
             self.messages.error(f"{stats['errors']} files could not be processed")
@@ -254,7 +262,9 @@ class DisplayManager:
             return default
 
         default_text = "Y/n" if default else "y/N"
-        response = self.prompt_user(f"{message} ({default_text})", "y" if default else "n").lower()
+        response = self.prompt_user(
+            f"{message} ({default_text})", "y" if default else "n"
+        ).lower()
 
         if response in ["y", "yes", "true", "1"]:
             return True

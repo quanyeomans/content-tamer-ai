@@ -61,55 +61,59 @@ class InstallationError(Exception):
     """Raised when a secure installation fails."""
 
 
-def run_system_command_safe(command: list, **kwargs) -> 'subprocess.CompletedProcess':
+def run_system_command_safe(command: list, **kwargs) -> "subprocess.CompletedProcess":
     """
     Run system command safely with full path validation to prevent PATH injection.
-    
+
     Args:
         command: List of command and arguments (e.g., ['sysctl', '-n', 'hw.memsize'])
         **kwargs: Additional arguments to pass to subprocess.run()
-        
+
     Returns:
         subprocess.CompletedProcess: Result of the command execution
-        
+
     Raises:
         SecurityError: If executable not found or in unsafe location
         subprocess.SubprocessError: If command execution fails
     """
-    import subprocess
-    import shutil
     import logging
-    
+    import shutil
+    import subprocess
+
     logger = logging.getLogger(__name__)
-    
+
     if not command:
         raise ValueError("Empty command list")
-    
+
     # Get full path to executable
     executable_name = command[0]
     executable_path = shutil.which(executable_name)
     if not executable_path:
         raise SecurityError(f"Executable '{executable_name}' not found in PATH")
-    
+
     # Validate executable is in expected system locations (security hardening)
     safe_paths = [
-        "/usr/bin", "/bin", "/usr/sbin", "/sbin",  # Standard Linux/macOS paths
-        "/System/Library", "/usr/local/bin",       # macOS system paths
-        "/opt/homebrew/bin",                       # Homebrew on Apple Silicon
-        "C:\\Windows\\System32",                   # Windows system path
-        "C:\\Windows\\SysWOW64"                    # Windows 32-bit on 64-bit
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",  # Standard Linux/macOS paths
+        "/System/Library",
+        "/usr/local/bin",  # macOS system paths
+        "/opt/homebrew/bin",  # Homebrew on Apple Silicon
+        "C:\\Windows\\System32",  # Windows system path
+        "C:\\Windows\\SysWOW64",  # Windows 32-bit on 64-bit
     ]
-    
+
     if not any(executable_path.startswith(path) for path in safe_paths):
         logger.warning("Executable in unexpected location: %s", executable_path)
         # Continue execution but log the warning for security monitoring
-    
+
     # Run with full path and ensure shell=False
     full_command = [executable_path] + command[1:]
-    kwargs['shell'] = False  # Force shell=False for security
-    
+    kwargs["shell"] = False  # Force shell=False for security
+
     try:
-        return subprocess.run(full_command, check=kwargs.get('check', False), **kwargs)
+        return subprocess.run(full_command, check=kwargs.get("check", False), **kwargs)
     except subprocess.SubprocessError as e:
         logger.warning("System command failed safely: %s - %s", executable_name, e)
         raise
@@ -269,7 +273,9 @@ class PathValidator:
                     continue
 
             if not path_is_safe:
-                raise SecurityError(f"Path '{file_path}' is outside allowed directories")
+                raise SecurityError(
+                    f"Path '{file_path}' is outside allowed directories"
+                )
 
             return abs_path
 
@@ -326,7 +332,9 @@ class ContentValidator:
             return ""
 
         # Basic length check
-        if len(content) > MAX_CONTENT_LENGTH * 2:  # Allow some overhead before truncation
+        if (
+            len(content) > MAX_CONTENT_LENGTH * 2
+        ):  # Allow some overhead before truncation
             content = content[: MAX_CONTENT_LENGTH * 2]
 
         # Check for embedded scripts or commands
@@ -339,7 +347,9 @@ class ContentValidator:
             r"exec\s*\(",
         ]
 
-        combined_pattern = re.compile("|".join(script_patterns), re.IGNORECASE | re.DOTALL)
+        combined_pattern = re.compile(
+            "|".join(script_patterns), re.IGNORECASE | re.DOTALL
+        )
         if combined_pattern.search(content):
             raise SecurityError(
                 f"File '{source_file}' contains potentially malicious embedded scripts"
@@ -380,7 +390,9 @@ class ThreatLevel(Enum):
 class PDFThreatAnalysis:
     """Results from PDF threat analysis."""
 
-    def __init__(self, threat_level: ThreatLevel, indicators: Dict[str, Any], summary: str):
+    def __init__(
+        self, threat_level: ThreatLevel, indicators: Dict[str, Any], summary: str
+    ):
         self.threat_level = threat_level
         self.indicators = indicators
         self.summary = summary
@@ -447,7 +459,9 @@ class PDFAnalyzer:
 
         # Run PDFiD analysis
         try:
-            xmldoc = PDFiD(file_path, allNames=False, extraData=False, disarm=False, force=False)
+            xmldoc = PDFiD(
+                file_path, allNames=False, extraData=False, disarm=False, force=False
+            )
 
             # Extract key indicators
             indicators = self._extract_indicators(xmldoc)
@@ -554,7 +568,9 @@ class PDFAnalyzer:
         else:
             return ThreatLevel.SAFE
 
-    def _generate_summary(self, threat_level: ThreatLevel, indicators: Dict[str, Any]) -> str:
+    def _generate_summary(
+        self, threat_level: ThreatLevel, indicators: Dict[str, Any]
+    ) -> str:
         """Generate human-readable summary of threats detected."""
         if threat_level == ThreatLevel.SAFE:
             return "PDF appears safe - no suspicious indicators detected"
@@ -570,7 +586,9 @@ class PDFAnalyzer:
         if indicators.get("open_action", 0) > 0:
             threats.append(f"Auto-open actions ({indicators['open_action']} instances)")
         if indicators.get("uri_references", 0) > 0:
-            threats.append(f"External URI references ({indicators['uri_references']} instances)")
+            threats.append(
+                f"External URI references ({indicators['uri_references']} instances)"
+            )
         if indicators.get("submit_form", 0) > 0:
             threats.append(f"Form submissions ({indicators['submit_form']} instances)")
 
@@ -664,11 +682,15 @@ class SecureLogger(logging.Logger):
         """Override addHandler to ensure secure formatting."""
         # Always apply our secure formatter
         handler.setFormatter(
-            SecureLoggingFormatter(fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            SecureLoggingFormatter(
+                fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
         )
         super().addHandler(handler)
 
-    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, **kwargs):
+    def _log(
+        self, level, msg, args, exc_info=None, extra=None, stack_info=False, **kwargs
+    ):
         """
         Override _log to sanitize messages before logging.
         This is the single point where all log messages pass through.
@@ -728,7 +750,9 @@ def secure_log_debug(logger_instance: logging.Logger, message: str, *args, **kwa
     logger_instance.debug(sanitized_message, *args, **kwargs)
 
 
-def setup_secure_log_rotation(log_file_path: str, max_size_mb: int = 10, backup_count: int = 3):
+def setup_secure_log_rotation(
+    log_file_path: str, max_size_mb: int = 10, backup_count: int = 3
+):
     """
     Set up secure log rotation with automatic sanitization.
 
@@ -755,7 +779,9 @@ def setup_secure_log_rotation(log_file_path: str, max_size_mb: int = 10, backup_
 
     # Apply secure formatter that sanitizes all log messages
     handler.setFormatter(
-        SecureLoggingFormatter(fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        SecureLoggingFormatter(
+            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
     )
 
     return handler

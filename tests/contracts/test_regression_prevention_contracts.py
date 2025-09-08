@@ -21,10 +21,19 @@ from io import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
 
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestRegressionPreventionContracts(unittest.TestCase):
+class TestRegressionPreventionContracts(unittest.TestCase, RichTestCase):
     """Contracts that prevent specific bugs from recurring."""
+    
+    def setUp(self):
+        """Set up Rich testing environment for each test."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
     
     @pytest.mark.contract
     @pytest.mark.regression
@@ -34,7 +43,7 @@ class TestRegressionPreventionContracts(unittest.TestCase):
         Bug History: show_completion_stats was called after processing context 
         already displayed completion, causing duplicate messages.
         """
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Simulate the exact scenario that caused the bug
         with manager.processing_context(2, "Regression Test") as ctx:
@@ -67,7 +76,7 @@ class TestRegressionPreventionContracts(unittest.TestCase):
         Bug History: show_completion_stats defaulted success_rate to 0.0 instead of
         calculating from successful/total_files parameters.
         """
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Test the exact scenario that triggered the bug
         stats_scenarios = [
@@ -103,7 +112,7 @@ class TestRegressionPreventionContracts(unittest.TestCase):
         Bug History: processing_context wasn't properly calling context.__enter__()
         which meant stats.total was never set, causing incorrect progress display.
         """
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         expected_total = 5
         
         with manager.processing_context(expected_total, "Regression Test") as ctx:
@@ -130,7 +139,7 @@ class TestRegressionPreventionContracts(unittest.TestCase):
         Bug History: complete_file and fail_file methods weren't calling update() 
         with increment=True, causing counters to remain at 0.
         """
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(3, "Regression Test") as ctx:
             initial_succeeded = ctx.display.progress.stats.succeeded
@@ -160,7 +169,7 @@ class TestRegressionPreventionContracts(unittest.TestCase):
         Bug History: Context exit wasn't properly preserving final statistics,
         causing completion stats to show incorrect values.
         """
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Capture state during and after processing
         processing_stats = None
@@ -208,7 +217,7 @@ class TestRegressionPreventionContracts(unittest.TestCase):
         Bug History: Target filenames sometimes not displayed correctly due to
         processing context not properly preserving filename data.
         """
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         test_files = [
             ("input_document_1.pdf", "ai_organized_financial_report_2024.pdf"),
@@ -248,7 +257,7 @@ class TestRegressionPreventionContracts(unittest.TestCase):
         Bug History: Processing mixed results sometimes caused state inconsistencies
         where counters didn't match actual processing results.
         """
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Complex mixed processing scenario that previously caused issues
         with manager.processing_context(6, "Regression Test") as ctx:

@@ -23,6 +23,7 @@ try:
     from core.directory_manager import setup_directories
 except ImportError:
     import os
+
     sys.path.insert(0, os.path.dirname(__file__))
     from core.application import organize_content
     from core.cli_parser import (
@@ -37,25 +38,32 @@ except ImportError:
 __all__ = ["main"]
 
 
-def _validate_organization_settings(enable_post_processing: bool, ml_enhancement_level: int, quiet: bool):
+def _validate_organization_settings(
+    enable_post_processing: bool, ml_enhancement_level: int, quiet: bool
+):
     """Validate organization settings against feature flags."""
     if not enable_post_processing:
         return enable_post_processing, ml_enhancement_level
 
     try:
         from utils.feature_flags import get_feature_manager
+
         feature_manager = get_feature_manager()
 
         # Check if organization is available
         if not feature_manager.is_organization_enabled():
             if not quiet:
-                print("⚠️  Organization features are currently disabled via feature flags")
+                print(
+                    "⚠️  Organization features are currently disabled via feature flags"
+                )
             return False, ml_enhancement_level
 
         # Validate ML level against feature flags
         validated_ml_level = feature_manager.validate_ml_level(ml_enhancement_level)
         if validated_ml_level != ml_enhancement_level and not quiet:
-            print(f"ℹ️  Adjusted ML level to {validated_ml_level} (closest available level)")
+            print(
+                f"ℹ️  Adjusted ML level to {validated_ml_level} (closest available level)"
+            )
 
         return enable_post_processing, validated_ml_level
 
@@ -89,16 +97,18 @@ def main() -> int:
 
             # Determine organization settings from CLI arguments with feature flag validation
             # Note: If neither --organize nor --no-organize specified, guided navigation will handle it
-            enable_post_processing = getattr(args, 'organize', False)
-            ml_enhancement_level = getattr(args, 'ml_level', 2)
+            enable_post_processing = getattr(args, "organize", False)
+            ml_enhancement_level = getattr(args, "ml_level", 2)
 
             # Force disable if --no-organize was specified
-            if getattr(args, 'no_organize', False):
+            if getattr(args, "no_organize", False):
                 enable_post_processing = False
 
             # Validate settings against feature flags
-            enable_post_processing, ml_enhancement_level = _validate_organization_settings(
-                enable_post_processing, ml_enhancement_level, args.quiet
+            enable_post_processing, ml_enhancement_level = (
+                _validate_organization_settings(
+                    enable_post_processing, ml_enhancement_level, args.quiet
+                )
             )
 
             # Start the main content organization task with enhanced display

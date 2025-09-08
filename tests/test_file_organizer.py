@@ -455,7 +455,39 @@ class TestPhase2MLEnhancement(unittest.TestCase):
 
     def tearDown(self):
         """Clean up temporary directory."""
-        shutil.rmtree(self.temp_dir)
+        # Fix database connection leaks - close any database connections
+        import gc
+        import sqlite3
+        import time
+        
+        # Force garbage collection to close any unclosed database connections
+        gc.collect()
+        
+        # Find and close any lingering database connections
+        analytics_db_path = os.path.join(self.temp_dir, ".content_tamer", "organization", "analytics.db")
+        if os.path.exists(analytics_db_path):
+            try:
+                # Try to close any open connections by connecting and immediately closing
+                conn = sqlite3.connect(analytics_db_path)
+                conn.close()
+            except Exception:
+                pass
+        
+        # Clean up with robust error handling for locked files
+        try:
+            # First, try to ensure WAL files are cleaned up
+            for root, dirs, files in os.walk(self.temp_dir):
+                for file in files:
+                    if file.endswith(('.db-wal', '.db-shm')):
+                        try:
+                            os.remove(os.path.join(root, file))
+                        except (PermissionError, FileNotFoundError):
+                            pass
+            
+            shutil.rmtree(self.temp_dir)
+        except (PermissionError, OSError):
+            # On Windows, files may still be locked - use ignore_errors for test cleanup
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_uncertainty_detector_basic_functionality(self):
         """Test uncertainty detector identifies low-confidence documents."""

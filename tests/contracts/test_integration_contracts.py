@@ -25,13 +25,15 @@ from core.application import _process_files_batch
 from core.file_processor import process_file_enhanced_core
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
 from core.directory_manager import ensure_default_directories
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestIntegrationContracts(unittest.TestCase):
+class TestIntegrationContracts(unittest.TestCase, RichTestCase):
     """Contracts for end-to-end workflow component integration."""
     
     def setUp(self):
         """Set up test environment with temporary directories."""
+        RichTestCase.setUp(self)
         self.test_dir = tempfile.mkdtemp()
         self.input_dir = os.path.join(self.test_dir, "input")
         self.processed_dir = os.path.join(self.test_dir, "processed")  
@@ -54,7 +56,7 @@ class TestIntegrationContracts(unittest.TestCase):
     @pytest.mark.integration
     def test_file_processing_to_display_contract(self):
         """INTEGRATION CONTRACT: File processing results must flow correctly to display manager."""
-        display_manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        display_manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with display_manager.processing_context(1, "Integration Contract Test") as ctx:
             # Contract: File processing success must be reflected in display
@@ -82,7 +84,7 @@ class TestIntegrationContracts(unittest.TestCase):
     @pytest.mark.integration
     def test_success_failure_determination_contract(self):
         """INTEGRATION CONTRACT: Success/failure determination must be consistent across components."""
-        display_manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        display_manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with display_manager.processing_context(2, "Success/Failure Contract") as ctx:
             # Test successful processing contract
@@ -142,7 +144,7 @@ class TestIntegrationContracts(unittest.TestCase):
     @pytest.mark.integration
     def test_error_handling_integration_contract(self):
         """INTEGRATION CONTRACT: Error handling must be consistent across component boundaries."""
-        display_manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        display_manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with display_manager.processing_context(3, "Error Handling Contract") as ctx:
             # Process one successful file
@@ -172,7 +174,7 @@ class TestIntegrationContracts(unittest.TestCase):
     @pytest.mark.integration  
     def test_batch_processing_contract(self):
         """INTEGRATION CONTRACT: Batch processing must maintain individual file contracts."""
-        display_manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        display_manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Simulate batch processing scenario
         batch_files = [
@@ -227,7 +229,7 @@ class TestIntegrationContracts(unittest.TestCase):
         # Test that core components maintain expected interfaces
         
         # Contract: RichDisplayManager must have expected interface
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Required methods must exist
         required_methods = ['processing_context', 'show_completion_stats']
@@ -259,7 +261,7 @@ class TestIntegrationContracts(unittest.TestCase):
     @pytest.mark.integration
     def test_data_integrity_across_components_contract(self):
         """INTEGRATION CONTRACT: Data integrity must be maintained across component boundaries."""
-        display_manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        display_manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Test data that flows through multiple components
         test_data = {

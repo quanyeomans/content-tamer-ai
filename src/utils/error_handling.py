@@ -28,11 +28,13 @@ class ErrorType(Enum):
     NETWORK_ISSUE = "network_issue"  # Network-related problems
     PERMANENT_ERROR = "permanent"  # Genuine failures
     UNSUPPORTED_FORMAT = "unsupported"  # File format issues
-    
+
     # Organization-specific errors
     ORGANIZATION_ML_UNAVAILABLE = "org_ml_unavailable"  # ML dependencies missing
     ORGANIZATION_CONFIG_ERROR = "org_config_error"  # Configuration issues
-    ORGANIZATION_INSUFFICIENT_DATA = "org_insufficient_data"  # Not enough data for organization
+    ORGANIZATION_INSUFFICIENT_DATA = (
+        "org_insufficient_data"  # Not enough data for organization
+    )
     ORGANIZATION_CLASSIFIER_ERROR = "org_classifier_error"  # Classification failures
     ORGANIZATION_FOLDER_ERROR = "org_folder_error"  # Folder creation/access issues
 
@@ -129,11 +131,21 @@ class ErrorClassifier:
         return ErrorClassifier._classify_organization_error(error_str, exception)
 
     @staticmethod
-    def _classify_organization_error(error_str: str, exception: Exception) -> ErrorClassification:
+    def _classify_organization_error(
+        error_str: str, exception: Exception
+    ) -> ErrorClassification:
         """Classify organization-specific errors."""
-        
+
         # ML/NLP dependencies missing
-        ml_indicators = ["spacy", "sentence", "transformers", "sklearn", "nltk", "model", "no module named"]
+        ml_indicators = [
+            "spacy",
+            "sentence",
+            "transformers",
+            "sklearn",
+            "nltk",
+            "model",
+            "no module named",
+        ]
         if any(indicator in error_str for indicator in ml_indicators):
             return ErrorClassification(
                 error_type=ErrorType.ORGANIZATION_ML_UNAVAILABLE,
@@ -142,9 +154,14 @@ class ErrorClassifier:
                 user_message="ML dependencies not available, falling back to basic organization",
                 retry_recommended=False,
             )
-        
+
         # Configuration errors
-        config_indicators = ["configuration", "invalid config", "missing config", "preferences"]
+        config_indicators = [
+            "configuration",
+            "invalid config",
+            "missing config",
+            "preferences",
+        ]
         if any(indicator in error_str for indicator in config_indicators):
             return ErrorClassification(
                 error_type=ErrorType.ORGANIZATION_CONFIG_ERROR,
@@ -153,9 +170,14 @@ class ErrorClassifier:
                 user_message="Organization configuration issue, using defaults",
                 retry_recommended=True,
             )
-        
+
         # Insufficient data for organization
-        data_indicators = ["no documents", "empty content", "insufficient data", "no valid documents"]
+        data_indicators = [
+            "no documents",
+            "empty content",
+            "insufficient data",
+            "no valid documents",
+        ]
         if any(indicator in error_str for indicator in data_indicators):
             return ErrorClassification(
                 error_type=ErrorType.ORGANIZATION_INSUFFICIENT_DATA,
@@ -164,9 +186,14 @@ class ErrorClassifier:
                 user_message="Insufficient data for intelligent organization",
                 retry_recommended=False,
             )
-            
+
         # Classification failures
-        classifier_indicators = ["classification", "categorization", "clustering", "similarity"]
+        classifier_indicators = [
+            "classification",
+            "categorization",
+            "clustering",
+            "similarity",
+        ]
         if any(indicator in error_str for indicator in classifier_indicators):
             return ErrorClassification(
                 error_type=ErrorType.ORGANIZATION_CLASSIFIER_ERROR,
@@ -175,9 +202,15 @@ class ErrorClassifier:
                 user_message="Classification temporarily failed, retrying with simpler approach",
                 retry_recommended=True,
             )
-        
+
         # Folder creation/access issues
-        folder_indicators = ["mkdir", "folder", "directory", "makedirs", "cannot create"]
+        folder_indicators = [
+            "mkdir",
+            "folder",
+            "directory",
+            "makedirs",
+            "cannot create",
+        ]
         if any(indicator in error_str for indicator in folder_indicators):
             return ErrorClassification(
                 error_type=ErrorType.ORGANIZATION_FOLDER_ERROR,
@@ -282,7 +315,9 @@ class RetryHandler:
 
                 # Log the attempt with sanitized error message
                 sanitized_error = sanitize_log_message(str(e))
-                logger.debug(f"Attempt {attempt + 1} failed for {filename}: {sanitized_error}")
+                logger.debug(
+                    f"Attempt {attempt + 1} failed for {filename}: {sanitized_error}"
+                )
 
                 # Check if we should retry
                 if (

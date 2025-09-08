@@ -19,16 +19,29 @@ import unittest
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
 
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestUIStateConsistencyContracts(unittest.TestCase):
+class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
     """Contracts ensuring UI components maintain consistent state."""
+    
+    def setUp(self):
+        """Set up Rich testing environment for each test."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
     
     @pytest.mark.contract
     @pytest.mark.critical
     def test_rich_display_consistency_contract(self):
         """CONTRACT: Rich display must consistently handle completion stats."""
-        rich_manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        # Use proper container injection for Rich display manager
+        from core.application_container import TestApplicationContainer
+        container = TestApplicationContainer()
+        options = RichDisplayOptions(quiet=True)
+        rich_manager = container.create_display_manager(options)
         
         test_stats = {
             'total_files': 4,
@@ -52,7 +65,7 @@ class TestUIStateConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_progress_state_atomic_updates_contract(self):
         """CONTRACT: Progress state updates must be atomic and consistent."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(3, "State Consistency Test") as ctx:
             # Contract: Each file operation must result in consistent state update
@@ -100,7 +113,7 @@ class TestUIStateConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_display_refresh_preserves_state_contract(self):
         """CONTRACT: Display refresh operations must preserve underlying state."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(2, "State Consistency Test") as ctx:
             # Build up some state
@@ -137,7 +150,7 @@ class TestUIStateConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_concurrent_state_access_consistency_contract(self):
         """CONTRACT: Multiple accesses to state must return consistent values."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(4, "State Consistency Test") as ctx:
             # Process some files to create state
@@ -172,7 +185,7 @@ class TestUIStateConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical  
     def test_ui_component_state_isolation_contract(self):
         """CONTRACT: UI component state must be isolated between different contexts."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         # First processing context
         context1_final_stats = None
@@ -210,7 +223,7 @@ class TestUIStateConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_progress_percentage_accuracy_contract(self):
         """CONTRACT: Progress percentages must accurately reflect processing state."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         total_files = 10
         with manager.processing_context(total_files, "Progress Accuracy Test") as ctx:
@@ -244,7 +257,7 @@ class TestUIStateConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_display_state_recovery_contract(self):
         """CONTRACT: Display state must be recoverable after errors."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(3, "State Recovery Test") as ctx:
             # Process one successful file

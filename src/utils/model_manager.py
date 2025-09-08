@@ -9,9 +9,9 @@ import hashlib
 import json
 import os
 import time
-from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from typing import Dict, List, Optional, Tuple
 
 import requests
 
@@ -84,7 +84,9 @@ class ModelManager:
 
     # Hardware tier definitions
     HARDWARE_TIERS = [
-        HardwareTier("ultra_lightweight", 4, 6, ["gemma-2-2b"], "Laptops, older hardware"),
+        HardwareTier(
+            "ultra_lightweight", 4, 6, ["gemma-2-2b"], "Laptops, older hardware"
+        ),
         HardwareTier("standard", 6, 8, ["llama3.2-3b"], "Most desktop systems"),
         HardwareTier("enhanced", 8, 10, ["mistral-7b"], "Quality-focused users"),
         HardwareTier("premium", 10, 32, ["llama3.1-8b"], "High-end systems"),
@@ -143,7 +145,9 @@ class ModelManager:
             response.raise_for_status()
 
             ollama_models = response.json().get("models", [])
-            model_names = [model.get("name", "").split(":")[0] for model in ollama_models]
+            model_names = [
+                model.get("name", "").split(":")[0] for model in ollama_models
+            ]
 
             if model_name in model_names:
                 return ModelStatus.AVAILABLE
@@ -160,7 +164,8 @@ class ModelManager:
 
         if not self.is_ollama_running():
             raise RuntimeError(
-                f"Ollama is not running on {self.host}. " "Please start Ollama first: ollama serve"
+                f"Ollama is not running on {self.host}. "
+                "Please start Ollama first: ollama serve"
             )
 
         try:
@@ -204,7 +209,9 @@ class ModelManager:
             return True
 
         except requests.RequestException as e:
-            raise RuntimeError(f"Failed to download model {model_name}: {str(e)}") from e
+            raise RuntimeError(
+                f"Failed to download model {model_name}: {str(e)}"
+            ) from e
 
     def verify_model(self, model_name: str) -> bool:
         """Verify that a model is properly installed and functional."""
@@ -238,7 +245,9 @@ class ModelManager:
 
         try:
             data = {"name": model_name}
-            response = self.session.delete(f"{self.base_url}/api/delete", json=data, timeout=30)
+            response = self.session.delete(
+                f"{self.base_url}/api/delete", json=data, timeout=30
+            )
             response.raise_for_status()
             return True
 
@@ -259,7 +268,9 @@ class ModelManager:
             status=self._get_model_status(spec.name),
         )
 
-    def get_recommended_model_for_system(self, available_ram_gb: float) -> Optional[str]:
+    def get_recommended_model_for_system(
+        self, available_ram_gb: float
+    ) -> Optional[str]:
         """Get recommended model based on available system RAM."""
         # Find the best model that fits in available RAM
         suitable_models = []
@@ -275,20 +286,26 @@ class ModelManager:
         suitable_models.sort(key=lambda x: x[1], reverse=True)
         return suitable_models[0][0]
 
-    def get_hardware_tier_for_system(self, available_ram_gb: float) -> Optional[HardwareTier]:
+    def get_hardware_tier_for_system(
+        self, available_ram_gb: float
+    ) -> Optional[HardwareTier]:
         """Get hardware tier based on available system RAM."""
         for tier in reversed(self.HARDWARE_TIERS):  # Check from highest to lowest
             if available_ram_gb >= tier.min_ram_gb:
                 return tier
         return None
 
-    def estimate_download_time(self, model_name: str, bandwidth_mbps: float = 10.0) -> float:
+    def estimate_download_time(
+        self, model_name: str, bandwidth_mbps: float = 10.0
+    ) -> float:
         """Estimate download time for a model in seconds."""
         if model_name not in self.MODEL_SPECS:
             return 0.0
 
         model_size_mb = self.MODEL_SPECS[model_name].size_gb * 1024
-        return (model_size_mb * 8) / bandwidth_mbps  # Convert to bits and divide by bandwidth
+        return (
+            model_size_mb * 8
+        ) / bandwidth_mbps  # Convert to bits and divide by bandwidth
 
     def get_system_status(self) -> Dict:
         """Get overall system status."""
@@ -297,7 +314,11 @@ class ModelManager:
             "ollama_host": self.host,
             "models_directory": self.models_dir,
             "available_models": len(
-                [m for m in self.list_available_models() if m.status == ModelStatus.AVAILABLE]
+                [
+                    m
+                    for m in self.list_available_models()
+                    if m.status == ModelStatus.AVAILABLE
+                ]
             ),
             "total_models": len(self.MODEL_SPECS),
         }

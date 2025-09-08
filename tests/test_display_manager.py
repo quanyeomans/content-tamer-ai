@@ -21,6 +21,7 @@ from utils.display_manager import (
 )
 from utils.message_handler import MessageHandler, SimpleMessageHandler
 from utils.progress_display import ProgressDisplay
+from tests.utils.rich_test_utils import RichTestCase
 
 
 class TestDisplayOptions(unittest.TestCase):
@@ -381,12 +382,12 @@ class TestEdgeCasesAndErrorHandling(unittest.TestCase):
         self.assertGreater(len(output_content), 0)
 
 
-class TestRichUIEnhancements(unittest.TestCase):
+class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
     """Test Rich UI enhancement features as described in README."""
 
     def setUp(self):
         """Set up Rich display for testing."""
-        self.output = StringIO()
+        RichTestCase.setUp(self)
         # Import Rich components for testing
         try:
             from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
@@ -396,15 +397,21 @@ class TestRichUIEnhancements(unittest.TestCase):
         except ImportError:
             self.rich_available = False
             self.skipTest("Rich display components not available")
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
 
     def test_target_filename_display_in_progress(self):
         """Test that progress bar shows target filename like: → quarterly_report_2024_financials.pdf"""
         if not self.rich_available:
             self.skipTest("Rich not available")
             
-        manager = self.RichDisplayManager(
-            self.RichDisplayOptions(verbose=True, no_color=True, file=self.output)
+        # Use the test container and display manager from RichTestCase
+        display_options = self.RichDisplayOptions(
+            verbose=True, no_color=True, show_stats=False
         )
+        manager = self.test_container.create_display_manager(display_options)
         
         with manager.processing_context(1, "Processing Documents") as ctx:
             ctx.start_file("input_document.pdf") 
@@ -414,7 +421,7 @@ class TestRichUIEnhancements(unittest.TestCase):
             ctx.complete_file("input_document.pdf", "quarterly_report_2024_financials.pdf")
         
         # Check that output contains the arrow and target filename
-        output = self.output.getvalue()
+        output = self.get_console_output()
         self.assertIn("→", output, "Progress should show arrow indicator")
         self.assertIn("quarterly_report_2024_financials.pdf", output, "Target filename should be visible")
 
@@ -423,9 +430,11 @@ class TestRichUIEnhancements(unittest.TestCase):
         if not self.rich_available:
             self.skipTest("Rich not available")
             
-        manager = self.RichDisplayManager(
-            self.RichDisplayOptions(verbose=True, no_color=True, file=self.output)
+        # Use the test container and display manager from RichTestCase
+        display_options = self.RichDisplayOptions(
+            verbose=True, no_color=True, show_stats=False
         )
+        manager = self.test_container.create_display_manager(display_options)
         
         with manager.processing_context(1, "Processing Documents") as ctx:
             ctx.start_file("test_document.pdf")
@@ -442,14 +451,14 @@ class TestRichUIEnhancements(unittest.TestCase):
                 ctx.set_status(stage)
                 # Should show appropriate stage indicator in verbose mode
                 
-        output = self.output.getvalue()
-        # Should contain stage indicators in progress display 
-        # Note: These will be Unicode on systems that support it, ASCII fallbacks otherwise
-        self.assertIn("Processing", output, "Should show processing stage in progress")
-        # The progress display shows stage changes through icons and status text
-        # Since Rich Live displays may not capture all text to StringIO, we check that
-        # the start_file debug message appears (confirming verbose mode works)
+        output = self.get_console_output()
+        # Rich Live progress display doesn't capture to StringIO, but we can check:
+        # 1. Debug message appears (confirming verbose mode works)
         self.assertIn("Starting file: test_document.pdf", output, "Should show verbose debug message")
+        # 2. Completion message appears
+        self.assertIn("Content organization completed successfully", output, "Should show completion message")
+        # 3. Progress statistics are captured
+        self.assertIn("Results:", output, "Should show results summary")
 
     def test_celebration_levels_based_on_success_rate(self):
         """Test that completion shows different celebration levels based on success rate.""" 
@@ -457,9 +466,10 @@ class TestRichUIEnhancements(unittest.TestCase):
             self.skipTest("Rich not available")
             
         # Test perfect success (100%)
-        manager = self.RichDisplayManager(
-            self.RichDisplayOptions(no_color=True, file=self.output)
+        display_options = self.RichDisplayOptions(
+            no_color=True, show_stats=False
         )
+        manager = self.test_container.create_display_manager(display_options)
         
         with manager.processing_context(2, "Testing Celebrations") as ctx:
             ctx.complete_file("file1.pdf", "success1.pdf")
@@ -472,9 +482,10 @@ class TestRichUIEnhancements(unittest.TestCase):
         self.assertEqual(progress_stats.success_rate, 100.0, "Should calculate 100% success rate")
         
         # Test partial success (~67%)
-        manager2 = self.RichDisplayManager(
-            self.RichDisplayOptions(no_color=True, file=self.output)
+        display_options2 = self.RichDisplayOptions(
+            no_color=True, show_stats=False
         )
+        manager2 = self.test_container.create_display_manager(display_options2)
         
         with manager2.processing_context(3, "Testing Partial Success") as ctx:
             ctx.complete_file("file1.pdf", "success1.pdf")
@@ -493,10 +504,12 @@ class TestRichUIEnhancements(unittest.TestCase):
         if not self.rich_available:
             self.skipTest("Rich not available")
             
-        output = StringIO()
-        manager = self.RichDisplayManager(
-            self.RichDisplayOptions(no_color=True, file=output)
+        # Use the test container and clear output
+        self.clear_console_output()
+        display_options = self.RichDisplayOptions(
+            no_color=True, show_stats=False
         )
+        manager = self.test_container.create_display_manager(display_options)
         
         # Simulate normal processing workflow with Rich progress
         with manager.processing_context(2, "Test Processing") as ctx:
@@ -517,7 +530,7 @@ class TestRichUIEnhancements(unittest.TestCase):
         
         manager.show_completion_stats(completion_stats)
         
-        output_content = output.getvalue()
+        output_content = self.get_console_output()
         
         # Should not have duplicate completion messages
         error_completion_count = output_content.count("[ERROR] Processing complete:")
@@ -541,10 +554,12 @@ class TestRichUIEnhancements(unittest.TestCase):
         ]
         
         for mode, quiet, verbose in test_cases:
-            output = StringIO()
-            manager = self.RichDisplayManager(
-                self.RichDisplayOptions(quiet=quiet, verbose=verbose, no_color=True, file=output)
+            # Use the test container with different options
+            self.clear_console_output()  # Clear before each test
+            display_options = self.RichDisplayOptions(
+                quiet=quiet, verbose=verbose, no_color=True, show_stats=False
             )
+            manager = self.test_container.create_display_manager(display_options)
             
             manager.debug("Debug message")
             manager.info("Info message")
@@ -552,7 +567,7 @@ class TestRichUIEnhancements(unittest.TestCase):
             manager.warning("Warning message")
             manager.error("Error message")
             
-            content = output.getvalue()
+            content = self.get_console_output()
             
             if quiet:
                 # Quiet mode should have minimal output
@@ -589,8 +604,8 @@ class TestRichUIEnhancements(unittest.TestCase):
             
         from utils.rich_progress_display import RichProgressDisplay
         
-        # Capture progress display output
-        progress = RichProgressDisplay(show_stats=True, no_color=True)
+        # Capture progress display output using proper test setup
+        progress = self.display_manager.progress
         progress.start(100, "Testing Progress Percentage")
         
         # Simulate processing files to test percentage display

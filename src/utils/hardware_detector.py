@@ -5,10 +5,10 @@ Detects system capabilities including RAM, CPU, and GPU to recommend
 appropriate local LLM models and configurations.
 """
 
-import platform
 import os
-from typing import Dict, List, Optional, Tuple
+import platform
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
 try:
     import psutil
@@ -127,7 +127,10 @@ class HardwareDetector:
                     from utils.security import run_system_command_safe
 
                     result = run_system_command_safe(
-                        ["sysctl", "-n", "hw.memsize"], capture_output=True, text=True, timeout=5
+                        ["sysctl", "-n", "hw.memsize"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
                     )
                     if result.returncode == 0:
                         bytes_ram = int(result.stdout.strip())
@@ -235,13 +238,17 @@ class HardwareDetector:
         except (ImportError, OSError, PermissionError) as e:
             # Log specific failures for security monitoring
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning("GPU detection failed: %s: %s", type(e).__name__, e)
         except Exception as e:
-            # Log unexpected exceptions for security monitoring  
+            # Log unexpected exceptions for security monitoring
             import logging
+
             logger = logging.getLogger(__name__)
-            logger.error("Unexpected error in GPU detection: %s: %s", type(e).__name__, e)
+            logger.error(
+                "Unexpected error in GPU detection: %s: %s", type(e).__name__, e
+            )
 
         return has_gpu, gpu_info
 
@@ -289,7 +296,9 @@ class HardwareDetector:
             reason = f"Tight fit: {available_ram:.1f}GB RAM available, {primary_req['min_ram_gb']}GB required"
 
         # Alternative models (smaller ones that would also work)
-        alternatives = [model for model, _ in compatible_models[1:3]]  # Top 2 alternatives
+        alternatives = [
+            model for model, _ in compatible_models[1:3]
+        ]  # Top 2 alternatives
 
         primary_recommendation = ModelRecommendation(
             model_name=primary_model,
@@ -320,7 +329,8 @@ class HardwareDetector:
         system_info = self.detect_system_info()
 
         compatibility = {
-            "supported_platform": system_info.platform_system in ["Linux", "Darwin", "Windows"],
+            "supported_platform": system_info.platform_system
+            in ["Linux", "Darwin", "Windows"],
             "sufficient_ram": system_info.available_ram_gb >= 2.0,
             "supported_architecture": system_info.platform_machine
             in ["x86_64", "AMD64", "arm64", "aarch64"],
@@ -357,7 +367,9 @@ class HardwareDetector:
             }
 
         headroom_ratio = available_ram / required_ram
-        cpu_factor = min(system_info.cpu_count / 4.0, 2.0)  # Normalize to 4 cores, cap at 2x
+        cpu_factor = min(
+            system_info.cpu_count / 4.0, 2.0
+        )  # Normalize to 4 cores, cap at 2x
 
         # Rough performance estimates
         if headroom_ratio > 2.0 and cpu_factor > 1.5:

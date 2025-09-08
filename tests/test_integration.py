@@ -9,6 +9,9 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
+# Add Rich testing utilities for Rich testing patterns  
+from tests.utils.rich_test_utils import RichTestCase
+
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 from ai_providers import AIProviderFactory
 from content_processors import ContentProcessorFactory
@@ -34,9 +37,25 @@ from core.file_processor import (
 from file_organizer import FileOrganizer
 from main import main
 
+# Import fixtures for improved integration testing
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures"))
+try:
+    from integration_test_fixtures import integration_fixtures, IntegrationMockFactory
+    FIXTURES_AVAILABLE = True
+except ImportError:
+    FIXTURES_AVAILABLE = False
 
-class TestDefaultDirectories(unittest.TestCase):
+
+class TestDefaultDirectories(unittest.TestCase, RichTestCase):
     """Test default directory structure functionality."""
+    
+    def setUp(self):
+        """Set up test fixtures with Rich testing patterns."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up test environment."""
+        RichTestCase.tearDown(self)
 
     def test_ensure_default_directories(self):
         """Test that default directories are created correctly."""
@@ -83,13 +102,16 @@ class TestDefaultDirectories(unittest.TestCase):
                 self.assertTrue(os.path.basename(unprocessed_dir) == "unprocessed")
 
 
-class TestIntegrationWorkflow(unittest.TestCase):
+class TestIntegrationWorkflow(unittest.TestCase, RichTestCase):
     """Test end-to-end processing workflow."""
-
+    
     def setUp(self):
-        """Set up temporary directory structure for integration testing."""
-        self.temp_dir_obj = tempfile.TemporaryDirectory()
-        self.temp_dir = self.temp_dir_obj.name
+        """Set up test fixtures with Rich testing patterns and temporary directory structure."""
+        # Initialize Rich testing patterns first
+        RichTestCase.setUp(self)
+        
+        # Fix I/O capture issues by using manual temp directory management
+        self.temp_dir = tempfile.mkdtemp(prefix="integration_test_")
         self.test_files = []
         try:
             self.input_dir = os.path.join(self.temp_dir, "input")
@@ -119,20 +141,22 @@ class TestIntegrationWorkflow(unittest.TestCase):
 
     def tearDown(self):
         """Clean up temporary directory and files."""
-        # Close any open file handles first
-        for test_file in getattr(self, 'test_files', []):
+        # Fix I/O capture issues with proper cleanup
+        if hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
             try:
-                if os.path.exists(test_file):
-                    os.chmod(test_file, 0o666)  # Ensure writable for cleanup
-            except (OSError, PermissionError):
-                pass
-        
-        # Clean up temp directory using TemporaryDirectory
-        if hasattr(self, 'temp_dir_obj'):
-            try:
-                self.temp_dir_obj.cleanup()
+                # Ensure all files are writable before deletion
+                for root, dirs, files in os.walk(self.temp_dir):
+                    for file in files:
+                        try:
+                            os.chmod(os.path.join(root, file), 0o666)
+                        except (OSError, PermissionError):
+                            pass
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
             except Exception:
                 pass  # Best effort cleanup
+        
+        # Clean up Rich testing patterns
+        RichTestCase.tearDown(self)
 
     @patch("core.application.get_api_details")
     @patch("core.application.AIProviderFactory.create")
@@ -183,7 +207,7 @@ class TestIntegrationWorkflow(unittest.TestCase):
             mock_display.progress = mock_progress
             mock_display_setup.return_value = mock_display
 
-            # Run the main function
+            # Run the main function with test container injection
             success = organize_content(
                 self.input_dir,
                 self.unprocessed_dir,
@@ -191,6 +215,9 @@ class TestIntegrationWorkflow(unittest.TestCase):
                 provider="openai",
                 model="gpt-4o",
                 display_options={"no_color": True},
+                container=self.test_container,  # Inject test container for Rich output capture
+                enable_post_processing=True,  # Explicitly enable to bypass prompts
+                ml_enhancement_level=2,  # Set explicit level
             )
 
             # Verify success
@@ -335,8 +362,16 @@ class TestIntegrationWorkflow(unittest.TestCase):
         self.assertTrue(result.startswith("network_error_"))
 
 
-class TestCLIIntegration(unittest.TestCase):
+class TestCLIIntegration(unittest.TestCase, RichTestCase):
     """Test command-line interface integration."""
+    
+    def setUp(self):
+        """Set up test fixtures with Rich testing patterns."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up test environment."""
+        RichTestCase.tearDown(self)
 
     def test_list_available_models(self):
         """Test listing available models."""
@@ -438,8 +473,16 @@ class TestCLIIntegration(unittest.TestCase):
                 mock_input.assert_called_once_with("\nEnter your Openai API key: ")
 
 
-class TestAPIKeyValidation(unittest.TestCase):
+class TestAPIKeyValidation(unittest.TestCase, RichTestCase):
     """Test API key validation and provider detection functionality."""
+    
+    def setUp(self):
+        """Set up test fixtures with Rich testing patterns."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up test environment."""
+        RichTestCase.tearDown(self)
 
     def test_detect_openai_proj_key_provider(self):
         """
@@ -524,6 +567,116 @@ class TestAPIKeyValidation(unittest.TestCase):
         error_message = str(context.exception)
         self.assertIn("too short", error_message)
         self.assertIn("51 characters", error_message)
+
+
+@unittest.skipUnless(FIXTURES_AVAILABLE, "Integration test fixtures not available")
+class TestImprovedIntegrationPatterns(unittest.TestCase, RichTestCase):
+    """Improved integration tests using centralized fixtures and minimal mocking."""
+    
+    def setUp(self):
+        """Set up test fixtures with Rich testing patterns and improved integration environment."""
+        # Initialize Rich testing patterns first
+        RichTestCase.setUp(self)
+        
+        # Set up improved integration test environment
+        if FIXTURES_AVAILABLE:
+            self.test_env = integration_fixtures.create_test_environment()
+            self.addCleanup(self.test_env.cleanup)
+    
+    def test_organize_content_with_realistic_integration(self):
+        """IMPROVED: Test organize_content with realistic component interactions."""
+        if not FIXTURES_AVAILABLE:
+            self.skipTest("Integration fixtures not available")
+            
+        # Use minimal mocking - only external AI service
+        mock_ai = IntegrationMockFactory.create_minimal_ai_mock(success_rate=1.0)
+        
+        with patch("core.application.get_api_details") as mock_get_api, \
+             patch("core.application.AIProviderFactory.create") as mock_create_ai, \
+             patch("core.file_processor._extract_file_content") as mock_extract:
+            
+            # Configure minimal mocks
+            mock_get_api.return_value = "fake-api-key"
+            mock_create_ai.return_value = mock_ai
+            mock_extract.return_value = ("Realistic document content", None)
+            
+            # Test with real file operations and component interactions
+            # Inject test container for Rich output capture and testing
+            success = organize_content(
+                self.test_env.input_dir,
+                self.test_env.unprocessed_dir,
+                self.test_env.processed_dir,
+                provider="openai",
+                model="gpt-4o",
+                display_options={"quiet": True, "no_color": True},
+                container=self.test_container,  # Rich testing container injection
+                enable_post_processing=True,  # Bypass stdin prompts in tests
+                ml_enhancement_level=2,
+            )
+            
+            # INTEGRATION VERIFICATION: Real file system changes
+            self.assertIsInstance(success, bool)
+            
+            # Verify actual file operations occurred
+            input_remaining = os.listdir(self.test_env.input_dir)
+            processed_files = [f for f in os.listdir(self.test_env.processed_dir) 
+                             if not os.path.isdir(os.path.join(self.test_env.processed_dir, f))]
+            
+            # Files should be moved from input to processed
+            total_handled = len(input_remaining) + len(processed_files) + len(os.listdir(self.test_env.unprocessed_dir))
+            self.assertEqual(total_handled, 3, "All test files should be handled")
+            
+            # RICH TESTING VALIDATION: Verify console output captured
+            console_output = self.get_console_output()
+            self.assertIsInstance(console_output, str, "Console output should be captured")
+            # Note: In quiet mode, there may be minimal output, so we just verify capture works
+            
+    def test_file_processing_component_interaction(self):
+        """IMPROVED: Test file processing with real component interactions.""" 
+        if not FIXTURES_AVAILABLE:
+            self.skipTest("Integration fixtures not available")
+        
+        # Test individual file processing with real components
+        test_file = self.test_env.test_files[0]
+        input_path = os.path.join(self.test_env.input_dir, test_file.filename)
+        
+        # Create real file organizer (not mocked)
+        file_organizer = FileOrganizer()
+        
+        with patch("core.file_processor._extract_file_content") as mock_extract, \
+             patch("core.file_processor._generate_filename") as mock_gen:
+            
+            mock_extract.return_value = (test_file.expected_content, None)
+            mock_gen.return_value = "integration_improved_filename"
+            
+            # Test process_file with real file operations
+            mock_pbar = MagicMock()
+            mock_progress_f = lambda x: None
+            
+            success, result = process_file(
+                input_path,
+                test_file.filename,
+                self.test_env.unprocessed_dir,
+                self.test_env.processed_dir,
+                mock_pbar,
+                mock_progress_f,
+                "eng",
+                MagicMock(),  # ai_client
+                file_organizer
+            )
+            
+            # INTEGRATION VERIFICATION: Real file operations
+            if success:
+                # File should be moved to processed directory
+                processed_files = os.listdir(self.test_env.processed_dir)
+                self.assertGreater(len(processed_files), 0, "Processed file should exist")
+                
+                # Original file should be gone
+                self.assertFalse(os.path.exists(input_path), "Original file should be moved")
+            else:
+                # File should be in unprocessed directory
+                unprocessed_files = os.listdir(self.test_env.unprocessed_dir)
+                self.assertGreater(len(unprocessed_files), 0, "Failed file should be in unprocessed")
 
 
 if __name__ == "__main__":

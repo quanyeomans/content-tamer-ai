@@ -6,15 +6,18 @@ combined with modern NLP techniques. Designed to achieve 80%+ accuracy on first 
 for one-shot client discovery scenarios.
 """
 
-import re
-import spacy
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime
 import logging
+import re
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
+
+import spacy
 
 
 class EnhancedRuleBasedClassifier:
     """Enhanced rule-based classifier with spaCy NLP integration."""
+
+    _spacy_warning_shown = False  # Class-level flag to prevent warning spam
 
     def __init__(self):
         """Initialize classifier with enhanced patterns and spaCy model."""
@@ -22,8 +25,10 @@ class EnhancedRuleBasedClassifier:
             # Load spaCy model with minimal components for speed
             self.nlp = spacy.load("en_core_web_sm", disable=["parser", "tagger"])
         except OSError:
-            # Graceful fallback if spaCy not available
-            logging.warning("spaCy model not available, using basic fallback")
+            # Graceful fallback if spaCy not available - warn only once
+            if not EnhancedRuleBasedClassifier._spacy_warning_shown:
+                logging.warning("spaCy model not available, using basic fallback")
+                EnhancedRuleBasedClassifier._spacy_warning_shown = True
             self.nlp = None
 
         # Enhanced pattern rules based on research and common document types
@@ -47,23 +52,38 @@ class EnhancedRuleBasedClassifier:
             ],
             "invoices": [
                 {
-                    "patterns": [r"invoice\s*#?\d+", r"amount\s+due", r"payment\s+terms"],
+                    "patterns": [
+                        r"invoice\s*#?\d+",
+                        r"amount\s+due",
+                        r"payment\s+terms",
+                    ],
                     "weight": 0.9,
                 },
                 {"patterns": [r"invoice", r"due\s+date", r"total"], "weight": 0.8},
                 {"patterns": [r"billing", r"charge", r"remit"], "weight": 0.7},
-                {"patterns": [r"\$[\d,]+\.\d{2}", r"net\s+\d+", r"payable"], "weight": 0.7},
+                {
+                    "patterns": [r"\$[\d,]+\.\d{2}", r"net\s+\d+", r"payable"],
+                    "weight": 0.7,
+                },
             ],
             "reports": [
                 {"patterns": [r"report", r"analysis", r"findings"], "weight": 0.8},
                 {"patterns": [r"quarterly", r"annual", r"summary"], "weight": 0.8},
                 {"patterns": [r"revenue", r"expenses", r"performance"], "weight": 0.7},
                 {
-                    "patterns": [r"executive\s+summary", r"conclusion", r"recommendation"],
+                    "patterns": [
+                        r"executive\s+summary",
+                        r"conclusion",
+                        r"recommendation",
+                    ],
                     "weight": 0.8,
                 },
                 {
-                    "patterns": [r"q[1-4]\s+\d{4}", r"financial\s+report", r"year.over.year"],
+                    "patterns": [
+                        r"q[1-4]\s+\d{4}",
+                        r"financial\s+report",
+                        r"year.over.year",
+                    ],
                     "weight": 0.9,
                 },
             ],
@@ -73,13 +93,21 @@ class EnhancedRuleBasedClassifier:
                 {"patterns": [r"email", r"message", r"communication"], "weight": 0.6},
                 {"patterns": [r"thank\s+you", r"please", r"update"], "weight": 0.6},
                 {
-                    "patterns": [r"colleagues", r"various\s+topics", r"meeting\s+notes"],
+                    "patterns": [
+                        r"colleagues",
+                        r"various\s+topics",
+                        r"meeting\s+notes",
+                    ],
                     "weight": 0.7,
                 },
             ],
             "financial": [
                 {
-                    "patterns": [r"balance\s+sheet", r"income\s+statement", r"cash\s+flow"],
+                    "patterns": [
+                        r"balance\s+sheet",
+                        r"income\s+statement",
+                        r"cash\s+flow",
+                    ],
                     "weight": 0.9,
                 },
                 {"patterns": [r"budget", r"forecast", r"financial"], "weight": 0.8},
@@ -87,8 +115,14 @@ class EnhancedRuleBasedClassifier:
                 {"patterns": [r"assets", r"liabilities", r"equity"], "weight": 0.8},
             ],
             "legal": [
-                {"patterns": [r"legal\s+document", r"court", r"jurisdiction"], "weight": 0.9},
-                {"patterns": [r"plaintiff", r"defendant", r"litigation"], "weight": 0.8},
+                {
+                    "patterns": [r"legal\s+document", r"court", r"jurisdiction"],
+                    "weight": 0.9,
+                },
+                {
+                    "patterns": [r"plaintiff", r"defendant", r"litigation"],
+                    "weight": 0.8,
+                },
                 {"patterns": [r"statute", r"regulation", r"compliance"], "weight": 0.7},
                 {"patterns": [r"hereby", r"witness", r"notarized"], "weight": 0.7},
             ],
@@ -182,7 +216,9 @@ class EnhancedRuleBasedClassifier:
                 elif ent.label_ in ["ORG", "PERSON"]:
                     # Organization/person entities boost contracts/correspondence
                     entity_scores["contracts"] = entity_scores.get("contracts", 0) + 0.1
-                    entity_scores["correspondence"] = entity_scores.get("correspondence", 0) + 0.1
+                    entity_scores["correspondence"] = (
+                        entity_scores.get("correspondence", 0) + 0.1
+                    )
                 elif ent.label_ == "LAW":
                     # Legal entities boost legal category
                     entity_scores["legal"] = entity_scores.get("legal", 0) + 0.3
@@ -209,7 +245,9 @@ class EnhancedRuleBasedClassifier:
 
         return combined
 
-    def get_classification_confidence(self, content: str, filename: str) -> Tuple[str, float]:
+    def get_classification_confidence(
+        self, content: str, filename: str
+    ) -> Tuple[str, float]:
         """
         Get classification with confidence score.
 

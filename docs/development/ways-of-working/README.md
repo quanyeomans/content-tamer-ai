@@ -21,6 +21,15 @@ These documents provide the structure and checkpoints to ensure I consistently f
 - Integration testing guidance
 - Completion validation criteria
 
+### 📊 **UNIT TEST EXPANSION WORKFLOW** *(Current Focus)*
+**Module-by-module test coverage expansion**
+- Target modules with 0% test coverage first
+- Write 15-25 comprehensive tests per module
+- Achieve 9.0+ pylint score before completion
+- Cover defaults, validation, edge cases, and security scenarios
+- Use proper mocking for external dependencies
+- Maintain quality with systematic approach
+
 ## Usage Instructions
 
 ### For Every Code Change
@@ -35,6 +44,20 @@ These documents provide the structure and checkpoints to ensure I consistently f
    - Implement minimal solution
    - Validate security and integration
    - Complete with proper cleanup
+
+### For Unit Test Coverage Expansion *(Current Priority)*
+
+**When to Use**: Improving test coverage on existing modules without functional changes
+
+1. **Module Selection**: Choose modules with low/zero test coverage
+2. **TodoWrite Planning**: Break into phases (defaults, validation, edge cases, security)
+3. **Comprehensive Testing**: Write 15-25 tests covering all functions and edge cases
+4. **Quality Gate**: Ensure 9.0+ pylint score maintained throughout
+5. **Success Validation**: All tests pass, coverage achieved, quality maintained
+
+**Pattern**: `utils/feature_flags.py` (21 tests), `core/filename_config.py` (18 tests), `utils/expert_mode.py` (22 tests)
+
+**Current Architecture (2024)**: Modern dependency injection with ApplicationContainer pattern, centralized Rich UI management via ConsoleManager, and comprehensive Rich testing infrastructure via RichTestCase framework.
 
 ## Reference Documents
 
@@ -66,8 +89,11 @@ The following detailed guides provide additional context:
 ### Test-Driven Development
 - **Always write tests first** - No exceptions
 - **Test user behavior** - Not implementation details  
+- **ApplicationContainer Pattern** - Use TestApplicationContainer for dependency injection in tests
+- **Rich UI Testing** - Inherit from RichTestCase for Rich UI component testing
 - **Minimal mocking** - Only mock external services
 - **Real file operations** - Use temp directories
+- **Console isolation** - Use proper console management to prevent pytest I/O conflicts
 
 ### Security by Design
 - **Never log API keys** - Environment variables only

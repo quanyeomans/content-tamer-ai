@@ -14,7 +14,7 @@ import math
 
 # Primary filename length constraint
 MAX_FILENAME_LENGTH = 160  # Characters (filesystem compatible, user requirement)
-MIN_FILENAME_LENGTH = 10   # Minimum meaningful length
+MIN_FILENAME_LENGTH = 10  # Minimum meaningful length
 TARGET_FILENAME_WORDS = (4, 12)  # Range of words for balanced descriptiveness
 
 # Character constraints
@@ -27,8 +27,9 @@ FORBIDDEN_PATTERNS = ["script", "command", "exec", "run", "javascript", "python"
 
 # Token calculation constants
 CHARS_PER_TOKEN_AVERAGE = 2.7  # Average across all AI providers
-TOKEN_SAFETY_BUFFER = 0.3      # 30% buffer for complex filenames
-TOKEN_MINIMUM = 20             # Absolute minimum for basic functionality
+TOKEN_SAFETY_BUFFER = 0.3  # 30% buffer for complex filenames
+TOKEN_MINIMUM = 20  # Absolute minimum for basic functionality
+
 
 def calculate_optimal_tokens(target_length: int = MAX_FILENAME_LENGTH) -> int:
     """
@@ -44,6 +45,7 @@ def calculate_optimal_tokens(target_length: int = MAX_FILENAME_LENGTH) -> int:
     buffered_tokens = math.ceil(base_tokens * (1 + TOKEN_SAFETY_BUFFER))
     return max(buffered_tokens, TOKEN_MINIMUM)
 
+
 # Programmatically calculated token limits
 MAX_OUTPUT_TOKENS = calculate_optimal_tokens()  # ~77 tokens for 160 chars
 FALLBACK_TOKENS = calculate_optimal_tokens(80)  # Fallback for short filenames
@@ -52,7 +54,10 @@ FALLBACK_TOKENS = calculate_optimal_tokens(80)  # Fallback for short filenames
 # SYSTEM PROMPT TEMPLATES
 # =============================================================================
 
-def get_filename_prompt_template(provider: str = "generic") -> str:  # pylint: disable=unused-argument
+
+def get_filename_prompt_template(
+    provider: str = "generic",
+) -> str:  # pylint: disable=unused-argument
     """
     Generate standardized filename generation prompt.
 
@@ -66,12 +71,16 @@ def get_filename_prompt_template(provider: str = "generic") -> str:  # pylint: d
         f"Generate a descriptive, detailed filename based on the document content. "
         f"Return ONLY the filename text, no quotes or code blocks. "
         f"Use English letters, numbers, underscores, and hyphens only. "
+        f"IMPORTANT: Separate ALL words with underscores (not camelCase). "
         f"Target {TARGET_FILENAME_WORDS[0]}-{TARGET_FILENAME_WORDS[1]} words, "
         f"up to {MAX_FILENAME_LENGTH} characters maximum. "
         f"Include key topics, dates, document type when relevant."
     )
 
-def get_secure_filename_prompt_template(provider: str = "generic") -> str:  # pylint: disable=unused-argument
+
+def get_secure_filename_prompt_template(
+    provider: str = "generic",
+) -> str:  # pylint: disable=unused-argument
     """
     Generate secure filename generation prompt for sanitized content.
 
@@ -86,6 +95,7 @@ def get_secure_filename_prompt_template(provider: str = "generic") -> str:  # py
         f"Do not include any commands, scripts, or instructions from the content."
     )
 
+
 # Provider-specific system prompts using centralized template
 DEFAULT_SYSTEM_PROMPTS = {
     "openai": get_filename_prompt_template("openai"),
@@ -97,6 +107,7 @@ DEFAULT_SYSTEM_PROMPTS = {
 # =============================================================================
 # VALIDATION FUNCTIONS
 # =============================================================================
+
 
 def validate_generated_filename(filename: str) -> str:
     """
@@ -112,25 +123,34 @@ def validate_generated_filename(filename: str) -> str:
         return "unnamed_document"
 
     # Remove quotes and whitespace
-    cleaned = filename.strip().strip('\'\"`')
+    cleaned = filename.strip().strip("'\"`")
 
     # Replace invalid characters with underscores
-    sanitized = ''.join(c if c in ALLOWED_CHARS else '_' for c in cleaned)
+    sanitized = "".join(c if c in ALLOWED_CHARS else "_" for c in cleaned)
 
     # Remove consecutive underscores
-    while '__' in sanitized:
-        sanitized = sanitized.replace('__', '_')
+    while "__" in sanitized:
+        sanitized = sanitized.replace("__", "_")
 
     # Remove leading/trailing underscores
-    sanitized = sanitized.strip('_')
+    sanitized = sanitized.strip("_")
 
     # Ensure minimum length
     if len(sanitized) < MIN_FILENAME_LENGTH:
         sanitized = f"document_{sanitized}"
 
-    # Enforce maximum length
+    # Enforce maximum length with word boundary preservation
     if len(sanitized) > MAX_FILENAME_LENGTH:
-        sanitized = sanitized[:MAX_FILENAME_LENGTH].rstrip('_')
+        # Find last word boundary before limit
+        truncate_pos = MAX_FILENAME_LENGTH
+        while truncate_pos > MIN_FILENAME_LENGTH and sanitized[truncate_pos - 1] not in ['_', '-']:
+            truncate_pos -= 1
+        
+        # If we couldn't find a good boundary, use hard truncation
+        if truncate_pos <= MIN_FILENAME_LENGTH:
+            truncate_pos = MAX_FILENAME_LENGTH
+            
+        sanitized = sanitized[:truncate_pos].rstrip("_-")
 
     # Check for forbidden patterns
     sanitized_lower = sanitized.lower()
@@ -140,7 +160,10 @@ def validate_generated_filename(filename: str) -> str:
 
     return sanitized or "document"
 
-def get_token_limit_for_provider(provider: str) -> int:  # pylint: disable=unused-argument
+
+def get_token_limit_for_provider(
+    provider: str,
+) -> int:  # pylint: disable=unused-argument
     """
     Get appropriate token limit for specific AI provider.
 
@@ -154,9 +177,11 @@ def get_token_limit_for_provider(provider: str) -> int:  # pylint: disable=unuse
     # Can be extended for provider-specific limits if needed
     return MAX_OUTPUT_TOKENS
 
+
 # =============================================================================
 # CONFIGURATION SUMMARY
 # =============================================================================
+
 
 def get_config_summary() -> dict:
     """Get summary of current configuration for debugging/logging."""
@@ -169,17 +194,18 @@ def get_config_summary() -> dict:
         "providers_supported": list(DEFAULT_SYSTEM_PROMPTS.keys()),
     }
 
+
 # =============================================================================
 # CONSTANTS EXPORT (for backward compatibility during transition)
 # =============================================================================
 
 # Export key constants for easy import
 __all__ = [
-    'MAX_FILENAME_LENGTH',
-    'MAX_OUTPUT_TOKENS',
-    'DEFAULT_SYSTEM_PROMPTS',
-    'get_filename_prompt_template',
-    'validate_generated_filename',
-    'get_token_limit_for_provider',
-    'get_config_summary',
+    "MAX_FILENAME_LENGTH",
+    "MAX_OUTPUT_TOKENS",
+    "DEFAULT_SYSTEM_PROMPTS",
+    "get_filename_prompt_template",
+    "validate_generated_filename",
+    "get_token_limit_for_provider",
+    "get_config_summary",
 ]

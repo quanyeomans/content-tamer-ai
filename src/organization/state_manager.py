@@ -6,10 +6,10 @@ in the .content_tamer directory pattern established in the codebase.
 """
 
 import json
-import os
-from typing import Dict, Any, Optional
-from datetime import datetime
 import logging
+import os
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 
 class SimpleStateManager:
@@ -31,8 +31,12 @@ class SimpleStateManager:
 
         # State file paths
         self.preferences_file = os.path.join(self.organization_dir, "preferences.json")
-        self.session_history_file = os.path.join(self.organization_dir, "session_history.json")
-        self.domain_model_file = os.path.join(self.organization_dir, "domain_model.json")
+        self.session_history_file = os.path.join(
+            self.organization_dir, "session_history.json"
+        )
+        self.domain_model_file = os.path.join(
+            self.organization_dir, "domain_model.json"
+        )
 
     def _ensure_directories(self) -> None:
         """Ensure state directories exist."""

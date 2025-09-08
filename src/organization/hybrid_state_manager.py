@@ -6,13 +6,13 @@ historical analysis and ML performance tracking. Maintains backward
 compatibility with Phase 1 SimpleStateManager.
 """
 
-import os
-import sqlite3
 import json
 import logging
-from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime
+import os
+import sqlite3
 import tempfile
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from .state_manager import SimpleStateManager
 
@@ -185,7 +185,11 @@ class HybridStateManager(SimpleStateManager):
                             doc.get("confidence", 0.0),
                             doc.get("classification_method", "rule_based"),
                             doc.get("content_preview", "")[:500],  # Limit size
-                            json.dumps(doc.get("metadata", {})) if doc.get("metadata") else None,
+                            (
+                                json.dumps(doc.get("metadata", {}))
+                                if doc.get("metadata")
+                                else None
+                            ),
                         ),
                     )
 
@@ -426,7 +430,9 @@ class HybridStateManager(SimpleStateManager):
             )
 
         if not recommendations:
-            recommendations.append("System performing well - no immediate optimizations needed")
+            recommendations.append(
+                "System performing well - no immediate optimizations needed"
+            )
 
         return recommendations
 
@@ -502,23 +508,31 @@ class HybridStateManager(SimpleStateManager):
             with sqlite3.connect(self.analytics_db_path) as conn:
                 cursor = conn.cursor()
 
-                cutoff_date = datetime.now().replace(day=datetime.now().day - days_to_keep)
+                cutoff_date = datetime.now().replace(
+                    day=datetime.now().day - days_to_keep
+                )
                 cutoff_str = cutoff_date.isoformat()
 
                 # Clean up old records
                 cursor.execute(
-                    "DELETE FROM document_classifications WHERE created_at < ?", (cutoff_str,)
+                    "DELETE FROM document_classifications WHERE created_at < ?",
+                    (cutoff_str,),
                 )
-                cursor.execute("DELETE FROM ml_performance WHERE created_at < ?", (cutoff_str,))
                 cursor.execute(
-                    "DELETE FROM organization_sessions WHERE created_at < ?", (cutoff_str,)
+                    "DELETE FROM ml_performance WHERE created_at < ?", (cutoff_str,)
+                )
+                cursor.execute(
+                    "DELETE FROM organization_sessions WHERE created_at < ?",
+                    (cutoff_str,),
                 )
 
                 # Vacuum to reclaim space
                 cursor.execute("VACUUM")
 
                 conn.commit()
-                logging.info(f"Cleaned up analytics data older than {days_to_keep} days")
+                logging.info(
+                    f"Cleaned up analytics data older than {days_to_keep} days"
+                )
 
         except sqlite3.Error as e:
             logging.warning(f"Failed to cleanup old data: {e}")

@@ -10,14 +10,15 @@ Extends BasicOrganizationEngine with Phase 2 ML capabilities:
 
 import logging
 import time
-from typing import Dict, List, Any, Optional
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from .organization_engine import BasicOrganizationEngine
-from .hybrid_state_manager import HybridStateManager
-from content_analysis.uncertainty_detector import UncertaintyDetector
 from content_analysis.ml_refiner import SelectiveMLRefinement
+from content_analysis.uncertainty_detector import UncertaintyDetector
+
+from .hybrid_state_manager import HybridStateManager
+from .organization_engine import BasicOrganizationEngine
 
 
 class EnhancedOrganizationEngine(BasicOrganizationEngine):
@@ -42,11 +43,17 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
             self.uncertainty_detector = UncertaintyDetector()
             self.ml_refiner = SelectiveMLRefinement()
 
-            logging.info(f"Enhanced organization engine initialized (Level {ml_enhancement_level})")
+            logging.info(
+                f"Enhanced organization engine initialized (Level {ml_enhancement_level})"
+            )
         else:
-            logging.info("Enhanced organization engine running in Phase 1 compatibility mode")
+            logging.info(
+                "Enhanced organization engine running in Phase 1 compatibility mode"
+            )
 
-    def organize_documents(self, processed_documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def organize_documents(
+        self, processed_documents: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Enhanced document organization with selective ML refinement.
 
@@ -58,7 +65,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
         """
         start_time = time.time()
 
-        logging.info(f"Starting enhanced organization of {len(processed_documents)} documents")
+        logging.info(
+            f"Starting enhanced organization of {len(processed_documents)} documents"
+        )
 
         # Step 1: Perform base classification (Phase 1)
         base_result = self._perform_base_classification(processed_documents)
@@ -79,7 +88,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
         )
 
         # Step 4: Calculate enhanced quality metrics
-        quality_metrics = self._calculate_enhanced_quality_metrics(classified_docs, ml_metrics)
+        quality_metrics = self._calculate_enhanced_quality_metrics(
+            classified_docs, ml_metrics
+        )
 
         # Step 5: Determine reorganization recommendation
         should_reorganize = self._should_apply_reorganization_logic(quality_metrics)
@@ -102,12 +113,53 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
 
         # Save to hybrid state manager with analytics
         if self.ml_enhancement_level >= 2:
-            self.state_manager.save_enhanced_session_data(session_data, processing_time, ml_metrics)
+            self.state_manager.save_enhanced_session_data(
+                session_data, processing_time, ml_metrics
+            )
         else:
             self.state_manager.save_session_data(session_data)
 
-        # Return comprehensive results
-        return {
+        # Step 7: Execute organization plan if recommended
+        execution_result = None
+        if should_reorganize:
+            try:
+                from organization.file_executor import OrganizationFileExecutor
+                executor = OrganizationFileExecutor(self.target_folder)
+                
+                # Validate plan before execution
+                validation_result = executor.validate_organization_plan({
+                    "success": True,
+                    "organization_structure": organization_structure
+                })
+                
+                if validation_result['valid']:
+                    # Execute the organization plan
+                    execution_result = executor.execute_organization_plan({
+                        "success": True,
+                        "organization_structure": organization_structure
+                    })
+                else:
+                    execution_result = {
+                        "success": False,
+                        "reason": "Organization plan validation failed",
+                        "validation_issues": validation_result['issues']
+                    }
+                    
+            except ImportError as e:
+                logging.warning(f"File executor not available: {e}")
+                execution_result = {
+                    "success": False,
+                    "reason": "File execution components not available"
+                }
+            except Exception as e:
+                logging.error(f"Organization execution failed: {e}")
+                execution_result = {
+                    "success": False,
+                    "reason": f"Execution error: {str(e)}"
+                }
+
+        # Return comprehensive results including execution
+        result = {
             "success": True,
             "organization_structure": organization_structure,
             "quality_metrics": quality_metrics,
@@ -118,6 +170,12 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
             "ml_metrics": ml_metrics,
             "processing_time": processing_time,
         }
+        
+        if execution_result:
+            result["execution_result"] = execution_result
+            result["files_organized"] = execution_result.get("files_moved", 0)
+        
+        return result
 
     def _perform_base_classification(
         self, processed_documents: List[Dict[str, Any]]
@@ -137,7 +195,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
                 )
 
                 # Extract metadata
-                metadata = self.metadata_extractor.extract_metadata(content, doc_info["filename"])
+                metadata = self.metadata_extractor.extract_metadata(
+                    content, doc_info["filename"]
+                )
 
                 # Create classified document record
                 classified_doc = {
@@ -146,7 +206,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
                     "category": category,
                     "confidence": confidence,
                     "metadata": metadata,
-                    "content_preview": content[:200] + "..." if len(content) > 200 else content,
+                    "content_preview": (
+                        content[:200] + "..." if len(content) > 200 else content
+                    ),
                     "classification_method": "rule_based",
                 }
 
@@ -174,14 +236,16 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
             "classification_stats": classification_stats,
         }
 
-    def _apply_ml_enhancement(self, classified_docs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _apply_ml_enhancement(
+        self, classified_docs: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Apply ML enhancement to uncertain classifications."""
         ml_start_time = time.time()
 
         try:
             # Detect uncertain classifications
-            certain_docs, uncertain_docs = self.uncertainty_detector.detect_uncertain_documents(
-                classified_docs
+            certain_docs, uncertain_docs = (
+                self.uncertainty_detector.detect_uncertain_documents(classified_docs)
             )
 
             logging.info(
@@ -191,8 +255,10 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
             # Apply ML refinement to uncertain documents
             ml_refined_classifications = {}
             if uncertain_docs and self.ml_refiner.is_ml_available():
-                ml_refined_classifications = self.ml_refiner.refine_uncertain_classifications(
-                    uncertain_docs, classified_docs
+                ml_refined_classifications = (
+                    self.ml_refiner.refine_uncertain_classifications(
+                        uncertain_docs, classified_docs
+                    )
                 )
 
             # Update classifications with ML refinement results
@@ -211,8 +277,12 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
                     doc["ml_details"] = {
                         "cluster_id": ml_result.get("cluster_id"),
                         "cluster_size": ml_result.get("cluster_size"),
-                        "original_category": doc.get("original_category", doc["category"]),
-                        "original_confidence": doc.get("original_confidence", doc["confidence"]),
+                        "original_category": doc.get(
+                            "original_category", doc["category"]
+                        ),
+                        "original_confidence": doc.get(
+                            "original_confidence", doc["confidence"]
+                        ),
                     }
                     ml_refined_count += 1
 
@@ -233,7 +303,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
                 ),
                 "processing_time": ml_processing_time,
                 "uncertainty_threshold": self.uncertainty_detector.confidence_threshold,
-                "model_name": "all-mpnet-base-v2" if self.ml_refiner.is_ml_available() else None,
+                "model_name": (
+                    "all-mpnet-base-v2" if self.ml_refiner.is_ml_available() else None
+                ),
             }
 
             return {"enhanced_documents": enhanced_docs, "ml_metrics": ml_metrics}
@@ -243,7 +315,11 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
             # Fallback to original classifications
             return {
                 "enhanced_documents": classified_docs,
-                "ml_metrics": {"ml_applied": False, "error": str(e), "fallback_used": True},
+                "ml_metrics": {
+                    "ml_applied": False,
+                    "error": str(e),
+                    "fallback_used": True,
+                },
             }
 
     def _calculate_enhanced_quality_metrics(
@@ -259,7 +335,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
         if ml_metrics.get("ml_applied", False):
             # Calculate rule-based vs ML accuracy
             rule_based_docs = [
-                doc for doc in classified_docs if doc.get("classification_method") == "rule_based"
+                doc
+                for doc in classified_docs
+                if doc.get("classification_method") == "rule_based"
             ]
             ml_refined_docs = [
                 doc
@@ -268,15 +346,15 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
             ]
 
             if rule_based_docs:
-                rule_accuracy = sum(doc.get("confidence", 0) for doc in rule_based_docs) / len(
-                    rule_based_docs
-                )
+                rule_accuracy = sum(
+                    doc.get("confidence", 0) for doc in rule_based_docs
+                ) / len(rule_based_docs)
                 base_metrics["rule_accuracy"] = rule_accuracy
 
             if ml_refined_docs:
-                ml_accuracy = sum(doc.get("confidence", 0) for doc in ml_refined_docs) / len(
-                    ml_refined_docs
-                )
+                ml_accuracy = sum(
+                    doc.get("confidence", 0) for doc in ml_refined_docs
+                ) / len(ml_refined_docs)
                 base_metrics["ml_accuracy"] = ml_accuracy
 
             # Overall ML impact
@@ -299,7 +377,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
 
         return base_metrics
 
-    def _get_classification_stats(self, classified_docs: List[Dict[str, Any]]) -> Dict[str, int]:
+    def _get_classification_stats(
+        self, classified_docs: List[Dict[str, Any]]
+    ) -> Dict[str, int]:
         """Get classification statistics from enhanced documents."""
         stats = defaultdict(int)
         for doc in classified_docs:
@@ -308,7 +388,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
 
     def get_advanced_insights(self) -> Dict[str, Any]:
         """Get advanced insights using hybrid state manager analytics."""
-        if self.ml_enhancement_level >= 2 and hasattr(self.state_manager, "get_advanced_insights"):
+        if self.ml_enhancement_level >= 2 and hasattr(
+            self.state_manager, "get_advanced_insights"
+        ):
             try:
                 return self.state_manager.get_advanced_insights()
             except Exception as e:
@@ -317,7 +399,9 @@ class EnhancedOrganizationEngine(BasicOrganizationEngine):
         else:
             return {"error": "Advanced insights require Phase 2 or higher"}
 
-    def get_uncertainty_analysis(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def get_uncertainty_analysis(
+        self, documents: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Get detailed uncertainty analysis for documents."""
         if self.ml_enhancement_level >= 2:
             return self.uncertainty_detector.get_uncertainty_summary(documents)

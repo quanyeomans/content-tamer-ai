@@ -18,20 +18,24 @@ sys.path.insert(0, 'src')
 
 from utils.rich_progress_display import RichProgressDisplay
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestRichUIRegression(unittest.TestCase):
+class TestRichUIRegression(unittest.TestCase, RichTestCase):
     """Regression tests for Rich UI behavioral issues."""
 
     def setUp(self):
-        """Set up test fixtures with capture console."""
-        self.output_buffer = io.StringIO()
-        self.console = Console(file=self.output_buffer, force_terminal=True, width=100)
+        """Set up test fixtures with Rich test framework."""
+        RichTestCase.setUp(self)
+        
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
 
     def test_border_wrapping_fix(self):
         """Test that borders wrap content properly, not as small rectangles."""
-        # Create progress display with fixed Live display settings
-        progress_display = RichProgressDisplay(console=self.console, show_stats=True)
+        # Create progress display using test framework
+        progress_display = self.display_manager.progress
         
         # Verify that transient is False to prevent border fragmentation
         progress_display.start(3, "Test Border Wrapping")
@@ -43,7 +47,7 @@ class TestRichUIRegression(unittest.TestCase):
         progress_display.finish("Test completed")
         
         # Check that output contains proper border characters, not fragmented
-        output = self.output_buffer.getvalue()
+        output = self.get_console_output()
         
         # Should contain proper border elements
         self.assertIn('─', output, "Should contain horizontal border characters")
@@ -57,7 +61,7 @@ class TestRichUIRegression(unittest.TestCase):
 
     def test_file_processing_line_persistence(self):
         """Test that completed file processing lines persist and accumulate."""
-        progress_display = RichProgressDisplay(console=self.console, show_stats=False)
+        progress_display = self.display_manager.progress
         
         progress_display.start(3, "Test Line Persistence")
         
@@ -83,7 +87,7 @@ class TestRichUIRegression(unittest.TestCase):
         progress_display.finish("Test completed")
         
         # Check that output shows persistent file information
-        output = self.output_buffer.getvalue()
+        output = self.get_console_output()
         
         # Should contain all processed filenames
         for filename in files:
@@ -91,7 +95,7 @@ class TestRichUIRegression(unittest.TestCase):
 
     def test_failed_file_persistence(self):
         """Test that failed files also persist in the display."""
-        progress_display = RichProgressDisplay(console=self.console)
+        progress_display = self.display_manager.progress
         
         progress_display.start(2, "Test Failed File Persistence")
         
@@ -117,8 +121,7 @@ class TestRichUIRegression(unittest.TestCase):
     def test_display_manager_ui_consistency(self):
         """Test that RichDisplayManager maintains UI consistency."""
         options = RichDisplayOptions(verbose=True, show_stats=True)
-        manager = RichDisplayManager(options)
-        manager.console = self.console
+        manager = self.test_container.create_display_manager(options)
         
         # Test processing context behavior
         with manager.processing_context(2, "Test UI Consistency") as ctx:
@@ -128,7 +131,7 @@ class TestRichUIRegression(unittest.TestCase):
             ctx.start_file("test2.pdf")  
             ctx.complete_file("test2.pdf", "processed2.pdf")
         
-        output = self.output_buffer.getvalue()
+        output = self.get_console_output()
         
         # Should show both files in output
         self.assertIn("test1.pdf", output)
@@ -138,7 +141,7 @@ class TestRichUIRegression(unittest.TestCase):
 
     def test_stats_display_consistency(self):
         """Test that statistics display remains consistent."""
-        progress_display = RichProgressDisplay(console=self.console, show_stats=True)
+        progress_display = self.display_manager.progress
         
         progress_display.start(3, "Test Stats Consistency")
         
@@ -161,7 +164,7 @@ class TestRichUIRegression(unittest.TestCase):
 
     def test_completed_files_display_limit(self):
         """Test that completed files display is limited to prevent UI overflow."""
-        progress_display = RichProgressDisplay(console=self.console)
+        progress_display = self.display_manager.progress
         
         progress_display.start(10, "Test Display Limit")
         
@@ -181,19 +184,21 @@ class TestRichUIRegression(unittest.TestCase):
         progress_display.finish()
 
 
-class TestRichUIIntegration(unittest.TestCase):
+class TestRichUIIntegration(unittest.TestCase, RichTestCase):
     """Integration tests for Rich UI components working together."""
 
     def setUp(self):
-        """Set up test fixtures."""
-        self.output_buffer = io.StringIO()
-        self.console = Console(file=self.output_buffer, force_terminal=True, width=120)
+        """Set up test fixtures with Rich test framework."""
+        RichTestCase.setUp(self)
+        
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
 
     def test_full_processing_workflow_ui(self):
         """Test complete processing workflow UI behavior."""
         options = RichDisplayOptions(verbose=True, show_stats=True)
-        manager = RichDisplayManager(options)
-        manager.console = self.console
+        manager = self.test_container.create_display_manager(options)
         
         # Simulate full processing workflow
         manager.print_header("Content Tamer AI", "UI Regression Test")
@@ -215,10 +220,10 @@ class TestRichUIIntegration(unittest.TestCase):
             ctx.start_file("document3.pdf")
             ctx.fail_file("document3.pdf", "File corrupted")
         
-        output = self.output_buffer.getvalue()
+        output = self.get_console_output()
         
         # Verify complete workflow is represented in output
-        self.assertIn("Content Tamer AI", output)
+        self.assertIn("CONTENT TAMER AI", output)  # Header shows as uppercase with emoji
         self.assertIn("document1.pdf", output)
         self.assertIn("Monthly_Report_Analysis.pdf", output)
         self.assertIn("Strategic_Planning_Overview.pdf", output)

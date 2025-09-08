@@ -68,7 +68,11 @@ class ExpertModePrompter:
         print()
 
         while True:
-            choice = input("Choose mode [Q]uick start or [E]xpert mode (Q/E): ").strip().lower()
+            choice = (
+                input("Choose mode [Q]uick start or [E]xpert mode (Q/E): ")
+                .strip()
+                .lower()
+            )
             if choice in ["q", "quick", ""]:
                 return False
             elif choice in ["e", "expert"]:
@@ -84,7 +88,9 @@ class ExpertModePrompter:
         print("⚙️  EXPERT MODE CONFIGURATION")
         print("=" * 60)
         print()
-        print("Configure each setting below. Press Enter to use defaults shown in [brackets].")
+        print(
+            "Configure each setting below. Press Enter to use defaults shown in [brackets]."
+        )
         print()
 
         # 1. Input Directory
@@ -176,16 +182,22 @@ class ExpertModePrompter:
         # 8. Document Organization Options
         print("\n🗂️  DOCUMENT ORGANIZATION")
         print("   Post-processing organization with AI-powered categorization")
-        print("   Automatically organizes processed files into logical folder structures")
+        print(
+            "   Automatically organizes processed files into logical folder structures"
+        )
         print()
         print("   Organization Modes:")
         print("     • Level 1: Enhanced rule-based classification (fastest)")
-        print("     • Level 2: Selective ML refinement for uncertain documents (balanced)")
-        print("     • Level 3: Advanced temporal intelligence with business insights (most sophisticated)")
+        print(
+            "     • Level 2: Selective ML refinement for uncertain documents (balanced)"
+        )
+        print(
+            "     • Level 3: Advanced temporal intelligence with business insights (most sophisticated)"
+        )
         print()
-        
+
         config.enable_organization = self._prompt_organization_choice()
-        
+
         if config.enable_organization:
             config.ml_level = self._prompt_ml_level()
 
@@ -194,7 +206,9 @@ class ExpertModePrompter:
 
         return config
 
-    def _prompt_with_default(self, prompt: str, default: str, help_text: str = "") -> str:
+    def _prompt_with_default(
+        self, prompt: str, default: str, help_text: str = ""
+    ) -> str:
         """Prompt with a default value."""
         if help_text:
             print(f"     💡 {help_text}")
@@ -298,18 +312,24 @@ class ExpertModePrompter:
     def _prompt_organization_choice(self) -> bool:
         """Prompt user for organization workflow choice."""
         print("   Available Options:")
-        print("     1. Skip organization (default) - Just rename files with AI-generated names")
-        print("     2. Enable organization - Organize files into intelligent folder structures")
+        print(
+            "     1. Skip organization (default) - Just rename files with AI-generated names"
+        )
+        print(
+            "     2. Enable organization - Organize files into intelligent folder structures"
+        )
         print()
-        
+
         while True:
             choice = input("   Choose organization option [1-2, default=1]: ").strip()
-            
+
             if choice == "" or choice == "1":
                 print("   ✅ Organization disabled - files will only be renamed")
                 return False
             elif choice == "2":
-                print("   ✅ Organization enabled - files will be organized into folders")
+                print(
+                    "   ✅ Organization enabled - files will be organized into folders"
+                )
                 return True
             else:
                 print("   Please enter '1' to skip or '2' to enable organization")
@@ -318,14 +338,16 @@ class ExpertModePrompter:
         """Prompt user for ML enhancement level choice."""
         print("\n   ML Enhancement Level:")
         print("     1. Basic Rules - Fast rule-based classification (80%+ accuracy)")
-        print("     2. Selective ML - Applies ML only to uncertain documents (recommended)")
+        print(
+            "     2. Selective ML - Applies ML only to uncertain documents (recommended)"
+        )
         print("     3. Temporal Intelligence - Advanced patterns + business insights")
         print()
         print("   💡 Level 2 provides the best balance of speed and accuracy")
-        
+
         while True:
             choice = input("   Choose ML level [1-3, default=2]: ").strip()
-            
+
             if choice == "" or choice == "2":
                 print("   ✅ Using Level 2: Selective ML refinement")
                 return 2
@@ -349,14 +371,22 @@ class ExpertModePrompter:
         print(f"AI Model:           {config.model}")
         print(f"OCR Language:       {config.ocr_language}")
         print(f"Reset Progress:     {'Yes' if config.reset_progress else 'No'}")
-        
+
         # Organization settings
         if config.enable_organization is not None:
-            print(f"Organization:       {'Enabled' if config.enable_organization else 'Disabled'}")
+            print(
+                f"Organization:       {'Enabled' if config.enable_organization else 'Disabled'}"
+            )
             if config.enable_organization:
-                level_names = {1: "Basic Rules", 2: "Selective ML", 3: "Temporal Intelligence"}
-                print(f"ML Enhancement:     Level {config.ml_level} ({level_names[config.ml_level]})")
-        
+                level_names = {
+                    1: "Basic Rules",
+                    2: "Selective ML",
+                    3: "Temporal Intelligence",
+                }
+                print(
+                    f"ML Enhancement:     Level {config.ml_level} ({level_names[config.ml_level]})"
+                )
+
         print(f"Quiet Mode:         {'Yes' if config.quiet_mode else 'No'}")
         print(f"Verbose Mode:       {'Yes' if config.verbose_mode else 'No'}")
         print(f"Disable Colors:     {'Yes' if config.no_color else 'No'}")
@@ -389,7 +419,7 @@ class ExpertModePrompter:
             args.extend(["--ocr-lang", config.ocr_language])
         if config.reset_progress:
             args.append("--reset-progress")
-        
+
         # Organization settings
         if config.enable_organization is True:
             args.append("--organize")
@@ -397,7 +427,7 @@ class ExpertModePrompter:
                 args.extend(["--ml-level", str(config.ml_level)])
         elif config.enable_organization is False:
             args.append("--no-organize")
-            
+
         if config.quiet_mode:
             args.append("--quiet")
         if config.verbose_mode:

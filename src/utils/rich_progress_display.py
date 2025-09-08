@@ -67,20 +67,24 @@ class RichProgressDisplay:
 
     def __init__(
         self,
+        console: Console,
         no_color: bool = False,
         show_stats: bool = True,
-        console: Optional[Console] = None,
         width: Optional[int] = None,
     ):
-        # Initialize Rich console with cross-platform compatibility
-        self.console = console or Console(
-            force_terminal=True,
-            safe_box=True,  # Windows legacy terminal compatibility
-            width=width,
-            no_color=no_color,
-            legacy_windows=False,  # Disable legacy Windows mode to avoid encoding issues
-            _environ={"TERM": "xterm-256color"},  # Force modern terminal detection
-        )
+        """
+        Initialize RichProgressDisplay with injected Console.
+
+        Args:
+            console: Rich Console instance to use for all output
+            no_color: Whether to disable colors (for legacy compatibility)
+            show_stats: Whether to display statistics
+            width: Optional width override (deprecated)
+        """
+        if console is None:
+            raise ValueError("Console instance is required for RichProgressDisplay")
+
+        self.console = console
 
         self.show_stats = show_stats
         self.stats = RichProgressStats()
@@ -119,7 +123,9 @@ class RichProgressDisplay:
             expand=True,
         )
 
-        self._task_id = self._progress.add_task(f"[cyan]{description}[/cyan]", total=total)
+        self._task_id = self._progress.add_task(
+            f"[cyan]{description}[/cyan]", total=total
+        )
 
         # Start live display
         self._start_live_display()
@@ -181,7 +187,12 @@ class RichProgressDisplay:
         self.stats.failed += 1
         if filename:
             self.stats._processed_files.append(
-                {"source": filename, "target": "", "status": "failed", "timestamp": time.time()}
+                {
+                    "source": filename,
+                    "target": "",
+                    "status": "failed",
+                    "timestamp": time.time(),
+                }
             )
         self._status_text = "failed"
         self._update_task_description()
@@ -211,15 +222,15 @@ class RichProgressDisplay:
             if len(display_name) > 40:
                 display_name = f"{display_name[:37]}..."
 
-            file_display = f"[dim cyan]→[/dim cyan] [bright_white]{display_name}[/bright_white]"
+            file_display = (
+                f"[dim cyan]→[/dim cyan] [bright_white]{display_name}[/bright_white]"
+            )
         else:
             file_display = ""
 
         # Create rich description
         if text and file_display:
-            description = (
-                f"[cyan]Processing Files[/cyan] {file_display} [{color}]{icon} {text}[/{color}]"
-            )
+            description = f"[cyan]Processing Files[/cyan] {file_display} [{color}]{icon} {text}[/{color}]"
         elif file_display:
             description = f"[cyan]Processing Files[/cyan] {file_display}"
         else:
@@ -231,15 +242,18 @@ class RichProgressDisplay:
         """Start the live Rich display."""
         if not self.show_stats:
             self._live = Live(
-                self._progress, console=self.console, refresh_per_second=10, transient=False
+                self._progress,
+                console=self.console,
+                refresh_per_second=4,
+                transient=True,
             )
         else:
             # Create combined display with stats
             self._live = Live(
                 self._create_full_display(),
                 console=self.console,
-                refresh_per_second=10,
-                transient=False,  # Fix border wrapping issue
+                refresh_per_second=4,
+                transient=True,  # Update in place to prevent scrolling
             )
 
         self._live.start()
@@ -247,28 +261,38 @@ class RichProgressDisplay:
     def _create_full_display(self) -> Table:
         """Create the full display with progress and stats."""
         table = Table.grid()
-        
+
         # Add completed files history (persistent) - only show during active progress
-        if self._completed_files and self._live and hasattr(self._live, '_started') and getattr(self._live, '_started', False):
+        if (
+            self._completed_files
+            and self._live
+            and hasattr(self._live, "_started")
+            and getattr(self._live, "_started", False)
+        ):
             completed_table = Table.grid(padding=(0, 1))
             for file_info in self._completed_files[-5:]:  # Show last 5 completed
                 icon = file_info["icon"]
                 filename = file_info["filename"]
                 target = file_info.get("target_filename", "")
-                
+
                 if target and target != filename:
                     display_text = f"{icon} {filename} → {target}"
                 else:
                     display_text = f"{icon} {filename}"
-                    
+
                 # Add error info if failed
                 if file_info["status"] == "failed" and file_info.get("error"):
                     display_text += f" ({file_info['error']})"
-                
-                completed_table.add_row(Text(display_text, style="dim cyan" if file_info["status"] == "success" else "red"))
-            
+
+                completed_table.add_row(
+                    Text(
+                        display_text,
+                        style="dim cyan" if file_info["status"] == "success" else "red",
+                    )
+                )
+
             table.add_row(completed_table)
-        
+
         # Add current progress
         table.add_row(self._progress)
 
@@ -349,23 +373,23 @@ class RichProgressDisplay:
         if self._completed_files:
             completed_header = Text("📁 Processed Files:", style="bold cyan")
             summary_table.add_row(completed_header)
-            
+
             for file_info in self._completed_files[-5:]:  # Show last 5 in final summary
                 icon = file_info["icon"]
                 filename = file_info["filename"]
                 target = file_info.get("target_filename", "")
-                
+
                 if target and target != filename:
                     file_display = f"  {icon} {filename} → {target}"
                 else:
                     file_display = f"  {icon} {filename}"
-                    
+
                 if file_info["status"] == "failed" and file_info.get("error"):
                     file_display += f" ({file_info['error']})"
-                
+
                 style = "dim cyan" if file_info["status"] == "success" else "red"
                 summary_table.add_row(Text(file_display, style=style))
-            
+
             summary_table.add_row("")  # Spacing
 
         # Stats summary
@@ -376,7 +400,9 @@ class RichProgressDisplay:
             stats_text.append("📊 Results: ", style="bold cyan")
             stats_text.append(f"Total: {self.stats.total}", style="white")
             stats_text.append(" • ", style="dim")
-            stats_text.append(f"Successful: {self.stats.succeeded}", style="bright_green")
+            stats_text.append(
+                f"Successful: {self.stats.succeeded}", style="bright_green"
+            )
             stats_text.append(" • ", style="dim")
             stats_text.append(
                 f"Success Rate: {success_rate:.1f}%",
@@ -423,7 +449,9 @@ class RichProgressDisplay:
         self.console.print(panel)
 
     @contextmanager
-    def processing_context(self, total_files: int, description: str = "Processing Files"):
+    def processing_context(
+        self, total_files: int, description: str = "Processing Files"
+    ):
         """Context manager for convenient progress tracking."""
         self.start(total_files, description)
         try:
@@ -442,33 +470,37 @@ class RichProgressDisplay:
     def complete_file(self, filename: str, target_filename: str = "") -> None:
         """Complete file processing successfully."""
         self.add_success(filename, target_filename)
-        
-        # Add to completed files for persistent display
-        self._completed_files.append({
-            "filename": filename,
-            "target_filename": target_filename,
-            "status": "success",
-            "icon": "✅"
-        })
-        
-        self.update(
-            filename=filename, target_filename=target_filename, status="completed", increment=True
+
+        # Add to completed files for persistent display (cascading history)
+        self._completed_files.append(
+            {
+                "filename": filename,
+                "target_filename": target_filename,
+                "status": "success",
+                "icon": "✅",
+            }
         )
+
+        # Clear current filename to show completion in cascade
+        self.update(filename="", target_filename="", status="completed", increment=True)
 
     def fail_file(self, filename: str, error: str = "") -> None:
         """Mark file processing as failed."""
         self.add_error(filename)
-        
-        # Add to completed files for persistent display
-        self._completed_files.append({
-            "filename": filename,
-            "target_filename": "",
-            "status": "failed",
-            "icon": "❌",
-            "error": error
-        })
-        
-        self.update(filename=filename, status="failed", increment=True)
+
+        # Add to completed files for persistent display (cascading history)
+        self._completed_files.append(
+            {
+                "filename": filename,
+                "target_filename": "",
+                "status": "failed",
+                "icon": "❌",
+                "error": error,
+            }
+        )
+
+        # Clear current filename to show failure in cascade
+        self.update(filename="", target_filename="", status="failed", increment=True)
 
     def warn_file(self, filename: str, warning: str = "") -> None:
         """Add warning for file processing."""

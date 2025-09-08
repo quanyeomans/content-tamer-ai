@@ -5,9 +5,13 @@ Quick test to analyze optimal token settings for 160-character filenames.
 import os
 import sys
 
-from utils.text_utils import ENCODING
+# Add src directory to path for proper imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.dirname(current_dir)
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
 
-sys.path.append("src")
+from utils.text_utils import ENCODING
 
 
 def analyze_filename_tokens():

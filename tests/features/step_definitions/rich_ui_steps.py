@@ -46,14 +46,13 @@ def step_clean_environment(context):
 @given('I am processing {file_count:d} documents with Rich UI')
 def step_processing_documents_rich_ui(context, file_count):
     """Set up Rich UI for processing specified number of documents."""
-    options = RichDisplayOptions(verbose=True, show_stats=True)
-    context.display_manager = RichDisplayManager(options)
-    context.display_manager.console = context.console
+    from core.application_container import TestApplicationContainer
     
-    context.progress_display = RichProgressDisplay(
-        console=context.console, 
-        show_stats=True
-    )
+    context.test_container = TestApplicationContainer()
+    options = RichDisplayOptions(verbose=True, show_stats=True)
+    context.display_manager = context.test_container.create_display_manager(options)
+    
+    context.progress_display = context.display_manager.progress
     context.progress_display.start(file_count, "Testing Rich UI Behavior")
     context.total_files = file_count
     context.files_completed = 0
@@ -62,10 +61,12 @@ def step_processing_documents_rich_ui(context, file_count):
 @given('I am using Rich UI with progress display')
 def step_rich_ui_progress_display(context):
     """Initialize Rich UI with progress display."""
-    context.progress_display = RichProgressDisplay(
-        console=context.console,
-        show_stats=True
-    )
+    from core.application_container import TestApplicationContainer
+    
+    context.test_container = TestApplicationContainer()
+    options = RichDisplayOptions(show_stats=True)
+    context.display_manager = context.test_container.create_display_manager(options)
+    context.progress_display = context.display_manager.progress
     context.rich_progress_active = True
 
 

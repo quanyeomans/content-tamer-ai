@@ -6,9 +6,10 @@ classification confidence, feature analysis, and document characteristics.
 """
 
 import logging
-from typing import Dict, List, Tuple, Any
-import numpy as np
 from collections import Counter
+from typing import Any, Dict, List, Tuple
+
+import numpy as np
 
 
 class UncertaintyDetector:
@@ -88,7 +89,9 @@ class UncertaintyDetector:
         # Normalize to [0, 1] range
         return min(1.0, uncertainty)
 
-    def _analyze_uncertainty_factors(self, document: Dict[str, Any]) -> Dict[str, float]:
+    def _analyze_uncertainty_factors(
+        self, document: Dict[str, Any]
+    ) -> Dict[str, float]:
         """Analyze specific uncertainty factors for a document."""
         factors = {}
 
@@ -203,7 +206,10 @@ class UncertaintyDetector:
 
         # If it looks like a financial document but missing amounts
         content = document.get("content_preview", "").lower()
-        if any(word in content for word in ["invoice", "payment", "bill", "$"]) and not amounts:
+        if (
+            any(word in content for word in ["invoice", "payment", "bill", "$"])
+            and not amounts
+        ):
             missing_score += 0.3
 
         # Very low word count
@@ -212,7 +218,9 @@ class UncertaintyDetector:
 
         return min(1.0, missing_score)
 
-    def get_uncertainty_summary(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def get_uncertainty_summary(
+        self, documents: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Generate summary statistics about uncertainty detection."""
         certain_docs, uncertain_docs = self.detect_uncertain_documents(documents)
 
@@ -221,7 +229,9 @@ class UncertaintyDetector:
         if uncertain_docs:
             for factor in self.uncertainty_factors.keys():
                 factor_values = [
-                    doc.get("uncertainty_analysis", {}).get("factors", {}).get(factor, 0)
+                    doc.get("uncertainty_analysis", {})
+                    .get("factors", {})
+                    .get(factor, 0)
                     for doc in uncertain_docs
                 ]
                 factor_stats[factor] = {
@@ -234,10 +244,14 @@ class UncertaintyDetector:
             "total_documents": len(documents),
             "certain_documents": len(certain_docs),
             "uncertain_documents": len(uncertain_docs),
-            "uncertainty_rate": len(uncertain_docs) / len(documents) if documents else 0,
+            "uncertainty_rate": (
+                len(uncertain_docs) / len(documents) if documents else 0
+            ),
             "confidence_threshold": self.confidence_threshold,
             "factor_analysis": factor_stats,
-            "recommendation": self._get_processing_recommendation(certain_docs, uncertain_docs),
+            "recommendation": self._get_processing_recommendation(
+                certain_docs, uncertain_docs
+            ),
         }
 
     def _get_processing_recommendation(
@@ -282,7 +296,9 @@ class UncertaintyDetector:
                 analysis[f"threshold_{threshold}"] = {
                     "certain_count": len(certain),
                     "uncertain_count": len(uncertain),
-                    "uncertainty_rate": len(uncertain) / len(documents) if documents else 0,
+                    "uncertainty_rate": (
+                        len(uncertain) / len(documents) if documents else 0
+                    ),
                 }
         finally:
             # Restore original threshold

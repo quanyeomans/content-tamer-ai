@@ -5,16 +5,19 @@ Extracts document metadata from processed content, reusing OCR content
 from the filename generation phase for memory efficiency.
 """
 
-import re
-import spacy
-from typing import Dict, List, Optional, Any
-from datetime import datetime
 import logging
+import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import spacy
 from dateutil import parser as date_parser
 
 
 class ContentMetadataExtractor:
     """Extract structured metadata from document content."""
+
+    _spacy_warning_shown = False  # Class-level flag to prevent warning spam
 
     def __init__(self):
         """Initialize metadata extractor with spaCy and date parsing."""
@@ -22,7 +25,10 @@ class ContentMetadataExtractor:
             # Load spaCy model for entity recognition
             self.nlp = spacy.load("en_core_web_sm", disable=["parser", "tagger"])
         except OSError:
-            logging.warning("spaCy model not available, using basic fallback")
+            # Graceful fallback if spaCy not available - warn only once
+            if not ContentMetadataExtractor._spacy_warning_shown:
+                logging.warning("spaCy model not available, using basic fallback")
+                ContentMetadataExtractor._spacy_warning_shown = True
             self.nlp = None
 
         # Date patterns for extraction
@@ -61,7 +67,9 @@ class ContentMetadataExtractor:
         from .rule_classifier import EnhancedRuleBasedClassifier
 
         classifier = EnhancedRuleBasedClassifier()
-        document_type, confidence = classifier.get_classification_confidence(content, filename)
+        document_type, confidence = classifier.get_classification_confidence(
+            content, filename
+        )
 
         metadata["document_type"] = document_type
         metadata["confidence_score"] = confidence
@@ -144,7 +152,9 @@ class ContentMetadataExtractor:
                     dates_found.append(
                         {
                             "raw_text": match,
-                            "parsed_date": parsed_date.isoformat()[:10],  # YYYY-MM-DD format
+                            "parsed_date": parsed_date.isoformat()[
+                                :10
+                            ],  # YYYY-MM-DD format
                             "year": parsed_date.year,
                             "method": "regex",
                         }
@@ -245,10 +255,18 @@ class ContentMetadataExtractor:
 
         # Look for quarter mentions
         quarter_matches = re.findall(r"q([1-4])\s+(\d{4})", content, re.IGNORECASE)
-        fiscal_hints["quarter_mentions"] = [f"Q{q} {year}" for q, year in quarter_matches]
+        fiscal_hints["quarter_mentions"] = [
+            f"Q{q} {year}" for q, year in quarter_matches
+        ]
 
         # Look for fiscal keywords
-        fiscal_keywords = ["fiscal year", "fy", "budget year", "financial year", "tax year"]
+        fiscal_keywords = [
+            "fiscal year",
+            "fy",
+            "budget year",
+            "financial year",
+            "tax year",
+        ]
         for keyword in fiscal_keywords:
             if keyword.lower() in content.lower():
                 fiscal_hints["fiscal_keywords"].append(keyword)

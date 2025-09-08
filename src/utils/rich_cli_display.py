@@ -8,13 +8,13 @@ and cross-platform compatibility using the Rich library.
 import sys
 from typing import Any, Optional
 
+from rich.align import Align
+from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
-from rich.text import Text
-from rich.table import Table
-from rich.columns import Columns
-from rich.align import Align
 from rich.rule import Rule
+from rich.table import Table
+from rich.text import Text
 
 
 class MessageLevel:
@@ -31,15 +31,18 @@ class MessageLevel:
 class RichCLIDisplay:
     """Rich-powered CLI display system for delightful user interactions."""
 
-    def __init__(self, no_color: bool = False, console: Optional[Console] = None):
-        self.console = console or Console(
-            force_terminal=True,
-            safe_box=True,  # Windows compatibility
-            stderr=False,
-            no_color=no_color,
-            legacy_windows=False,  # Disable legacy Windows mode to avoid encoding issues
-            _environ={"TERM": "xterm-256color"},  # Force modern terminal detection
-        )
+    def __init__(self, console: Console, no_color: bool = False):
+        """
+        Initialize RichCLIDisplay with injected Console.
+
+        Args:
+            console: Rich Console instance to use for all output
+            no_color: Whether to disable colors (for legacy compatibility)
+        """
+        if console is None:
+            raise ValueError("Console instance is required for RichCLIDisplay")
+
+        self.console = console
 
         # Message styling configuration
         self.styles = {
@@ -140,12 +143,20 @@ class RichCLIDisplay:
         table.add_row("", "", "")  # Spacer
         for setting, value in ocr_settings.items():
             if setting == "OCR_LANG":
-                table.add_row("Language:", f"[cyan]{value}[/cyan]", "Text recognition language")
+                table.add_row(
+                    "Language:", f"[cyan]{value}[/cyan]", "Text recognition language"
+                )
             elif setting == "OCR_PAGES":
-                table.add_row("Max Pages:", f"[cyan]{value}[/cyan]", "Pages processed per document")
+                table.add_row(
+                    "Max Pages:",
+                    f"[cyan]{value}[/cyan]",
+                    "Pages processed per document",
+                )
             elif setting == "OCR_ZOOM":
                 table.add_row(
-                    "Image Zoom:", f"[cyan]{value}x[/cyan]", "Resolution enhancement factor"
+                    "Image Zoom:",
+                    f"[cyan]{value}x[/cyan]",
+                    "Resolution enhancement factor",
                 )
 
         self.console.print(table)
@@ -158,7 +169,9 @@ class RichCLIDisplay:
         # Create informative panel
         info_text = Text()
         info_text.append("🔐 ", style="yellow")
-        info_text.append("Type or paste your API key (you'll see it as you type)\n", style="white")
+        info_text.append(
+            "Type or paste your API key (you'll see it as you type)\n", style="white"
+        )
         info_text.append("🔑 ", style="cyan")
         info_text.append(
             f"{provider.title()} keys start with 'sk-' and are typically 40-60 characters\n",
@@ -171,7 +184,8 @@ class RichCLIDisplay:
         )
         info_text.append("🔒 ", style="blue")
         info_text.append(
-            "Your key will be validated and cleared from display after entry", style="dim"
+            "Your key will be validated and cleared from display after entry",
+            style="dim",
         )
 
         panel = Panel(
@@ -205,7 +219,9 @@ class RichCLIDisplay:
         """Display provider setup confirmation with style."""
         setup_text = Text()
         setup_text.append("[OK] ", style="bold green")
-        setup_text.append(f"{provider.title()} API key accepted and secured.", style="green")
+        setup_text.append(
+            f"{provider.title()} API key accepted and secured.", style="green"
+        )
 
         self.console.print(setup_text)
         self.console.print()
@@ -243,7 +259,9 @@ class RichCLIDisplay:
         # Add provider rows
         for provider, models in providers.items():
             models_text = ", ".join(models)
-            recommended = models[0] if models else "N/A"  # First model is usually default
+            recommended = (
+                models[0] if models else "N/A"
+            )  # First model is usually default
 
             table.add_row(provider.title(), models_text, f"✨ {recommended}")
 
@@ -280,19 +298,25 @@ class RichCLIDisplay:
             completion_text = Text()
             completion_text.append("[OK] ", style="bold bright_green")
             completion_text.append("Processing complete: ", style="bright_green")
-            completion_text.append("🎉 100% success rate! 🎉", style="bold bright_green")
+            completion_text.append(
+                "🎉 100% success rate! 🎉", style="bold bright_green"
+            )
         elif success_rate >= 80:
             # Good success rate
             completion_text = Text()
             completion_text.append("[OK] ", style="bold green")
             completion_text.append("Processing complete: ", style="green")
-            completion_text.append(f"{success_rate:.1f}% success rate", style="bright_green")
+            completion_text.append(
+                f"{success_rate:.1f}% success rate", style="bright_green"
+            )
         elif success_rate > 0:
             # Partial success
             completion_text = Text()
             completion_text.append("[OK] ", style="bold yellow")
             completion_text.append("Processing complete: ", style="yellow")
-            completion_text.append(f"{success_rate:.1f}% success rate", style="bright_yellow")
+            completion_text.append(
+                f"{success_rate:.1f}% success rate", style="bright_yellow"
+            )
         else:
             # No successes
             completion_text = Text()

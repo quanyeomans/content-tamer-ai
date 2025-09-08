@@ -169,8 +169,13 @@ def get_core_requirements():
         "pytesseract>=0.3.13",
         "pdfid>=1.1.0",
         "rich>=13.7.0",
-        "defusedxml>=0.7.1",      # For secure XML parsing (XXE protection)
-        "psutil>=5.9.0",          # For system hardware detection
+        "defusedxml>=0.7.1",              # For secure XML parsing (XXE protection)
+        "psutil>=5.9.0",                 # For system hardware detection
+        # ML and organization dependencies
+        "spacy>=3.7.0",                  # Enhanced NLP for document classification
+        "python-dateutil>=2.8.0",       # Date parsing and temporal analysis
+        "sentence-transformers>=2.2.0",  # State-of-the-art embeddings for ML refinement
+        "scikit-learn>=1.3.0",          # Machine learning algorithms for clustering
     ]
 
 
@@ -383,6 +388,29 @@ def create_virtual_environment():
         return True
 
 
+def install_spacy_model():
+    """Install spaCy English language model for ML processing."""
+    try:
+        print("Downloading spaCy English language model (en_core_web_sm)...")
+        print("This may take a few minutes depending on your internet connection.")
+        
+        cmd = [sys.executable, "-m", "spacy", "download", "en_core_web_sm"]
+        subprocess.run(cmd, check=True, text=True)
+        
+        print_success("spaCy language model installed successfully")
+        return True
+    
+    except subprocess.CalledProcessError as e:
+        print_error("Failed to install spaCy language model")
+        print(f"  Error code: {e.returncode}")
+        print("  ML processing will fall back to basic text analysis")
+        print("  You can install manually later with: python -m spacy download en_core_web_sm")
+        return False
+    except FileNotFoundError:
+        print_error("spaCy not found - install core dependencies first")
+        return False
+
+
 def verify_installation():
     """Verify that core packages can be imported."""
     print_step(6, "Verifying Installation")
@@ -397,6 +425,12 @@ def verify_installation():
         ("pytesseract", "pytesseract"),
         ("pdfid", "pdfid"),
         ("rich", "rich"),
+        ("defusedxml", "defusedxml"),
+        ("psutil", "psutil"),
+        ("spacy", "spacy"),
+        ("dateutil", "dateutil"),
+        ("sentence_transformers", "sentence_transformers"),
+        ("sklearn", "sklearn"),
     ]
 
     failed_imports = []
@@ -408,6 +442,17 @@ def verify_installation():
         except ImportError:
             print_error(f"Failed to import {package_name}")
             failed_imports.append(package_name)
+
+    # Test spaCy model loading separately
+    try:
+        import spacy
+        nlp = spacy.load("en_core_web_sm")
+        print_success("spaCy English model loaded successfully")
+    except OSError:
+        print_warning("spaCy English model not available - using basic fallback")
+        print("  Install with: python -m spacy download en_core_web_sm")
+    except ImportError:
+        pass  # spaCy import already tested above
 
     if failed_imports:
         print()
@@ -509,6 +554,11 @@ def main():
                 print_warning("AI provider installation failed, but core system should work")
         else:
             print_info("Skipped AI provider installation")
+
+    # Download spaCy language model for ML processing
+    print_step("5.5", "Installing spaCy Language Model", "Required for advanced document classification")
+    if not install_spacy_model():
+        print_warning("spaCy model installation failed, ML features will use basic fallback")
 
     # Step 6: Verify installation
     if not verify_installation():

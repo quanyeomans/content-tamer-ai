@@ -8,11 +8,12 @@ Phase 3 temporal intelligence for optimal document organization.
 
 import logging
 import time
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from content_analysis.temporal_analyzer import AdvancedTemporalAnalyzer
 
 from .enhanced_organization_engine import EnhancedOrganizationEngine
-from content_analysis.temporal_analyzer import AdvancedTemporalAnalyzer
 
 
 class TemporalOrganizationEngine(EnhancedOrganizationEngine):

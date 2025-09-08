@@ -16,18 +16,19 @@ try:
     from core.filename_config import (
         DEFAULT_SYSTEM_PROMPTS,
         get_secure_filename_prompt_template,
-        validate_generated_filename,
         get_token_limit_for_provider,
+        validate_generated_filename,
     )
 except ImportError:
     import os
     import sys
+
     sys.path.insert(0, os.path.dirname(__file__))
     from core.filename_config import (
         DEFAULT_SYSTEM_PROMPTS,
         get_secure_filename_prompt_template,
-        validate_generated_filename,
         get_token_limit_for_provider,
+        validate_generated_filename,
     )
 
 # Import API clients conditionally to avoid hard dependencies
@@ -256,9 +257,15 @@ class OpenAIProvider(AIProvider):
             except Exception as e:
                 # Handle image-related errors by checking message content
                 msg = str(e).lower()
-                if "image" in msg or "vision" in msg:  # Model doesn't support images, retry without
+                if (
+                    "image" in msg or "vision" in msg
+                ):  # Model doesn't support images, retry without
                     raw = self._handle_image_error(base, parts, client)
-                elif HAVE_OPENAI and hasattr(e, "__class__") and "APIError" in str(type(e)):
+                elif (
+                    HAVE_OPENAI
+                    and hasattr(e, "__class__")
+                    and "APIError" in str(type(e))
+                ):
                     # Handle other OpenAI API errors
                     raise
                 else:
@@ -280,7 +287,9 @@ class GeminiProvider(AIProvider):
     def __init__(self, api_key: str, model: str) -> None:
         super().__init__(api_key, model)
         if not HAVE_GEMINI or genai is None:
-            raise ImportError("Please install Google Generative AI: pip install google-genai")
+            raise ImportError(
+                "Please install Google Generative AI: pip install google-genai"
+            )
         genai.configure(api_key=api_key)  # type: ignore
         self.client = genai.GenerativeModel(model)  # type: ignore
 
@@ -394,13 +403,17 @@ class DeepseekProvider(AIProvider):
             "temperature": 0.2,
         }
         try:
-            response = requests.post(self.base_url, headers=headers, json=data, timeout=30)
+            response = requests.post(
+                self.base_url, headers=headers, json=data, timeout=30
+            )
             if response.status_code != 200:
                 raise RuntimeError(
                     f"Status code: {response.status_code}, Response: {response.text}"
                 )
             result = response.json()
-            return validate_generated_filename(result["choices"][0]["message"]["content"])
+            return validate_generated_filename(
+                result["choices"][0]["message"]["content"]
+            )
         except requests.RequestException as e:
             raise RuntimeError(f"Deepseek API request error: {str(e)}") from e
         except (KeyError, IndexError, json.JSONDecodeError) as e:

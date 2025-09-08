@@ -1,6 +1,0 @@
-=== FILE PROCESSING DEBUG RESULTS ===
-
-Content Extraction: PASS - Content extraction successful: 8192 characters, content starts with: Magazine Article / Talent Management
-Highly Skille...
-AI Client Setup: PASS - AI client setup successful
-Filename Generation: PASS - Unexpected success: 

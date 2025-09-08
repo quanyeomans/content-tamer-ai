@@ -19,16 +19,25 @@ from io import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
 
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestDisplayManagerInterfaceContracts(unittest.TestCase):
+class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
     """Contracts for display manager that prevent UI regressions."""
+    
+    def setUp(self):
+        """Set up Rich testing environment for each test."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
     
     @pytest.mark.contract
     @pytest.mark.critical
     def test_show_completion_stats_interface_contract(self):
         """CONTRACT: show_completion_stats accepts application.py data format."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Must accept this exact format from application.py
         stats = {
@@ -51,7 +60,7 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_progress_stats_provides_required_attributes_contract(self):
         """CONTRACT: progress.stats must provide attributes that application expects."""
-        manager = RichDisplayManager(RichDisplayOptions())
+        manager = self.test_container.create_display_manager(RichDisplayOptions())
         
         # These attributes must always exist
         required_attributes = ['total', 'succeeded', 'failed', 'warnings', 'success_rate']
@@ -74,7 +83,7 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase):
     def test_no_duplicate_completion_messages_contract(self):
         """CONTRACT: Only one completion message should appear in output."""
         output = StringIO()
-        manager = RichDisplayManager(RichDisplayOptions(no_color=True, file=output))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(no_color=True, file=output))
         
         # Simulate full processing workflow  
         with manager.processing_context(2, "Contract Test") as ctx:
@@ -109,7 +118,7 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_success_rate_calculation_contract(self):
         """CONTRACT: Success rate calculation must be consistent and accurate."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         # Test various success rate scenarios
         test_cases = [

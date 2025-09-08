@@ -26,7 +26,9 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 
 # Error log location
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 DEFAULT_PROCESSING_DIR = os.path.join(DEFAULT_DATA_DIR, ".processing")
 ERROR_LOG_FILE = os.path.join(DEFAULT_PROCESSING_DIR, "errors.log")
@@ -73,10 +75,22 @@ def _generate_filename(
         return f"empty_file_{timestamp}"
 
     # Get a new filename from the AI, with retries in case of network issues.
-    new_file_name = get_new_filename_with_retry_enhanced(
-        ai_client, text, img_b64, display_context, filename=filename
-    )
-    validated_filename = organizer.filename_handler.validate_and_trim_filename(new_file_name)
+    try:
+        new_file_name = get_new_filename_with_retry_enhanced(
+            ai_client, text, img_b64, display_context, filename=filename
+        )
+        validated_filename = organizer.filename_handler.validate_and_trim_filename(
+            new_file_name
+        )
+    except Exception as e:
+        # Final fallback if AI generation completely fails
+        if display_context:
+            display_context.show_error(f"AI filename generation failed: {str(e)}")
+        timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
+        fallback_name = f"ai_failed_{timestamp}"
+        validated_filename = organizer.filename_handler.validate_and_trim_filename(
+            fallback_name
+        )
 
     # Update progress display with the generated target filename
     display_context.set_status("ai_processing_complete")
@@ -116,7 +130,9 @@ def _move_and_record_file(
     )
 
     # Record that this file has been processed.
-    organizer.progress_tracker.record_progress(progress_f, filename, organizer.file_manager)
+    organizer.progress_tracker.record_progress(
+        progress_f, filename, organizer.file_manager
+    )
 
     return final_file_name
 
@@ -155,7 +171,9 @@ def _handle_processing_error(
     )
 
     # Record progress
-    organizer.progress_tracker.record_progress(progress_f, filename, organizer.file_manager)
+    organizer.progress_tracker.record_progress(
+        progress_f, filename, organizer.file_manager
+    )
 
     return success, result
 
@@ -227,21 +245,50 @@ def process_file_enhanced_core(
                     f"File moved to unprocessed: {str(e)}", filename=filename
                 )
             else:
-                display_context.show_error(f"File not found: {str(e)}", filename=filename)
+                display_context.show_error(
+                    f"File not found: {str(e)}", filename=filename
+                )
         except Exception as move_error:
-            display_context.show_error(f"Failed to move file: {str(move_error)}", filename=filename)
+            display_context.show_error(
+                f"Failed to move file: {str(move_error)}", filename=filename
+            )
 
         return False, None
 
     except RuntimeError as e:
         return _handle_runtime_error(e, filename, display_context)
 
+    except Exception as e:
+        # Catch-all for any unexpected exceptions (including AI failures)
+        try:
+            if os.path.exists(input_path):
+                unprocessed_path = os.path.join(unprocessed_folder, filename)
+                organizer.file_manager.safe_move(input_path, unprocessed_path)
+                display_context.show_error(
+                    f"Unexpected error, file moved to unprocessed: {str(e)}",
+                    filename=filename,
+                )
+            else:
+                display_context.show_error(
+                    f"Unexpected error: {str(e)}", filename=filename
+                )
+        except Exception as move_error:
+            display_context.show_error(
+                f"Critical error: {str(move_error)}", filename=filename
+            )
+
+        return False, str(e)
+
     finally:
         # Record progress - don't let this affect success determination
         try:
-            organizer.progress_tracker.record_progress(progress_f, filename, organizer.file_manager)
+            organizer.progress_tracker.record_progress(
+                progress_f, filename, organizer.file_manager
+            )
         except Exception as progress_error:
-            print(f"Warning: Progress recording failed for {filename}: {progress_error}")
+            print(
+                f"Warning: Progress recording failed for {filename}: {progress_error}"
+            )
 
     # Success is determined by completing all processing steps successfully
     # If we got a result from _move_file_only, the file was processed successfully
@@ -339,10 +386,13 @@ def get_new_filename_with_retry_enhanced(
     for attempt in range(max_attempts):
         try:
             return get_filename_from_ai(ai_client, pdf_content, image_b64)
-        except RuntimeError as e:
+        except (
+            Exception
+        ) as e:  # Catch all AI provider exceptions, not just RuntimeError
             error_str = str(e).lower()
             is_timeout = any(
-                t in error_str for t in ["timeout", "timed out", "connection", "network"]
+                t in error_str
+                for t in ["timeout", "timed out", "connection", "network"]
             )
 
             if is_timeout:
@@ -355,7 +405,9 @@ def get_new_filename_with_retry_enhanced(
                     )
             else:
                 if display_context:
-                    display_context.show_warning(f"AI API error: {str(e)}", filename=filename)
+                    display_context.show_warning(
+                        f"AI API error: {str(e)}", filename=filename
+                    )
 
             if attempt < max_attempts - 1:  # Don't wait after the last attempt
                 if display_context:
@@ -409,7 +461,9 @@ def get_new_filename_with_retry(
     return f"untitled_document_{timestamp}"
 
 
-def get_filename_from_ai(ai_client: Any, pdf_content: str, image_b64: Optional[str] = None) -> str:
+def get_filename_from_ai(
+    ai_client: Any, pdf_content: str, image_b64: Optional[str] = None
+) -> str:
     """Generate filename using AI client."""
     if ai_client is None:
         raise RuntimeError("AI client not initialized. Call organize_content first.")
@@ -434,7 +488,9 @@ def _handle_file_success(
     pbar.set_postfix({"Status": "Renamed", "New Name": final_filename})
 
     # Record that this file has been processed.
-    organizer.progress_tracker.record_progress(progress_f, filename, organizer.file_manager)
+    organizer.progress_tracker.record_progress(
+        progress_f, filename, organizer.file_manager
+    )
 
     # Update progress bar
     pbar.update(1)
@@ -483,7 +539,13 @@ def process_file(
 
         # Handle successful processing
         _handle_file_success(
-            input_path, filename, renamed_folder, new_file_name, organizer, pbar, progress_f
+            input_path,
+            filename,
+            renamed_folder,
+            new_file_name,
+            organizer,
+            pbar,
+            progress_f,
         )
         return True
 
@@ -494,7 +556,9 @@ def process_file(
             if os.path.exists(input_path):
                 unprocessed_path = os.path.join(unprocessed_folder, filename)
                 organizer.file_manager.safe_move(input_path, unprocessed_path)
-                pbar.set_postfix({"Status": "Unprocessed", "Moved to": unprocessed_folder})
+                pbar.set_postfix(
+                    {"Status": "Unprocessed", "Moved to": unprocessed_folder}
+                )
             else:
                 pbar.set_postfix({"Status": "Error", "Message": "File not found"})
 
@@ -503,7 +567,9 @@ def process_file(
             pbar.set_postfix({"Status": "Error", "Message": str(move_error)})
 
         # Record progress once for error case
-        organizer.progress_tracker.record_progress(progress_f, filename, organizer.file_manager)
+        organizer.progress_tracker.record_progress(
+            progress_f, filename, organizer.file_manager
+        )
 
         # Update progress bar for error case
         pbar.update(1)
@@ -518,7 +584,9 @@ def process_file(
         print(f"\\n{sanitized_error_msg}")
         try:
             with open(ERROR_LOG_FILE, mode="a", encoding="utf-8") as log:
-                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {sanitized_error_msg}\\n")
+                log.write(
+                    f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {sanitized_error_msg}\\n"
+                )
         except (IOError, OSError) as log_error:
             print(f"Warning: Could not write to error log: {str(log_error)}")
         pbar.set_postfix({"Status": "Error", "Message": "Unexpected error"})

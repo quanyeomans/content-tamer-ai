@@ -19,17 +19,25 @@ from io import StringIO
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
 
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
 
 
-class TestCompletionConsistencyContracts(unittest.TestCase):
+class TestCompletionConsistencyContracts(unittest.TestCase, RichTestCase):
     """Contracts preventing duplicate/conflicting display messages."""
+    
+    def setUp(self):
+        """Set up Rich testing environment for each test."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
     
     @pytest.mark.contract
     @pytest.mark.critical
     def test_single_progress_summary_per_session_contract(self):
         """CONTRACT: Each processing session should produce exactly one progress summary."""
-        output = StringIO()
-        manager = RichDisplayManager(RichDisplayOptions(no_color=True, file=output))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(no_color=True, quiet=False))
         
         # Run complete processing session
         with manager.processing_context(3, "Contract Test") as ctx:
@@ -51,7 +59,11 @@ class TestCompletionConsistencyContracts(unittest.TestCase):
         }
         manager.show_completion_stats(stats)
         
-        output_content = output.getvalue()
+        # Get captured output using Rich test framework
+        output_content = self.get_console_output()
+        
+        # Ensure no Rich I/O errors occurred
+        self.assert_no_rich_errors()
         
         # Contract: Should have exactly one comprehensive summary
         processing_complete_messages = output_content.count("Processing complete:")
@@ -64,7 +76,7 @@ class TestCompletionConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_success_rate_calculation_contract(self):
         """CONTRACT: Success rate must be calculated accurately from processed files."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(4, "Contract Test") as ctx:
             # Process 3 successful, 1 failed = 75% success rate
@@ -81,12 +93,18 @@ class TestCompletionConsistencyContracts(unittest.TestCase):
                 calculated_rate, expected_rate, places=1,
                 msg=f"Success rate calculation incorrect: expected {expected_rate}%, got {calculated_rate}%"
             )
+            
+            # Ensure no Rich I/O errors occurred
+            self.assert_no_rich_errors()
 
     @pytest.mark.contract
     @pytest.mark.critical
     def test_target_filename_tracking_contract(self):
         """CONTRACT: Target filenames must be tracked correctly in processing context."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.create_display_manager(RichDisplayOptions(quiet=True))
+        
+        # Ensure no Rich I/O errors before starting test
+        self.assert_no_rich_errors()
         
         with manager.processing_context(2, "Contract Test") as ctx:
             # Contract: Target filename should be tracked in processed files
@@ -109,8 +127,7 @@ class TestCompletionConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_no_error_completion_for_successful_processing_contract(self):
         """CONTRACT: Successful processing must never display error completion messages."""
-        output = StringIO()
-        manager = RichDisplayManager(RichDisplayOptions(no_color=True, file=output))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(no_color=True, quiet=False))
         
         # Simulate completely successful processing
         with manager.processing_context(2, "Contract Test") as ctx:
@@ -126,7 +143,8 @@ class TestCompletionConsistencyContracts(unittest.TestCase):
         }
         manager.show_completion_stats(stats)
         
-        output_content = output.getvalue()
+        output_content = self.get_console_output()
+        self.assert_no_rich_errors()
         
         # Contract: Must not show error completion for successful processing
         error_messages = output_content.count("[ERROR] Processing complete:")
@@ -147,8 +165,7 @@ class TestCompletionConsistencyContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_completion_message_contains_accurate_statistics_contract(self):
         """CONTRACT: Completion messages must contain accurate file processing statistics."""
-        output = StringIO()
-        manager = RichDisplayManager(RichDisplayOptions(no_color=True, file=output))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(no_color=True, quiet=False))
         
         # Process files with known results
         with manager.processing_context(4, "Contract Test") as ctx:
@@ -166,7 +183,8 @@ class TestCompletionConsistencyContracts(unittest.TestCase):
         }
         
         manager.show_completion_stats(expected_stats)
-        output_content = output.getvalue()
+        output_content = self.get_console_output()
+        self.assert_no_rich_errors()
         
         # Contract: Final progress state must match processing results
         final_stats = manager.progress.stats

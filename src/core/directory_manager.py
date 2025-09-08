@@ -50,7 +50,9 @@ def setup_directories(args) -> Tuple[str, str, str]:
         # User specified custom paths
         input_dir = args.input or input("Enter the input folder path: ")
         renamed_dir = args.renamed or input("Enter the renamed PDFs folder path: ")
-        unprocessed_dir = args.unprocessed or input("Enter the unprocessed files folder path: ")
+        unprocessed_dir = args.unprocessed or input(
+            "Enter the unprocessed files folder path: "
+        )
     else:
         # Use default directory structure
         if not args.quiet:
@@ -95,7 +97,9 @@ def _display_api_key_instructions(provider: str) -> None:
     print(
         f"• {provider.capitalize()} keys start with '{'sk-ant-' if provider == 'claude' else 'sk-'}' and are typically 40-60 characters"
     )
-    print(f"• You can set {provider.upper()}_API_KEY environment variable to skip this step")
+    print(
+        f"• You can set {provider.upper()}_API_KEY environment variable to skip this step"
+    )
     print("• Your key will be validated and cleared from display after entry")
 
 
@@ -111,9 +115,13 @@ def _clean_and_validate_input(api_key: str, provider: str) -> str:
 
     # Show partial key for user verification
     if len(api_key) >= 14:
-        partial_display = f"{api_key[:10]}{'*' * max(0, len(api_key) - 14)}{api_key[-4:]}"
+        partial_display = (
+            f"{api_key[:10]}{'*' * max(0, len(api_key) - 14)}{api_key[-4:]}"
+        )
     else:
-        partial_display = f"{api_key[:min(6, len(api_key))]}{'*' * max(0, len(api_key) - 6)}"
+        partial_display = (
+            f"{api_key[:min(6, len(api_key))]}{'*' * max(0, len(api_key) - 6)}"
+        )
 
     print(f"[OK] Received API key: {partial_display} ({len(api_key)} characters)")
 
@@ -253,7 +261,9 @@ def _perform_basic_security_checks(api_key: str, provider: str) -> None:
             )
 
 
-def _check_provider_mismatch(api_key: str, provider: str, detected_provider: str) -> None:
+def _check_provider_mismatch(
+    api_key: str, provider: str, detected_provider: str
+) -> None:
     """Check for provider mismatch and provide helpful error."""
     if detected_provider == "unknown" or detected_provider == provider:
         return
@@ -277,7 +287,9 @@ def _check_provider_mismatch(api_key: str, provider: str, detected_provider: str
     )
 
 
-def _validate_provider_specific_format(api_key: str, provider: str, detected_provider: str) -> None:
+def _validate_provider_specific_format(
+    api_key: str, provider: str, detected_provider: str
+) -> None:
     """Validate provider-specific API key format requirements."""
     if provider == "openai":
         if not api_key.startswith("sk-"):
@@ -340,7 +352,9 @@ def _check_for_suspicious_characters(api_key: str) -> None:
     if not re.match(r"^[a-zA-Z0-9\-_.+]+$", api_key):
         # Show what characters were found for debugging
         invalid_chars = set(re.findall(r"[^a-zA-Z0-9\-_.+]", api_key))
-        raise ValueError(f"API key contains invalid characters: {sorted(invalid_chars)}")
+        raise ValueError(
+            f"API key contains invalid characters: {sorted(invalid_chars)}"
+        )
 
 
 def _validate_api_key(api_key: str, provider: str) -> str:
@@ -379,7 +393,9 @@ def _clear_screen_secure():
             print("\033[2J\033[H", end="")
         else:
             # Unix/Linux/macOS: Use subprocess with shell=False for security
-            subprocess.run(["clear"], shell=False, check=False, capture_output=True, timeout=1)
+            subprocess.run(
+                ["clear"], shell=False, check=False, capture_output=True, timeout=1
+            )
     except (subprocess.SubprocessError, subprocess.TimeoutExpired, FileNotFoundError):
         # Fallback: Print newlines to simulate screen clear if commands fail
         print("\n" * 50)

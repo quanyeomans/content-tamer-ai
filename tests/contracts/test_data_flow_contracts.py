@@ -19,16 +19,29 @@ import unittest
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
 
 from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from tests.utils.rich_test_utils import RichTestCase
+
+# Import from parent tests directory
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from conftest import safe_rich_context
 
 
-class TestDataFlowContracts(unittest.TestCase):
+class TestDataFlowContracts(unittest.TestCase, RichTestCase):
     """Contracts ensuring data flows correctly from processing to user display."""
+    
+    def setUp(self):
+        """Set up Rich testing environment for each test."""
+        RichTestCase.setUp(self)
+    
+    def tearDown(self):
+        """Clean up Rich testing environment."""
+        RichTestCase.tearDown(self)
     
     @pytest.mark.contract
     @pytest.mark.critical
     def test_file_success_flows_to_progress_stats_contract(self):
         """CONTRACT: Successful file processing must increment progress.stats.succeeded."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(3, "Data Flow Test") as ctx:
             initial_succeeded = ctx.display.progress.stats.succeeded
@@ -47,7 +60,7 @@ class TestDataFlowContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_file_failure_flows_to_progress_stats_contract(self):
         """CONTRACT: Failed file processing must increment progress.stats.failed."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(3, "Data Flow Test") as ctx:
             initial_failed = ctx.display.progress.stats.failed
@@ -66,7 +79,7 @@ class TestDataFlowContracts(unittest.TestCase):
     @pytest.mark.critical  
     def test_progress_stats_sync_with_success_rate_contract(self):
         """CONTRACT: Progress stats must automatically sync with calculated success rate."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(4, "Data Flow Test") as ctx:
             # Process mixed results: 3 success, 1 failure = 75%
@@ -88,7 +101,7 @@ class TestDataFlowContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_processed_files_list_reflects_actual_processing_contract(self):
         """CONTRACT: Processed files list must contain all actually processed files."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         processed_filenames = ["doc1.pdf", "doc2.pdf", "doc3.pdf"]
         
@@ -112,7 +125,7 @@ class TestDataFlowContracts(unittest.TestCase):
     @pytest.mark.critical  
     def test_error_details_flow_to_completion_stats_contract(self):
         """CONTRACT: Error details from processing must be available for completion display."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(2, "Data Flow Test") as ctx:
             ctx.complete_file("success.pdf", "result.pdf")
@@ -138,7 +151,7 @@ class TestDataFlowContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_target_filename_data_flow_contract(self):
         """CONTRACT: Target filenames must flow from processing to completion display.""" 
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         target_filenames = ["organized_document_1.pdf", "organized_document_2.pdf"]
         
@@ -161,7 +174,7 @@ class TestDataFlowContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_processing_timestamps_data_flow_contract(self):
         """CONTRACT: Processing timestamps must be recorded for completion analysis."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(1, "Data Flow Test") as ctx:
             import time
@@ -195,7 +208,7 @@ class TestDataFlowContracts(unittest.TestCase):
     @pytest.mark.critical
     def test_counter_synchronization_across_operations_contract(self):
         """CONTRACT: All progress counters must remain synchronized during operations."""
-        manager = RichDisplayManager(RichDisplayOptions(quiet=True))
+        manager = self.test_container.create_display_manager(RichDisplayOptions(quiet=True))
         
         with manager.processing_context(5, "Data Flow Test") as ctx:
             # Mix of operations to test synchronization

@@ -134,7 +134,9 @@ class MessageHandler:
         self.config.disclosure_mode = mode
         self._apply_disclosure_mode()
 
-    def configure(self, quiet: bool = False, verbose: bool = False, no_color: bool = False) -> None:
+    def configure(
+        self, quiet: bool = False, verbose: bool = False, no_color: bool = False
+    ) -> None:
         """Update configuration settings."""
         if quiet:
             self.config.quiet_mode = True
@@ -162,8 +164,12 @@ class MessageHandler:
         context: Optional[str] = None,
     ) -> None:
         """Enhanced debug message with priority and context."""
-        if self.config.show_debug and self._should_display_message(MessageLevel.DEBUG, priority):
-            self._display_message_enhanced(message, MessageLevel.DEBUG, location, priority, context)
+        if self.config.show_debug and self._should_display_message(
+            MessageLevel.DEBUG, priority
+        ):
+            self._display_message_enhanced(
+                message, MessageLevel.DEBUG, location, priority, context
+            )
 
     def info(
         self,
@@ -178,7 +184,9 @@ class MessageHandler:
             and not self.config.quiet_mode
             and self._should_display_message(MessageLevel.INFO, priority)
         ):
-            self._display_message_enhanced(message, MessageLevel.INFO, location, priority, context)
+            self._display_message_enhanced(
+                message, MessageLevel.INFO, location, priority, context
+            )
 
     def success(
         self,
@@ -221,8 +229,12 @@ class MessageHandler:
         context: Optional[str] = None,
     ) -> None:
         """Enhanced error message with priority and context."""
-        if self.config.show_errors and self._should_display_message(MessageLevel.ERROR, priority):
-            self._display_message_enhanced(message, MessageLevel.ERROR, location, priority, context)
+        if self.config.show_errors and self._should_display_message(
+            MessageLevel.ERROR, priority
+        ):
+            self._display_message_enhanced(
+                message, MessageLevel.ERROR, location, priority, context
+            )
 
     def critical(
         self,
@@ -236,7 +248,9 @@ class MessageHandler:
             message, MessageLevel.CRITICAL, location, MessagePriority.CRITICAL, context
         )
 
-    def _should_display_message(self, level: MessageLevel, priority: MessagePriority) -> bool:
+    def _should_display_message(
+        self, level: MessageLevel, priority: MessagePriority
+    ) -> bool:
         """Determine if message should be displayed based on priority and disclosure mode."""
         # Critical messages always display
         if level == MessageLevel.CRITICAL:
@@ -292,7 +306,9 @@ class MessageHandler:
                 message = grouped_msg
 
         # Format message with enhancements
-        formatted_message = self._format_enhanced_message(message, level, priority, context)
+        formatted_message = self._format_enhanced_message(
+            message, level, priority, context
+        )
         timestamp = time.time()
 
         # Store in history
@@ -309,7 +325,9 @@ class MessageHandler:
 
         # Trim history if needed
         if len(self.message_history) > self.config.max_message_history:
-            self.message_history = self.message_history[-self.config.max_message_history :]
+            self.message_history = self.message_history[
+                -self.config.max_message_history :
+            ]
 
         # Display the message
         self._render_message(formatted_message, location)
@@ -336,17 +354,22 @@ class MessageHandler:
 
         # Add priority indicator for high priority messages
         if priority == MessagePriority.CRITICAL:
-            priority_indicator = self.formatter.colorize(" [CRITICAL]", "bright_red", bold=True)
+            priority_indicator = self.formatter.colorize(
+                " [CRITICAL]", "bright_red", bold=True
+            )
             base_message = f"{base_message}{priority_indicator}"
         elif (
-            priority == MessagePriority.HIGH and self.config.disclosure_mode == DisclosureMode.DEBUG
+            priority == MessagePriority.HIGH
+            and self.config.disclosure_mode == DisclosureMode.DEBUG
         ):
             priority_indicator = self.formatter.colorize(" [HIGH]", "bright_yellow")
             base_message = f"{base_message}{priority_indicator}"
 
         return base_message
 
-    def _render_message(self, formatted_message: str, location: DisplayLocation) -> None:
+    def _render_message(
+        self, formatted_message: str, location: DisplayLocation
+    ) -> None:
         """Render message to output based on location."""
         # Handle display based on location and progress state
         if location == DisplayLocation.REPLACE_PROGRESS and self._progress_active:
@@ -357,7 +380,9 @@ class MessageHandler:
         elif location == DisplayLocation.ABOVE_PROGRESS and self._progress_active:
             # Move up, show message, then restore progress
             if not self.formatter.no_color:
-                self.file.write(f"\r{Colors.CURSOR_UP}{formatted_message}\n{Colors.CURSOR_DOWN}")
+                self.file.write(
+                    f"\r{Colors.CURSOR_UP}{formatted_message}\n{Colors.CURSOR_DOWN}"
+                )
             else:
                 self.file.write(f"\n{formatted_message}")
             self.file.flush()
@@ -392,7 +417,9 @@ class MessageHandler:
 
         # Trim history if needed
         if len(self.message_history) > self.config.max_message_history:
-            self.message_history = self.message_history[-self.config.max_message_history :]
+            self.message_history = self.message_history[
+                -self.config.max_message_history :
+            ]
 
         # Handle display based on location and progress state
         if location == DisplayLocation.REPLACE_PROGRESS and self._progress_active:
@@ -403,7 +430,9 @@ class MessageHandler:
         elif location == DisplayLocation.ABOVE_PROGRESS and self._progress_active:
             # Move up, show message, then restore progress
             if not self.formatter.no_color:
-                self.file.write(f"\r{Colors.CURSOR_UP}{formatted_message}\n{Colors.CURSOR_DOWN}")
+                self.file.write(
+                    f"\r{Colors.CURSOR_UP}{formatted_message}\n{Colors.CURSOR_DOWN}"
+                )
             else:
                 self.file.write(f"\n{formatted_message}")
             self.file.flush()
@@ -447,7 +476,9 @@ class MessageHandler:
 
         if self.session_stats["error"] > 0:
             summary_parts.append(
-                self.formatter.colorize(f"{self.session_stats['error']} errors", "bright_red")
+                self.formatter.colorize(
+                    f"{self.session_stats['error']} errors", "bright_red"
+                )
             )
 
         if self.session_stats["critical"] > 0:
@@ -460,10 +491,15 @@ class MessageHandler:
             )
 
         # Show suppressed message count if any
-        if self.suppressed_messages and self.config.disclosure_mode != DisclosureMode.MINIMAL:
+        if (
+            self.suppressed_messages
+            and self.config.disclosure_mode != DisclosureMode.MINIMAL
+        ):
             suppressed_count = len(self.suppressed_messages)
             summary_parts.append(
-                self.formatter.colorize(f"{suppressed_count} similar messages suppressed", "dim")
+                self.formatter.colorize(
+                    f"{suppressed_count} similar messages suppressed", "dim"
+                )
             )
 
         if summary_parts:
@@ -490,7 +526,9 @@ class MessageHandler:
                     "critical": "bright_red",
                 }
                 color = color_map.get(level, "white")
-                formatted_stat = self.formatter.colorize(f"  {level_display}: {count}", color)
+                formatted_stat = self.formatter.colorize(
+                    f"  {level_display}: {count}", color
+                )
                 self.file.write(f"{formatted_stat}\n")
 
         # Show disclosure mode
@@ -502,9 +540,9 @@ class MessageHandler:
         # Show most frequent message types
         if self.message_counts:
             self.file.write("\nMost frequent message patterns:\n")
-            sorted_patterns = sorted(self.message_counts.items(), key=lambda x: x[1], reverse=True)[
-                :3
-            ]
+            sorted_patterns = sorted(
+                self.message_counts.items(), key=lambda x: x[1], reverse=True
+            )[:3]
             for pattern, count in sorted_patterns:
                 if count > 1:
                     pattern_display = self.formatter.colorize(
@@ -552,13 +590,17 @@ class MessageHandler:
 
         # Filter by priority
         if priority_filter:
-            messages = [msg for msg in messages if msg.get("priority") == priority_filter]
+            messages = [
+                msg for msg in messages if msg.get("priority") == priority_filter
+            ]
 
         # Filter by time range (start_time, end_time)
         if time_range:
             start_time, end_time = time_range
             messages = [
-                msg for msg in messages if start_time <= msg.get("timestamp", 0) <= end_time
+                msg
+                for msg in messages
+                if start_time <= msg.get("timestamp", 0) <= end_time
             ]
 
         # Filter by context
@@ -596,7 +638,9 @@ class MessageHandler:
             "critical": 0,
         }
 
-    def export_message_log(self, include_suppressed: bool = False) -> List[Dict[str, Any]]:
+    def export_message_log(
+        self, include_suppressed: bool = False
+    ) -> List[Dict[str, Any]]:
         """Export complete message log for analysis or debugging."""
         log_data = {
             "session_stats": self.session_stats.copy(),
@@ -619,7 +663,9 @@ class MessageHandler:
         if not enabled:
             self.message_counts.clear()
 
-    def replay_suppressed_messages(self, level_filter: Optional[MessageLevel] = None) -> None:
+    def replay_suppressed_messages(
+        self, level_filter: Optional[MessageLevel] = None
+    ) -> None:
         """Replay suppressed messages (useful for debugging)."""
         suppressed = self.get_suppressed_messages(level_filter)
 
@@ -642,7 +688,9 @@ class MessageHandler:
                     msg.get("priority", MessagePriority.NORMAL),
                     msg.get("context"),
                 )
-                replay_formatted = self.formatter.colorize("[REPLAY] ", "dim") + formatted
+                replay_formatted = (
+                    self.formatter.colorize("[REPLAY] ", "dim") + formatted
+                )
                 self._render_message(replay_formatted, DisplayLocation.BELOW_PROGRESS)
 
             finally:
@@ -682,7 +730,9 @@ class MessageHandler:
         captured_messages = []
         original_display = self._display_message
 
-        def capture_display(message: str, level: MessageLevel, location: DisplayLocation) -> None:
+        def capture_display(
+            message: str, level: MessageLevel, location: DisplayLocation
+        ) -> None:
             formatted = self.formatter.format_message(message, level)
             captured_messages.append(
                 {

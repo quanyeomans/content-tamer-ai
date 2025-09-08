@@ -16,21 +16,17 @@ from .file_processor import process_file_enhanced
 
 # Import utils with Rich display system
 try:
-    from utils.rich_display_manager import (
-        RichDisplayManager as DisplayManager,
-        RichDisplayOptions as DisplayOptions,
-    )
     from utils.error_handling import create_retry_handler
+    from utils.rich_display_manager import RichDisplayManager as DisplayManager
+    from utils.rich_display_manager import RichDisplayOptions as DisplayOptions
 except ImportError:
     import os
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from utils.rich_display_manager import (
-        RichDisplayManager as DisplayManager,
-        RichDisplayOptions as DisplayOptions,
-    )
     from utils.error_handling import create_retry_handler
+    from utils.rich_display_manager import RichDisplayManager as DisplayManager
+    from utils.rich_display_manager import RichDisplayOptions as DisplayOptions
 
 
 # Import modules - handle both package and direct execution
@@ -48,20 +44,31 @@ except ImportError:
     from file_organizer import FileOrganizer
 
 
-def _setup_display_manager(display_options: Optional[dict]) -> DisplayManager:
-    """Initialize display system with options."""
+def _setup_display_manager(
+    display_options: Optional[dict], container: Optional["ApplicationContainer"] = None
+) -> DisplayManager:
+    """Initialize display system with options using new architecture."""
+    from core.application_container import ApplicationContainer
+
     display_opts = display_options or {}
-    return DisplayManager(
-        DisplayOptions(
-            verbose=display_opts.get("verbose", False),
-            quiet=display_opts.get("quiet", False),
-            no_color=display_opts.get("no_color", False),
-            show_stats=display_opts.get("show_stats", True),
-        )
+
+    # Use provided container or create new one (supports test injection)
+    if container is None:
+        container = ApplicationContainer()
+
+    options = DisplayOptions(
+        verbose=display_opts.get("verbose", False),
+        quiet=display_opts.get("quiet", False),
+        no_color=display_opts.get("no_color", False),
+        show_stats=display_opts.get("show_stats", True),
     )
 
+    return container.create_display_manager(options)
 
-def _setup_ai_client(provider: str, model: Optional[str], display_manager: DisplayManager):
+
+def _setup_ai_client(
+    provider: str, model: Optional[str], display_manager: DisplayManager
+):
     """Setup and validate AI client."""
     try:
         if model is None:
@@ -155,14 +162,20 @@ def _process_files_batch(
                         # Move file to unprocessed folder
                         try:
                             if os.path.exists(input_path):
-                                unprocessed_path = os.path.join(unprocessed_dir, filename)
-                                organizer.file_manager.safe_move(input_path, unprocessed_path)
+                                unprocessed_path = os.path.join(
+                                    unprocessed_dir, filename
+                                )
+                                organizer.file_manager.safe_move(
+                                    input_path, unprocessed_path
+                                )
                         except OSError:
                             pass  # Will be noted in error summary
 
                         ctx.fail_file(filename, "Processing failed")
                         failed_count += 1
-                        error_details.append({"filename": filename, "error": "Processing failed"})
+                        error_details.append(
+                            {"filename": filename, "error": "Processing failed"}
+                        )
         return True, successful_count, failed_count, error_details
     except KeyboardInterrupt:
         display_manager.warning("Process interrupted by user. Progress has been saved.")
@@ -235,7 +248,9 @@ def _setup_processing_environment(
     return ai_client, model, organizer, content_factory
 
 
-def _handle_no_files(input_dir: str, supported_extensions: list, display_manager) -> bool:
+def _handle_no_files(
+    input_dir: str, supported_extensions: list, display_manager
+) -> bool:
     """Handle case when no processable files are found."""
     display_manager.warning(f"No processable files found in {input_dir}")
     display_manager.info(f"Supported extensions: {', '.join(supported_extensions)}")
@@ -308,91 +323,110 @@ def _prompt_organization_workflow(
     if quiet_mode:
         # In quiet mode, don't prompt - use defaults (organization disabled)
         return False, 2
-    
+
     file_count = len(processable_files)
-    
+
     # Check feature flags to see if organization should be offered
     try:
         from utils.feature_flags import get_feature_manager
+
         feature_manager = get_feature_manager()
-        
+
         # Check if organization is available for this context
         if not feature_manager.is_organization_enabled(file_count):
             return False, 2
-            
+
         # Check if guided navigation should be shown
         if not feature_manager.should_show_guided_navigation(file_count):
             return False, 2
-            
+
         # Get available ML levels for the prompt
         available_ml_levels = feature_manager.get_available_ml_levels()
         if not available_ml_levels:
             return False, 2
-            
+
     except ImportError:
         # Fallback without feature flags - use original logic
         if file_count <= 1:
             return False, 2
         available_ml_levels = [1, 2, 3]
-    
+
     display_manager.info("🗂️  Document Organization Options")
-    display_manager.info(f"   Found {file_count} files to process. Would you like to organize them?")
+    display_manager.info(
+        f"   Found {file_count} files to process. Would you like to organize them?"
+    )
     display_manager.info("")
-    display_manager.info("   Organization can automatically sort your processed files into:")
+    display_manager.info(
+        "   Organization can automatically sort your processed files into:"
+    )
     display_manager.info("   • Logical folder structures based on content type")
     display_manager.info("   • Date-based organization for chronological documents")
-    display_manager.info("   • Business categories (invoices, contracts, reports, etc.)")
+    display_manager.info(
+        "   • Business categories (invoices, contracts, reports, etc.)"
+    )
     display_manager.info("")
-    
+
     # Build dynamic options based on available ML levels
     options = ["Skip organization (default) - Just rename files"]
     option_mapping = {1: (False, 2)}  # Option 1 always disables organization
-    
+
     for level in available_ml_levels:
         if level == 1:
             options.append("Basic organization - Fast rule-based sorting")
             option_mapping[len(options)] = (True, 1)
         elif level == 2:
-            options.append("Smart organization - ML-enhanced categorization (recommended)")
-            option_mapping[len(options)] = (True, 2)  
+            options.append(
+                "Smart organization - ML-enhanced categorization (recommended)"
+            )
+            option_mapping[len(options)] = (True, 2)
         elif level == 3:
-            options.append("Advanced organization - Temporal intelligence with insights")
+            options.append(
+                "Advanced organization - Temporal intelligence with insights"
+            )
             option_mapping[len(options)] = (True, 3)
-    
+
     # Display available options
     display_manager.info("   Options:")
     for i, option in enumerate(options, 1):
         display_manager.info(f"     {i}. {option}")
     display_manager.info("")
-    
+
     max_option = len(options)
-    
+
     while True:
         try:
             choice = input(f"   Choose option [1-{max_option}, default=1]: ").strip()
-            
+
             if choice == "" or choice == "1":
-                display_manager.info("   ✅ Organization disabled - files will only be renamed")
+                display_manager.info(
+                    "   ✅ Organization disabled - files will only be renamed"
+                )
                 return False, 2
-            
+
             try:
                 choice_num = int(choice)
                 if 1 <= choice_num <= max_option:
                     enable_org, ml_level = option_mapping[choice_num]
-                    
+
                     if enable_org:
                         level_names = {1: "basic", 2: "smart", 3: "advanced"}
                         level_name = level_names.get(ml_level, f"level {ml_level}")
                         display_manager.info(f"   ✅ Using {level_name} organization")
                     else:
-                        display_manager.info("   ✅ Organization disabled - files will only be renamed")
-                    
+                        display_manager.info(
+                            "   ✅ Organization disabled - files will only be renamed"
+                        )
+
                     return enable_org, ml_level
                 else:
-                    display_manager.warning(f"   Please enter a number between 1 and {max_option}")
+                    display_manager.warning(
+                        f"   Please enter a number between 1 and {max_option}"
+                    )
             except ValueError:
-                display_manager.warning(f"   Please enter a number between 1 and {max_option}")
-                
+                display_manager.warning(
+                    f"   Please enter a number between 1 and {max_option}"
+                )
+
         except (KeyboardInterrupt, EOFError):
             display_manager.info("   Using default: organization disabled")
             return False, 2
@@ -409,6 +443,8 @@ def organize_content(
     display_options: Optional[dict] = None,
     enable_post_processing: bool = False,
     ml_enhancement_level: int = 2,
+    container: Optional["ApplicationContainer"] = None,
+    quiet_mode: bool = False,
 ) -> bool:
     """
     Organize and intelligently rename documents using AI analysis.
@@ -416,8 +452,8 @@ def organize_content(
     Processes any content type - PDFs, images, screenshots - and generates
     meaningful, descriptive filenames based on document content.
     """
-    # Initialize display system
-    display_manager = _setup_display_manager(display_options)
+    # Initialize display system (with optional test container injection)
+    display_manager = _setup_display_manager(display_options, container)
 
     # Validate directories and setup paths
     success, input_dir, unprocessed_dir, renamed_dir = _validate_and_setup_directories(
@@ -458,7 +494,7 @@ def organize_content(
 
     # Apply guided navigation if organization settings not explicitly set via CLI
     quiet_mode = display_options.get("quiet", False) if display_options else False
-    
+
     # If enable_post_processing is the default False and no explicit CLI override,
     # show guided navigation prompts for multi-file batches
     if not enable_post_processing and total_files > 1:
@@ -493,7 +529,9 @@ def organize_content(
 
     # Display completion summary
     progress_stats = (
-        display_manager.progress.stats if hasattr(display_manager.progress, "stats") else None
+        display_manager.progress.stats
+        if hasattr(display_manager.progress, "stats")
+        else None
     )
     _display_completion_summary(
         display_manager,
@@ -515,40 +553,62 @@ def organize_content(
                     file_path = os.path.join(renamed_dir, filename)
                     if os.path.isfile(file_path):
                         processed_files.append(file_path)
-            
+
             if processed_files:
                 # Use organization context for better progress display
-                with display_manager.organization_context(len(processed_files), ml_enhancement_level):
+                with display_manager.organization_context(
+                    len(processed_files), ml_enhancement_level
+                ):
                     # Show initial progress
-                    display_manager.show_organization_progress("analyzing", 0, len(processed_files), "Preparing documents")
-                    
+                    display_manager.show_organization_progress(
+                        "analyzing", 0, len(processed_files), "Preparing documents"
+                    )
+
                     # Run post-processing organization with ML level
                     organization_result = organizer.run_post_processing_organization(
-                        processed_files, renamed_dir, enable_organization=True,
-                        ml_enhancement_level=ml_enhancement_level
+                        processed_files,
+                        renamed_dir,
+                        enable_organization=True,
+                        ml_enhancement_level=ml_enhancement_level,
                     )
-                    
+
                     if organization_result.get("success", False):
                         if organization_result.get("organization_applied", False):
                             # Show successful organization results using enhanced display
-                            display_manager.show_organization_results(organization_result)
+                            display_manager.show_organization_results(
+                                organization_result
+                            )
                         else:
                             reason = organization_result.get("reason", "Unknown")
-                            display_manager.info(f"ℹ️  Post-processing organization skipped: {reason}")
+                            display_manager.info(
+                                f"ℹ️  Post-processing organization skipped: {reason}"
+                            )
                     else:
                         error_msg = organization_result.get("reason", "Unknown error")
                         error_details = {
-                            "error_type": organization_result.get("error_type", "unknown"),
-                            "is_recoverable": organization_result.get("is_recoverable", False),
-                            "retry_recommended": organization_result.get("retry_recommended", False),
-                            "context": organization_result.get("context", "")
+                            "error_type": organization_result.get(
+                                "error_type", "unknown"
+                            ),
+                            "is_recoverable": organization_result.get(
+                                "is_recoverable", False
+                            ),
+                            "retry_recommended": organization_result.get(
+                                "retry_recommended", False
+                            ),
+                            "context": organization_result.get("context", ""),
                         }
-                        display_manager.show_organization_error(error_msg, error_details)
+                        display_manager.show_organization_error(
+                            error_msg, error_details
+                        )
             else:
-                display_manager.info("ℹ️  No processed files found for post-processing organization")
-                
+                display_manager.info(
+                    "ℹ️  No processed files found for post-processing organization"
+                )
+
         except Exception as e:
-            display_manager.show_organization_error(f"Unexpected error: {e}", {"error_type": type(e).__name__})
+            display_manager.show_organization_error(
+                f"Unexpected error: {e}", {"error_type": type(e).__name__}
+            )
             # Don't fail the entire workflow due to post-processing issues
 
     return True
