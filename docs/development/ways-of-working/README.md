@@ -21,14 +21,14 @@ These documents provide the structure and checkpoints to ensure I consistently f
 - Integration testing guidance
 - Completion validation criteria
 
-### 📊 **UNIT TEST EXPANSION WORKFLOW** *(Current Focus)*
-**Module-by-module test coverage expansion**
-- Target modules with 0% test coverage first
-- Write 15-25 comprehensive tests per module
-- Achieve 9.0+ pylint score before completion
-- Cover defaults, validation, edge cases, and security scenarios
-- Use proper mocking for external dependencies
-- Maintain quality with systematic approach
+### 🔧 **DEPENDENCY MANAGEMENT WORKFLOW** *(Current Focus)*
+**Centralized system dependency detection and configuration**
+- Implement cross-platform dependency detection (Windows/macOS/Linux)
+- Create persistent configuration with JSON caching to prevent repeated searches
+- Integrate CLI commands (`--check-dependencies`, `--refresh-dependencies`)
+- Auto-configure external tools (Tesseract OCR, Ollama LLM)
+- Extend timeout values for large operations (Local LLM model downloads)
+- Consolidate test architecture following user feedback
 
 ## Usage Instructions
 
@@ -45,17 +45,18 @@ These documents provide the structure and checkpoints to ensure I consistently f
    - Validate security and integration
    - Complete with proper cleanup
 
-### For Unit Test Coverage Expansion *(Current Priority)*
+### For Dependency Management Implementation *(Current Priority)*
 
-**When to Use**: Improving test coverage on existing modules without functional changes
+**When to Use**: Implementing centralized dependency detection and configuration
 
-1. **Module Selection**: Choose modules with low/zero test coverage
-2. **TodoWrite Planning**: Break into phases (defaults, validation, edge cases, security)
-3. **Comprehensive Testing**: Write 15-25 tests covering all functions and edge cases
-4. **Quality Gate**: Ensure 9.0+ pylint score maintained throughout
-5. **Success Validation**: All tests pass, coverage achieved, quality maintained
+1. **Architecture Planning**: Create centralized DependencyManager class with cross-platform support
+2. **TodoWrite Planning**: Break into phases (detection, caching, CLI integration, testing)
+3. **Implementation**: Cross-platform common installation locations, persistent JSON configuration
+4. **CLI Integration**: Add `--check-dependencies`, `--refresh-dependencies` commands
+5. **Testing Consolidation**: Follow user feedback to consolidate tests in existing files
+6. **Timeout Extensions**: Handle large operations (Local LLM downloads) with appropriate timeouts
 
-**Pattern**: `utils/feature_flags.py` (21 tests), `core/filename_config.py` (18 tests), `utils/expert_mode.py` (22 tests)
+**Recent Examples**: DependencyManager (32 tests), CLI integration (consolidated), Local LLM timeout fix (10-minute support)
 
 **Current Architecture (2024)**: Modern dependency injection with ApplicationContainer pattern, centralized Rich UI management via ConsoleManager, and comprehensive Rich testing infrastructure via RichTestCase framework.
 

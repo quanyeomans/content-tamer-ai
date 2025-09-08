@@ -679,5 +679,48 @@ class TestImprovedIntegrationPatterns(unittest.TestCase, RichTestCase):
                 self.assertGreater(len(unprocessed_files), 0, "Failed file should be in unprocessed")
 
 
+class TestDependencyManagementIntegration(unittest.TestCase):
+    """Test dependency management integration."""
+    
+    def test_dependency_manager_import(self):
+        """Test that dependency manager can be imported and initialized."""
+        from core.dependency_manager import DependencyManager, get_dependency_manager
+        
+        # Test basic initialization
+        temp_dir = tempfile.mkdtemp()
+        try:
+            manager = DependencyManager(config_dir=temp_dir)
+            self.assertIsNotNone(manager)
+            
+            # Test global instance
+            global_manager = get_dependency_manager()
+            self.assertIsNotNone(global_manager)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+    def test_dependency_detection_basic(self):
+        """Test basic dependency detection functionality."""
+        from core.dependency_manager import DependencyManager
+        
+        temp_dir = tempfile.mkdtemp()
+        try:
+            manager = DependencyManager(config_dir=temp_dir)
+            
+            # Test that common locations are defined
+            self.assertIn("ollama", manager.common_locations)
+            self.assertIn("tesseract", manager.common_locations)
+            
+            # Test dependency info gathering
+            info = manager.get_dependency_info()
+            self.assertIn("ollama", info)
+            self.assertIn("tesseract", info)
+            
+            # Test configuration functions exist
+            self.assertTrue(hasattr(manager, 'configure_dependency'))
+            self.assertTrue(hasattr(manager, 'refresh_all_dependencies'))
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

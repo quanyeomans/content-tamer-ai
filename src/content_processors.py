@@ -29,7 +29,18 @@ try:
     import pytesseract
     from PIL import Image
 
-    HAVE_TESSERACT = True
+    # Check if tesseract executable is actually available
+    from core.dependency_manager import get_dependency_manager
+    _dep_manager = get_dependency_manager()
+    tesseract_path = _dep_manager.find_dependency("tesseract")
+    
+    if tesseract_path:
+        # Configure pytesseract to use the found executable
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+        HAVE_TESSERACT = True
+    else:
+        HAVE_TESSERACT = False
+        
 except ImportError:
     HAVE_TESSERACT = False
 

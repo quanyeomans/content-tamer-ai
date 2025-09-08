@@ -256,5 +256,57 @@ class TestImageProcessor(unittest.TestCase):
         self.assertIsNone(image_b64)
 
 
+class TestContentProcessorsDependencyIntegration(unittest.TestCase):
+    """Test content processors integration with dependency management."""
+    
+    def setUp(self):
+        # Clear any existing module imports to test fresh initialization
+        modules_to_clear = [
+            'content_processors',
+            'core.dependency_manager'
+        ]
+        for module in modules_to_clear:
+            if module in sys.modules:
+                del sys.modules[module]
+
+    @patch('core.dependency_manager.get_dependency_manager')
+    def test_tesseract_detection_on_import_found(self, mock_get_manager):
+        """Test Tesseract detection and configuration when import occurs with Tesseract found."""
+        # Mock dependency manager to find Tesseract
+        mock_manager = MagicMock()
+        mock_manager.find_dependency.return_value = "/usr/bin/tesseract"
+        mock_get_manager.return_value = mock_manager
+        
+        # Mock pytesseract import
+        with patch.dict('sys.modules', {'pytesseract': MagicMock(), 'PIL': MagicMock()}):
+            mock_pytesseract = sys.modules['pytesseract']
+            mock_pytesseract.pytesseract = MagicMock()
+            
+            # Import content_processors to trigger initialization
+            import content_processors
+            
+            # Should have detected Tesseract and configured pytesseract
+            self.assertTrue(content_processors.HAVE_TESSERACT)
+            mock_manager.find_dependency.assert_called_once_with("tesseract")
+            self.assertEqual(mock_pytesseract.pytesseract.tesseract_cmd, "/usr/bin/tesseract")
+
+    @patch('core.dependency_manager.get_dependency_manager')
+    def test_tesseract_detection_on_import_not_found(self, mock_get_manager):
+        """Test Tesseract detection when import occurs with Tesseract not found."""
+        # Mock dependency manager to not find Tesseract
+        mock_manager = MagicMock()
+        mock_manager.find_dependency.return_value = None
+        mock_get_manager.return_value = mock_manager
+        
+        # Mock pytesseract import
+        with patch.dict('sys.modules', {'pytesseract': MagicMock(), 'PIL': MagicMock()}):
+            # Import content_processors to trigger initialization
+            import content_processors
+            
+            # Should not have Tesseract available
+            self.assertFalse(content_processors.HAVE_TESSERACT)
+            mock_manager.find_dependency.assert_called_once_with("tesseract")
+
+
 if __name__ == "__main__":
     unittest.main()

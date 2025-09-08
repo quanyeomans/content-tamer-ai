@@ -129,6 +129,28 @@ Examples:
         help="Show detailed information about a specific local model",
     )
 
+    # Dependency management options
+    dependency_group = parser.add_argument_group(
+        "Dependency Management",
+        "Commands for managing external dependencies"
+    )
+    dependency_group.add_argument(
+        "--check-dependencies",
+        action="store_true",
+        help="Check status of all external dependencies (Ollama, Tesseract, etc.)"
+    )
+    dependency_group.add_argument(
+        "--refresh-dependencies", 
+        action="store_true",
+        help="Refresh dependency detection and update configuration"
+    )
+    dependency_group.add_argument(
+        "--configure-dependency",
+        nargs=2,
+        metavar=("NAME", "PATH"),
+        help="Manually configure dependency path (e.g., --configure-dependency tesseract 'C:\\path\\to\\tesseract.exe')"
+    )
+
     # Organization options
     organization_group = parser.add_argument_group(
         "Organization Options",
@@ -328,6 +350,34 @@ def setup_environment_and_args():
                 print(f"❌ Model '{args.local_model_info}' not found")
         except Exception as e:
             print(f"❌ Failed to get model info: {e}")
+        sys.exit(0)
+
+    # Handle dependency management commands
+    if args.check_dependencies:
+        from core.cli_handler import CLIHandler
+        from utils.console_manager import get_application_console
+        cli_handler = CLIHandler(get_application_console())
+        cli_handler.check_all_dependencies()
+        sys.exit(0)
+    
+    if args.refresh_dependencies:
+        from core.cli_handler import CLIHandler
+        from utils.console_manager import get_application_console
+        cli_handler = CLIHandler(get_application_console())
+        cli_handler.refresh_dependencies()
+        sys.exit(0)
+        
+    if args.configure_dependency:
+        from core.cli_handler import CLIHandler
+        from utils.console_manager import get_application_console
+        dependency_name, dependency_path = args.configure_dependency
+        cli_handler = CLIHandler(get_application_console())
+        dep_manager = cli_handler._get_dependency_manager()
+        
+        if dep_manager.configure_dependency(dependency_name, dependency_path):
+            print(f"✅ Configured {dependency_name} at {dependency_path}")
+        else:
+            print(f"❌ Failed to configure {dependency_name}: Path not found or invalid")
         sys.exit(0)
 
     return args

@@ -79,7 +79,7 @@ utility_bill_electricity_january_2024.png
 ```bash
 git clone https://github.com/quanyeomans/content-tamer-ai.git
 cd content-tamer-ai
-python install.py  # Smart cross-platform installer
+python scripts/install.py  # Smart cross-platform installer
 ```
 
 **✨ Installer Features:**
@@ -182,10 +182,12 @@ content-tamer-ai --no-stats         # Hide statistics in progress display
 ### 🔍 Helpful Commands
 
 ```bash
-content-tamer-ai --help          # Show all options
-content-tamer-ai --list-models   # See available AI models
-content-tamer-ai --quiet         # Clean, minimal output
-content-tamer-ai --verbose       # Detailed processing information
+content-tamer-ai --help                    # Show all options
+content-tamer-ai --list-models             # See available AI models
+content-tamer-ai --check-dependencies      # Check all system dependencies
+content-tamer-ai --refresh-dependencies    # Refresh dependency detection
+content-tamer-ai --quiet                   # Clean, minimal output
+content-tamer-ai --verbose                 # Detailed processing information
 ```
 
 ---
@@ -272,7 +274,7 @@ data/
 # 1. Check if your system is ready
 content-tamer-ai --check-local-requirements
 
-# 2. Automatic setup with hardware detection
+# 2. Automatic setup with hardware detection (now with 10-minute timeout for large models)
 content-tamer-ai --setup-local-llm
 
 # 3. Start processing offline!
@@ -313,6 +315,7 @@ The setup process automatically:
 - **🔍 Analyzes your system** — RAM, CPU, GPU detection
 - **🎯 Recommends optimal models** — Based on available resources  
 - **📊 Shows performance estimates** — Expected processing speeds
+- **⏰ Extended download support** — 10-minute timeout for large models like llama3.1-8b
 - **⚠️ Warns about limitations** — Memory pressure, compatibility issues
 
 ### 🔧 Behind the Scenes
@@ -324,8 +327,8 @@ The setup process automatically:
 - GPU acceleration when available
 
 **No Configuration Required**
-- Ollama installation handled automatically
-- Models downloaded with progress tracking
+- Ollama and Tesseract auto-detected with centralized dependency management
+- Models downloaded with progress tracking and extended 10-minute timeout
 - Robust error handling and recovery
 - Graceful fallback to cloud providers
 
@@ -396,7 +399,7 @@ Our security philosophy prioritizes **user control** over blocking. We detect an
 ```bash
 git clone https://github.com/quanyeomans/content-tamer-ai.git
 cd content-tamer-ai
-python install.py  # Get set up
+python scripts/install.py  # Get set up
 
 # Configure your IDE (optional but recommended)
 cp .vscode/settings.json.example .vscode/settings.json  # VS Code
@@ -427,6 +430,8 @@ python -m pytest   # Run tests
 - **API errors** — Check API key is set correctly for your provider
 - **Garbled progress display** — Use `--no-color` for terminals with limited Unicode support
 - **Too much/little output** — Use `--quiet` for minimal output or `--verbose` for detailed logging
+- **Local LLM download timeout** — Large models (llama3.1-8b) now supported with 10-minute timeout
+- **Tesseract/Ollama not found** — Use `--check-dependencies` to verify installation and auto-configure paths
 
 ### Known Test Issues (Errata)
 The following test failures represent 7.8% of total tests and are primarily related to integration testing patterns or known environment constraints:

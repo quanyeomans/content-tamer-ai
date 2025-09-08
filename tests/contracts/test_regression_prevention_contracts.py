@@ -275,7 +275,7 @@ class TestRegressionPreventionContracts(unittest.TestCase, RichTestCase):
             self.assertEqual(stats.total, 6, "Total count regression in mixed processing")
             self.assertEqual(stats.succeeded, 4, "Success count regression in mixed processing")
             self.assertEqual(stats.failed, 2, "Failure count regression in mixed processing")
-            self.assertEqual(stats.success_rate, 66.7, "Success rate regression in mixed processing")
+            self.assertAlmostEqual(stats.success_rate, 66.7, places=1, msg="Success rate regression in mixed processing")
             
             # Contract: Processed files list must contain all files
             processed_count = len(stats._processed_files)

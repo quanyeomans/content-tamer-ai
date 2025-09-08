@@ -566,6 +566,13 @@ def main():
 
     # Print completion summary
     print_completion_summary(tesseract_available)
+    
+    # Mention dependency auto-detection
+    if not tesseract_available:
+        print()
+        print(f"{Colors.CYAN}💡 Tip: After installing Tesseract, run:{Colors.END}")
+        print(f"  content-tamer-ai --check-dependencies")
+        print(f"  This will auto-detect and configure external dependencies.")
 
 
 if __name__ == "__main__":
