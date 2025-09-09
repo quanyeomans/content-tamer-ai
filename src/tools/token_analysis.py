@@ -11,7 +11,19 @@ src_dir = os.path.dirname(current_dir)
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
-from utils.text_utils import ENCODING
+try:
+    from shared.infrastructure.text_utilities import ENCODING
+except ImportError:
+    # Fallback encoding for token analysis
+    import tiktoken
+    try:
+        ENCODING = tiktoken.get_encoding("cl100k_base")
+    except Exception:
+        # Final fallback - approximate token counting
+        class FallbackEncoding:
+            def encode(self, text):
+                return text.split()
+        ENCODING = FallbackEncoding()
 
 
 def analyze_filename_tokens():

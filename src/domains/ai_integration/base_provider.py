@@ -1,0 +1,35 @@
+"""
+Base Provider Interface
+
+Abstract base class for AI providers, separated to avoid circular imports.
+"""
+
+import logging
+from abc import ABC, abstractmethod
+from typing import Optional
+
+
+class AIProvider(ABC):
+    """Abstract base class for AI providers."""
+
+    def __init__(self, api_key: Optional[str], model_name: str):
+        """Initialize provider with API key and model."""
+        self.api_key = api_key
+        self.model_name = model_name
+        self.model = model_name  # Alias for backward compatibility
+        self.logger = logging.getLogger(__name__)
+
+    @abstractmethod
+    def generate_filename(self, content: str, original_filename: str) -> str:
+        """Generate filename from content using AI provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def validate_api_key(self) -> bool:
+        """Validate API key for the provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_provider_name(self) -> str:
+        """Get the provider name."""
+        raise NotImplementedError

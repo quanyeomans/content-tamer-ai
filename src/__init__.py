@@ -15,7 +15,29 @@ Licensed under MIT License - see LICENSE file for details.
 __version__ = "2.0.0"
 __author__ = "Content Tamer AI Project"
 
-# Import main functions for easy access
-from .main import organize_content
+# Main entry point for persona-driven architecture
+from .main import main
 
-__all__ = ["organize_content"]
+# Domain services for library usage
+try:
+    from .domains.content import ContentService
+    from .domains.ai_integration import AIIntegrationService
+    from .domains.organization import OrganizationService
+    DOMAIN_SERVICES_AVAILABLE = True
+except ImportError:
+    DOMAIN_SERVICES_AVAILABLE = False
+
+# Interface layer for programmatic access
+try:
+    from .interfaces.programmatic.library_interface import ContentTamerAPI
+    LIBRARY_API_AVAILABLE = True
+except ImportError:
+    LIBRARY_API_AVAILABLE = False
+
+__all__ = ["main"]
+
+if DOMAIN_SERVICES_AVAILABLE:
+    __all__.extend(["ContentService", "AIIntegrationService", "OrganizationService"])
+
+if LIBRARY_API_AVAILABLE:
+    __all__.extend(["ContentTamerAPI"])

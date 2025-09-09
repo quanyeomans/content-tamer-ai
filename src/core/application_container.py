@@ -9,12 +9,26 @@ This eliminates hard-coded dependencies and enables clean testing
 through dependency substitution.
 """
 
-from typing import Any, Dict, Optional
+import os
+import sys
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rich.console import Console
 
-from utils.console_manager import ConsoleManager, create_test_console
-from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+if TYPE_CHECKING:
+    from interfaces.human.interactive_cli import InteractiveCLI
+
+# Import display components with fallback for path issues
+try:
+    from shared.display.console_manager import ConsoleManager, create_test_console
+    from shared.display.rich_display_manager import RichDisplayManager, RichDisplayOptions
+except ImportError:
+    # Add src directory to path for absolute imports
+    src_dir = os.path.dirname(os.path.dirname(__file__))
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+    from shared.display.console_manager import ConsoleManager, create_test_console
+    from shared.display.rich_display_manager import RichDisplayManager, RichDisplayOptions
 
 
 class ApplicationContainer:
@@ -72,17 +86,24 @@ class ApplicationContainer:
         # Inject the managed Console instance
         return RichDisplayManager(self._console, options)
 
-    def create_cli_handler(self):
+    def create_cli_interface(self) -> "InteractiveCLI":
         """
-        Create CLI command handlers with injected Console.
+        Create CLI interface with injected Console.
 
         Returns:
-            CLIHandler: CLI handler with injected Console dependencies
+            InteractiveCLI: CLI interface with injected Console dependencies
         """
         # Import here to avoid circular dependencies
-        from core.cli_handler import CLIHandler
+        try:
+            from interfaces.human.interactive_cli import InteractiveCLI
+        except ImportError:
+            # Add src directory to path if not already done
+            current_src_dir = os.path.dirname(os.path.dirname(__file__))
+            if current_src_dir not in sys.path:
+                sys.path.insert(0, current_src_dir)
+            from interfaces.human.interactive_cli import InteractiveCLI
 
-        return CLIHandler(self._console)
+        return InteractiveCLI()
 
     def is_test_mode(self) -> bool:
         """
@@ -101,6 +122,94 @@ class ApplicationContainer:
             Dict[str, Any]: Console configuration details
         """
         return ConsoleManager.get_console_config()
+
+    def create_content_service(
+        self, ocr_lang: str = "eng", max_content_length: int = 2000
+    ) -> Optional[Any]:
+        """
+        Create Content Domain service with dependencies.
+
+        Args:
+            ocr_lang: OCR language for content extraction
+            max_content_length: Maximum content length for AI processing
+
+        Returns:
+            ContentService: Configured content service
+        """
+        # Import here to avoid circular dependencies
+        try:
+            from domains.content.content_service import ContentService
+
+            return ContentService(ocr_lang, max_content_length)
+        except ImportError:
+            # Fallback for when domain services not available
+            self._warn_about_missing_domain_services("content")
+            return None
+
+    def create_ai_integration_service(self, retry_config: Optional[Any] = None) -> Optional[Any]:
+        """
+        Create AI Integration Domain service with dependencies.
+
+        Args:
+            retry_config: Optional retry configuration for AI requests
+
+        Returns:
+            AIIntegrationService: Configured AI integration service
+        """
+        try:
+            from domains.ai_integration.ai_integration_service import AIIntegrationService
+
+            return AIIntegrationService(retry_config)
+        except ImportError:
+            self._warn_about_missing_domain_services("ai_integration")
+            return None
+
+    def create_organization_service(
+        self, target_folder: str, clustering_config: Optional[Any] = None
+    ) -> Optional[Any]:
+        """
+        Create Organization Domain service with dependencies.
+
+        Args:
+            target_folder: Target folder for document organization
+            clustering_config: Optional clustering configuration
+
+        Returns:
+            OrganizationService: Configured organization service
+        """
+        try:
+            from domains.organization.organization_service import OrganizationService
+
+            return OrganizationService(target_folder, clustering_config)
+        except ImportError:
+            self._warn_about_missing_domain_services("organization")
+            return None
+
+    def create_application_kernel(self) -> Optional[Any]:
+        """
+        Create application kernel with all domain services wired.
+
+        Returns:
+            ApplicationKernel: Main application orchestration component
+        """
+        try:
+            from orchestration.application_kernel import ApplicationKernel
+
+            return ApplicationKernel(self)
+        except ImportError:
+            # Fallback to legacy application setup
+            self._warn_about_missing_domain_services("application_kernel")
+            return None
+
+    def _warn_about_missing_domain_services(self, service_name: str) -> None:
+        """Warn about missing domain services."""
+        import warnings
+
+        warnings.warn(
+            f"Domain service '{service_name}' not available. "
+            "Using legacy implementation or falling back to limited functionality.",
+            RuntimeWarning,
+        )
 
 
 class TestApplicationContainer(ApplicationContainer):
@@ -192,7 +301,7 @@ def get_global_container() -> ApplicationContainer:
     Returns:
         ApplicationContainer: Global container instance
     """
-    global _global_container
+    global _global_container  # pylint: disable=global-statement
     if _global_container is None:
         _global_container = ApplicationContainer()
     return _global_container
@@ -207,7 +316,7 @@ def set_global_container(container: ApplicationContainer) -> None:
     Args:
         container: Container instance to use globally
     """
-    global _global_container
+    global _global_container  # pylint: disable=global-statement
     _global_container = container
 
 
@@ -218,6 +327,6 @@ def reset_global_container() -> None:
     Forces recreation on next access. Used for testing
     and development scenarios.
     """
-    global _global_container
+    global _global_container  # pylint: disable=global-statement
     _global_container = None
     ConsoleManager.reset()

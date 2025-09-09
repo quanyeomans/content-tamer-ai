@@ -3,23 +3,24 @@
 import os
 import shutil
 import tempfile
-from typing import Any, Dict, List
-from unittest.mock import Mock, patch
+from typing import Dict
 
 
 class BDDTestContext:
-    """Context object for BDD tests with real file operations."""
-
+    """Context for BDD tests with minimal mocking."""
+    
     def __init__(self):
+        """Initialize context with clean state."""
         self.temp_dir = None
         self.input_dir = None
         self.processed_dir = None
         self.unprocessed_dir = None
-        self.test_files: List[str] = []
-        self.processing_result = None
-        self.display_output = None
+        self.test_files = []
         self.ai_mock_responses: Dict[str, str] = {}
-
+        self.processing_result = None
+        self.processing_error = None
+        self.display_output = None
+    
     def setup_directories(self):
         """Create clean test directories."""
         self.temp_dir = tempfile.mkdtemp()
@@ -38,12 +39,12 @@ class BDDTestContext:
     def create_pdf_file(self, filename: str, content: str = "Test document content") -> str:
         """Create a realistic PDF file for testing by copying from fixtures."""
         filepath = os.path.join(self.input_dir, filename)
-        
+
         # Use real PDF from fixtures instead of fake PDF
         fixture_pdf = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "fixtures", "sample.pdf"
+            os.path.dirname(os.path.dirname(__file__)), "fixtures", "sample.pd"
         )
-        
+
         if os.path.exists(fixture_pdf):
             shutil.copy2(fixture_pdf, filepath)
         else:
@@ -89,11 +90,11 @@ endobj
 
 xref
 0 5
-0000000000 65535 f 
-0000000010 00000 n 
-0000000053 00000 n 
-0000000110 00000 n 
-0000000205 00000 n 
+0000000000 65535 f
+0000000010 00000 n
+0000000053 00000 n
+0000000110 00000 n
+0000000205 00000 n
 trailer
 <<
 /Size 5
@@ -104,7 +105,7 @@ startxref
 %%EOF"""
             with open(filepath, "wb") as f:
                 f.write(pdf_content)
-        
+
         self.test_files.append(filepath)
         return filepath
 
@@ -147,7 +148,7 @@ startxref
 
         # Default AI response pattern
         base_name = (
-            filename_hint.replace(".pdf", "").replace(".png", "").replace(".txt", "")
+            filename_hint.replace(".pd", "").replace(".png", "").replace(".txt", "")
             if filename_hint
             else "document"
         )
@@ -158,7 +159,6 @@ startxref
         # In real implementation, this would involve OS-level file locking
         # For BDD tests, we'll simulate this behavior in step definitions
         pass
-
 
 def create_test_context() -> BDDTestContext:
     """Create a new BDD test context with clean state."""

@@ -6,7 +6,6 @@ This script checks system requirements, validates Python environment,
 and installs dependencies with user consent.
 """
 
-import os
 import sys
 import subprocess
 import platform
@@ -107,21 +106,15 @@ def check_pip_available():
     print_step(2, "Checking Package Manager")
 
     try:
-        import pip
-
+        subprocess.run(
+            [sys.executable, "-m", "pip", "--version"], check=True, capture_output=True
+        )
         print_success("pip package manager detected")
         return True
-    except ImportError:
-        try:
-            subprocess.run(
-                [sys.executable, "-m", "pip", "--version"], check=True, capture_output=True
-            )
-            print_success("pip available via module")
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            print_error("pip not found")
-            print("  Install pip: https://pip.pypa.io/en/stable/installation/")
-            return False
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print_error("pip not found")
+        print("  Install pip: https://pip.pypa.io/en/stable/installation/")
+        return False
 
 
 def check_tesseract_binary():
@@ -199,7 +192,7 @@ def get_ai_provider_options():
         },
         "local": {
             "package": "psutil>=5.9.0",
-            "description": "🏠 Local LLM (offline processing, no API keys required)",
+            "description": "Local LLM (offline processing, no API keys required)",
             "status": "[NEW] Complete Privacy",
         },
         "dev": {
@@ -233,11 +226,10 @@ def prompt_user_consent(packages, package_type="dependencies"):
 
         if response in ["y", "yes"]:
             return True
-        elif response in ["n", "no", ""]:
+        if response in ["n", "no", ""]:
             print_info("Installation cancelled by user")
             return False
-        else:
-            print("Please enter 'y' for yes or 'n' for no (default: no)")
+        print("Please enter 'y' for yes or 'n' for no (default: no)")
 
 
 def install_packages(packages, package_type="packages"):
@@ -295,7 +287,7 @@ def select_ai_providers():
                 f"Select providers to install {Colors.BOLD}[1,2,3,4 or 0 to skip]{Colors.END}: "
             ).strip()
 
-            if choices == "0" or choices == "":
+            if choices in ("0", ""):
                 print_info("Skipping AI provider installation")
                 break
 
@@ -307,8 +299,7 @@ def select_ai_providers():
                     key = options[i - 1]
                     selected_packages.append(providers[key]["package"])
                 break
-            else:
-                print(f"Please enter numbers between 1-{len(options)} or 0 to skip")
+            print(f"Please enter numbers between 1-{len(options)} or 0 to skip")
 
         except ValueError:
             print("Please enter valid numbers separated by commas")
@@ -342,11 +333,10 @@ def create_virtual_environment():
 
         if response in ["y", "yes", ""]:
             break
-        elif response in ["n", "no"]:
+        if response in ["n", "no"]:
             print_warning("Proceeding without virtual environment")
             return True
-        else:
-            print("Please enter 'y' for yes or 'n' for no")
+        print("Please enter 'y' for yes or 'n' for no")
 
     venv_name = "venv"
     venv_path = Path(venv_name)
@@ -357,7 +347,7 @@ def create_virtual_environment():
             response = input("Use existing directory? [Y/n]: ").strip().lower()
             if response in ["y", "yes", ""]:
                 break
-            elif response in ["n", "no"]:
+            if response in ["n", "no"]:
                 print_error("Virtual environment creation cancelled")
                 return False
 
@@ -393,13 +383,13 @@ def install_spacy_model():
     try:
         print("Downloading spaCy English language model (en_core_web_sm)...")
         print("This may take a few minutes depending on your internet connection.")
-        
+
         cmd = [sys.executable, "-m", "spacy", "download", "en_core_web_sm"]
         subprocess.run(cmd, check=True, text=True)
-        
+
         print_success("spaCy language model installed successfully")
         return True
-    
+
     except subprocess.CalledProcessError as e:
         print_error("Failed to install spaCy language model")
         print(f"  Error code: {e.returncode}")
@@ -446,7 +436,7 @@ def verify_installation():
     # Test spaCy model loading separately
     try:
         import spacy
-        nlp = spacy.load("en_core_web_sm")
+        spacy.load("en_core_web_sm")
         print_success("spaCy English model loaded successfully")
     except OSError:
         print_warning("spaCy English model not available - using basic fallback")
@@ -566,13 +556,13 @@ def main():
 
     # Print completion summary
     print_completion_summary(tesseract_available)
-    
+
     # Mention dependency auto-detection
     if not tesseract_available:
         print()
-        print(f"{Colors.CYAN}💡 Tip: After installing Tesseract, run:{Colors.END}")
-        print(f"  content-tamer-ai --check-dependencies")
-        print(f"  This will auto-detect and configure external dependencies.")
+        print(f"{Colors.CYAN}Tip: After installing Tesseract, run:{Colors.END}")
+        print("  content-tamer-ai --check-dependencies")
+        print("  This will auto-detect and configure external dependencies.")
 
 
 if __name__ == "__main__":

@@ -138,12 +138,12 @@ ignore_missing_imports = true
 
 # Pyright configuration
 [tool.pyright]
-include = ["src"]
+include = ["src", "tests"]
 exclude = [
     "**/node_modules",
-    "**/__pycache__",
-    "tests"
+    "**/__pycache__"
 ]
+extraPaths = ["src"]
 reportMissingImports = true
 reportMissingTypeStubs = false
 pythonVersion = "3.8"

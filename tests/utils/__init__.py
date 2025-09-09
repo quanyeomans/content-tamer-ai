@@ -19,7 +19,7 @@ from .rich_test_utils import (
 
 __all__ = [
     'create_test_console',
-    'create_test_container', 
+    'create_test_container',
     'capture_console_output',
     'reset_console_manager',
     'RichTestCase',

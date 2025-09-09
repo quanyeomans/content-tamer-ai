@@ -1,0 +1,9 @@
+[tool.pyright]
+reportMissingImports = "none"
+reportAssignmentType = "none"
+reportReturnType = "none"
+reportGeneralTypeIssues = "none"
+reportUndefinedVariable = "none"
+reportOptionalMemberAccess = "none"
+reportAttributeAccessIssue = "none"
+reportPossiblyUnboundVariable = "none"

@@ -8,12 +8,21 @@ This package contains the core business logic components:
 - application: Main application orchestration logic
 """
 
-# Remove direct imports to prevent circular dependencies
-# Import these modules as needed in specific functions
+# Import the main application container components
+from .application_container import (
+    ApplicationContainer,
+    create_application_container,
+    create_test_container,
+    get_global_container,
+    set_global_container,
+    reset_global_container,
+)
 
 __all__ = [
-    "organize_content",
-    "parse_arguments",
-    "ensure_default_directories",
-    "process_file_enhanced",
+    "ApplicationContainer",
+    "create_application_container",
+    "create_test_container",
+    "get_global_container",
+    "set_global_container",
+    "reset_global_container",
 ]
