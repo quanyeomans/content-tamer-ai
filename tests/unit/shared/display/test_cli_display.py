@@ -5,7 +5,7 @@ Tests for CLI display utilities - ANSI colors and terminal detection.
 import os
 import sys
 import unittest
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
@@ -18,6 +18,7 @@ from shared.display.cli_display import (
     create_formatter,
     get_terminal_capabilities,
 )
+
 
 class TestColors(unittest.TestCase):
     """Test ANSI color constants."""
@@ -35,6 +36,7 @@ class TestColors(unittest.TestCase):
         self.assertTrue(Colors.GREEN.startswith("\033["))
         self.assertEqual(Colors.RESET, "\033[0m")
         self.assertEqual(Colors.BOLD, "\033[1m")
+
 
 class TestTerminalCapabilities(unittest.TestCase):
     """Test terminal capability detection."""
@@ -92,6 +94,7 @@ class TestTerminalCapabilities(unittest.TestCase):
         capabilities._terminal_width = None  # Force re-detection
         width = capabilities.terminal_width
         self.assertEqual(width, 80)  # Should fallback to 80
+
 
 class TestColorFormatter(unittest.TestCase):
     """Test color formatting functionality."""
@@ -190,6 +193,7 @@ class TestColorFormatter(unittest.TestCase):
         self.assertNotIn("✅", result)  # Should not contain Unicode emoji
         self.assertIn("[OK]", result)  # Should contain ASCII alternative
 
+
 class TestConvenienceFunctions(unittest.TestCase):
     """Test convenience functions."""
 
@@ -205,6 +209,7 @@ class TestConvenienceFunctions(unittest.TestCase):
 
         formatter_no_color = create_formatter(no_color=True)
         self.assertTrue(formatter_no_color.no_color)
+
 
 class TestCrossPlatformCompatibility(unittest.TestCase):
     """Test cross-platform compatibility."""
@@ -237,6 +242,7 @@ class TestCrossPlatformCompatibility(unittest.TestCase):
         # xterm should support colors if isatty() returns True
         with patch("sys.stdout.isatty", return_value=True):
             self.assertTrue(capabilities.supports_color)
+
 
 if __name__ == "__main__":
     unittest.main()

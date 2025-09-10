@@ -12,12 +12,13 @@ Used as part of quality gates to prevent Console creation regressions.
 import ast
 import os
 import sys
-from typing import List, Dict, Any, NamedTuple
 from pathlib import Path
+from typing import Any, Dict, List, NamedTuple
 
 
 class ConsoleCreation(NamedTuple):
     """Represents a detected Console creation in code."""
+
     file_path: str
     line_number: int
     column: int
@@ -35,7 +36,7 @@ class ConsoleCreationDetector(ast.NodeVisitor):
 
         # Load source for context extraction
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 self.source_lines = f.readlines()
         except Exception:
             self.source_lines = []
@@ -45,17 +46,17 @@ class ConsoleCreationDetector(ast.NodeVisitor):
         creation_type = None
 
         # Direct Console() call
-        if isinstance(node.func, ast.Name) and node.func.id == 'Console':
-            creation_type = 'direct'
+        if isinstance(node.func, ast.Name) and node.func.id == "Console":
+            creation_type = "direct"
 
         # Module.Console() call (e.g., rich.console.Console())
-        elif isinstance(node.func, ast.Attribute) and node.func.attr == 'Console':
-            creation_type = 'attribute'
+        elif isinstance(node.func, ast.Attribute) and node.func.attr == "Console":
+            creation_type = "attribute"
 
         # Imported alias call (less common but possible)
-        elif isinstance(node.func, ast.Name) and 'console' in node.func.id.lower():
+        elif isinstance(node.func, ast.Name) and "console" in node.func.id.lower():
             # Check if it might be a Console constructor alias
-            creation_type = 'import_alias'
+            creation_type = "import_alias"
 
         if creation_type:
             context = self._get_line_context(node.lineno)
@@ -64,7 +65,7 @@ class ConsoleCreationDetector(ast.NodeVisitor):
                 line_number=node.lineno,
                 column=node.col_offset,
                 context=context,
-                creation_type=creation_type
+                creation_type=creation_type,
             )
             self.console_creations.append(creation)
 
@@ -91,7 +92,7 @@ def scan_file_for_console_creations(file_path: str) -> List[ConsoleCreation]:
         List[ConsoleCreation]: Detected Console instantiations
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             source = f.read()
 
         # Parse the AST
@@ -108,7 +109,9 @@ def scan_file_for_console_creations(file_path: str) -> List[ConsoleCreation]:
         return []
 
 
-def scan_directory_for_console_creations(directory: str, exclude_patterns: List[str] = None) -> List[ConsoleCreation]:
+def scan_directory_for_console_creations(
+    directory: str, exclude_patterns: List[str] = None
+) -> List[ConsoleCreation]:
     """
     Recursively scan directory for Console creations.
 
@@ -121,14 +124,14 @@ def scan_directory_for_console_creations(directory: str, exclude_patterns: List[
     """
     if exclude_patterns is None:
         exclude_patterns = [
-            '__pycache__',
-            '.pytest_cache',
-            '.git',
-            'node_modules',
-            'venv',
-            '.venv',
-            'console_manager.py',  # Exclude our own Console management
-            'console_analysis.py'  # Exclude this analysis tool
+            "__pycache__",
+            ".pytest_cache",
+            ".git",
+            "node_modules",
+            "venv",
+            ".venv",
+            "console_manager.py",  # Exclude our own Console management
+            "console_analysis.py",  # Exclude this analysis tool
         ]
 
     all_creations = []
@@ -138,7 +141,7 @@ def scan_directory_for_console_creations(directory: str, exclude_patterns: List[
         dirs[:] = [d for d in dirs if not any(pattern in d for pattern in exclude_patterns)]
 
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith(".py"):
                 # Skip excluded files
                 if any(pattern in file for pattern in exclude_patterns):
                     continue
@@ -162,10 +165,10 @@ def analyze_console_creations(creations: List[ConsoleCreation]) -> Dict[str, Any
     """
     if not creations:
         return {
-            'total_violations': 0,
-            'files_affected': 0,
-            'creation_types': {},
-            'severity': 'NONE'
+            "total_violations": 0,
+            "files_affected": 0,
+            "creation_types": {},
+            "severity": "NONE",
         }
 
     # Count by file
@@ -179,19 +182,19 @@ def analyze_console_creations(creations: List[ConsoleCreation]) -> Dict[str, Any
     # Determine severity
     total_violations = len(creations)
     if total_violations == 0:
-        severity = 'NONE'
+        severity = "NONE"
     elif total_violations <= 2:
-        severity = 'LOW'
+        severity = "LOW"
     elif total_violations <= 5:
-        severity = 'MEDIUM'
+        severity = "MEDIUM"
     else:
-        severity = 'HIGH'
+        severity = "HIGH"
 
     return {
-        'total_violations': total_violations,
-        'files_affected': files_affected,
-        'creation_types': creation_types,
-        'severity': severity
+        "total_violations": total_violations,
+        "files_affected": files_affected,
+        "creation_types": creation_types,
+        "severity": severity,
     }
 
 
@@ -206,7 +209,7 @@ def generate_report(creations: List[ConsoleCreation], analysis: Dict[str, Any]) 
     Returns:
         str: Formatted report
     """
-    if analysis['total_violations'] == 0:
+    if analysis["total_violations"] == 0:
         return """
 [PASS] CONSOLE ANALYSIS: PASSED
 No Console() instantiations found.
@@ -222,7 +225,7 @@ Files affected: {analysis['files_affected']}
 VIOLATIONS BY TYPE:
 """
 
-    for creation_type, count in analysis['creation_types'].items():
+    for creation_type, count in analysis["creation_types"].items():
         report += f"  {creation_type}: {count}\n"
 
     report += "\nDETAILED VIOLATIONS:\n"
@@ -257,7 +260,7 @@ def main() -> None:
     else:
         # Default to src/ directory relative to this script
         script_dir = Path(__file__).parent
-        scan_dir = script_dir.parent / 'src'
+        scan_dir = script_dir.parent / "src"
 
     if not os.path.exists(scan_dir):
         print(f"Error: Directory {scan_dir} does not exist", file=sys.stderr)
@@ -274,7 +277,7 @@ def main() -> None:
     print(report)
 
     # Exit with appropriate code
-    if analysis['total_violations'] > 0:
+    if analysis["total_violations"] > 0:
         print("\n[FAIL] CONSOLE ANALYSIS: FAILED")
         print("Architecture violations must be resolved before proceeding.")
         sys.exit(1)
@@ -284,5 +287,5 @@ def main() -> None:
         sys.exit(0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

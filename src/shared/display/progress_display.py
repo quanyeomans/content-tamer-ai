@@ -92,7 +92,9 @@ class ProgressDisplay:  # pylint: disable=too-many-instance-attributes
 
     def add_warning(self, filename: Optional[str] = None) -> None:
         """Increment warning count for unique files only."""
-        if filename and filename not in self.stats._files_with_warnings:  # pylint: disable=protected-access
+        if (
+            filename and filename not in self.stats._files_with_warnings
+        ):  # pylint: disable=protected-access
             self.stats.warnings += 1
             self.stats._files_with_warnings.add(filename)  # pylint: disable=protected-access
         elif not filename:
@@ -199,7 +201,9 @@ class ProgressDisplay:  # pylint: disable=too-many-instance-attributes
                     f"\n{' ' * 80}\r{Colors.CURSOR_UP if not self.formatter.no_color else ''}"
                 )
 
-    def _render_progress(self, description: str = "Processing") -> None:  # pylint: disable=unused-argument
+    def _render_progress(
+        self, description: str = "Processing"  # pylint: disable=unused-argument
+    ) -> None:
         """Render the complete progress display."""
         self._clear_current_line()
 

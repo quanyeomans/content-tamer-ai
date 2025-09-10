@@ -39,12 +39,97 @@ content-tamer-ai/
 
 ### **Code Quality Gates (MANDATORY)**
 ```bash
-# Before any commit - ALL must pass:
-pylint src/ --fail-under=9.5              # Code quality ≥9.5/10
-flake8 src/ --max-line-length=100         # Style compliance
-bandit -r src/ -ll -i                     # Security scan clean
+# PHASE 1: Code Formatting (Run first)
+black src/ tests/ --line-length=100      # Consistent formatting
+isort src/ tests/ --line-length=100      # Import ordering
+
+# PHASE 2: Comprehensive Analysis
+pylint src/ --fail-under=9.5             # Code quality ≥9.5/10 (Enhanced standard)
+pyright src/                             # Type checking (0 errors required)
+flake8 src/ --max-line-length=100        # Style compliance
+bandit -r src/ --severity-level high     # Security scan (0 high/medium issues)
 safety check                             # Dependency vulnerabilities
 pytest tests/ -x --tb=short              # Test suite passing
+
+# PHASE 3: Systematic Cleanup Validation
+pylint src/ --disable=all --enable=W0611,W0612,W0613  # Must be 10.00/10 (unused warnings)
+pylint src/ --disable=all --enable=W1203              # Must be 10.00/10 (logging format)
+pylint src/ --disable=all --enable=E0401,E0611        # Must be 10.00/10 (import errors)
+```
+
+### **🧹 Systematic Linting Workflow**
+```bash
+# Use parallel agent approach for large-scale cleanup:
+
+# 1. Deploy Import Resolution Agent
+# Task: Fix all E0401, E0611 errors across provider files
+# Focus: shared.infrastructure.filename_config imports, provider signatures
+
+# 2. Deploy Type Safety Agent  
+# Task: Fix orchestration layer pyright errors
+# Focus: return types, function signatures, missing imports
+
+# 3. Deploy Code Quality Agent
+# Task: Fix W1203 logging, R1705 structure issues
+# Focus: f-string logging → lazy %, unnecessary else after return
+
+# 4. Deploy Cleanup Agent
+# Task: Eliminate W0611, W0612, W0613 warnings
+# Focus: unused imports/variables, proper _ prefixing
+
+# Final validation must achieve:
+# - Pylint: ≥9.5/10 overall
+# - Pyright: 0 errors (warnings acceptable)  
+# - Unused warnings: 10.00/10 perfect score
+```
+
+### **🧪 Test Infrastructure Architecture Patterns (Proven)**
+
+#### **Test Execution Isolation (Critical for Integration Tests)**
+```bash
+# LESSON: Tests that pass individually but fail in suite = state contamination
+
+# Solution 1: Process-Level Isolation (100% reliable)
+python tools/testing/isolated_test_runner.py --integration
+# Result: 41/41 integration tests pass (100% vs 63% in suite)
+
+# Solution 2: Enhanced State Cleanup (conftest.py)
+def pytest_runtest_teardown(item, nextitem):
+    gc.collect()  # Clear ML models
+    spacy.info._CACHE.clear()  # Clear spaCy state
+    sys.path cleanup  # Reset import paths
+
+# Solution 3: Segmented Execution by Performance
+fast_tests: <2s (infrastructure) → immediate feedback
+slow_tests: >10s (ML-heavy) → separate execution with timeouts
+```
+
+#### **Pattern Consistency During Refactoring**
+```python
+# ✅ CORRECT: Consistent unittest patterns
+class TestService(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+    
+    def test_method(self):  # No pytest fixture parameters
+        # Use self.temp_dir
+
+# ❌ WRONG: Mixed unittest + pytest patterns  
+class TestService(unittest.TestCase):
+    def test_method(self, tmp_path):  # Causes TypeError
+        # unittest.TestCase doesn't support pytest fixtures
+```
+
+#### **ML Model Testing Optimization**
+```python
+# Session-scoped fixtures reduce 55s → 5s (90% improvement)
+@pytest.fixture(scope="session")
+def spacy_model():
+    return spacy.load("en_core_web_sm")
+
+# State cleanup prevents cross-test contamination
+def pytest_runtest_teardown(item, nextitem):
+    gc.collect()  # Critical for ML model tests
 ```
 
 ### **Architecture Compliance Checks**

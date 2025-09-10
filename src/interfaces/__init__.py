@@ -12,4 +12,4 @@ enabling clean support for multiple user personas without coupling.
 
 from .base_interfaces import HumanInterface, ProgrammaticInterface
 
-__all__ = ['HumanInterface', 'ProgrammaticInterface']
+__all__ = ["HumanInterface", "ProgrammaticInterface"]

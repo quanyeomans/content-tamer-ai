@@ -12,13 +12,13 @@ import platform
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 class DependencyManager:
     """
     Centralized manager for external dependency detection and configuration.
-    
+
     Features:
     - Automatic detection of dependencies in common installation locations
     - Persistent configuration caching to avoid repeated searches
@@ -29,12 +29,12 @@ class DependencyManager:
     def __init__(self, config_dir: Optional[str] = None):
         """
         Initialize dependency manager with optional custom config directory.
-        
+
         Args:
             config_dir: Custom directory for storing dependency config (defaults to user data dir)
         """
         self.system = platform.system()
-        
+
         # Set up config directory
         if config_dir:
             self.config_dir = Path(config_dir)
@@ -46,13 +46,13 @@ class DependencyManager:
             else:
                 base_dir = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
                 self.config_dir = Path(base_dir) / "content-tamer-ai"
-        
+
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_file = self.config_dir / "dependencies.json"
-        
+
         # Load existing configuration
         self.config = self._load_config()
-        
+
         # Define common installation locations per platform
         self._define_common_locations()
 
@@ -63,28 +63,28 @@ class DependencyManager:
                 "ollama": [
                     os.path.expanduser("~\\AppData\\Local\\Programs\\Ollama\\ollama.exe"),
                     "C:\\Program Files\\Ollama\\ollama.exe",
-                    "C:\\Program Files (x86)\\Ollama\\ollama.exe"
+                    "C:\\Program Files (x86)\\Ollama\\ollama.exe",
                 ],
                 "tesseract": [
                     "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
                     "C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe",
                     os.path.expanduser("~\\AppData\\Local\\Programs\\Tesseract-OCR\\tesseract.exe"),
                     "C:\\Tools\\tesseract\\tesseract.exe",
-                    "C:\\tesseract\\tesseract.exe"
-                ]
+                    "C:\\tesseract\\tesseract.exe",
+                ],
             }
         elif self.system == "Darwin":  # macOS
             self.common_locations = {
                 "ollama": [
                     "/usr/local/bin/ollama",
                     "/opt/homebrew/bin/ollama",
-                    os.path.expanduser("~/bin/ollama")
+                    os.path.expanduser("~/bin/ollama"),
                 ],
                 "tesseract": [
                     "/usr/local/bin/tesseract",
                     "/opt/homebrew/bin/tesseract",
-                    "/usr/bin/tesseract"
-                ]
+                    "/usr/bin/tesseract",
+                ],
             }
         else:  # Linux and others
             self.common_locations = {
@@ -92,22 +92,22 @@ class DependencyManager:
                     "/usr/local/bin/ollama",
                     "/usr/bin/ollama",
                     os.path.expanduser("~/.local/bin/ollama"),
-                    os.path.expanduser("~/bin/ollama")
+                    os.path.expanduser("~/bin/ollama"),
                 ],
                 "tesseract": [
                     "/usr/bin/tesseract",
                     "/usr/local/bin/tesseract",
-                    "/snap/bin/tesseract"
-                ]
+                    "/snap/bin/tesseract",
+                ],
             }
 
     def _load_config(self) -> Dict[str, str]:
         """Load dependency configuration from file."""
         if not self.config_file.exists():
             return {}
-        
+
         try:
-            with open(self.config_file, 'r', encoding='utf-8') as f:
+            with open(self.config_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError) as e:
             logging.warning(f"Failed to load dependency config: {e}")
@@ -116,7 +116,7 @@ class DependencyManager:
     def _save_config(self) -> None:
         """Save dependency configuration to file."""
         try:
-            with open(self.config_file, 'w', encoding='utf-8') as f:
+            with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2)
         except OSError as e:
             logging.warning(f"Failed to save dependency config: {e}")
@@ -124,11 +124,11 @@ class DependencyManager:
     def find_dependency(self, name: str, force_refresh: bool = False) -> Optional[str]:
         """
         Find dependency path, checking cache first, then common locations.
-        
+
         Args:
             name: Dependency name (e.g., 'ollama', 'tesseract')
             force_refresh: Force re-detection even if cached
-            
+
         Returns:
             Path to dependency executable or None if not found
         """
@@ -163,18 +163,18 @@ class DependencyManager:
     def configure_dependency(self, name: str, path: str) -> bool:
         """
         Manually configure dependency path.
-        
+
         Args:
             name: Dependency name
             path: Full path to dependency executable
-            
+
         Returns:
             True if path is valid and was configured
         """
         if not os.path.exists(path):
             logging.error(f"Dependency path does not exist: {path}")
             return False
-        
+
         self.config[name] = path
         self._save_config()
         logging.info(f"Configured {name} at {path}")
@@ -183,57 +183,61 @@ class DependencyManager:
     def get_dependency_info(self) -> Dict[str, Dict[str, Any]]:
         """
         Get comprehensive information about all configured dependencies.
-        
+
         Returns:
             Dictionary with dependency status, paths, and versions
         """
         info = {}
-        
+
         for dep_name in ["ollama", "tesseract"]:
             dep_path = self.find_dependency(dep_name)
             info[dep_name] = {
                 "available": dep_path is not None,
                 "path": dep_path,
                 "version": self._get_version(dep_name, dep_path) if dep_path else None,
-                "cached": dep_name in self.config
+                "cached": dep_name in self.config,
             }
-        
+
         return info
 
     def _get_version(self, name: str, path: str) -> Optional[str]:
         """Get version string for a dependency."""
         try:
             if name == "ollama":
-                result = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=5)
+                result = subprocess.run(
+                    [path, "--version"], capture_output=True, text=True, timeout=5
+                )
                 if result.returncode == 0:
                     # Extract version from "ollama version is X.Y.Z"
                     output = result.stdout.strip()
                     if "version is" in output:
                         return output.split("version is")[-1].strip()
             elif name == "tesseract":
-                result = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=5)
+                result = subprocess.run(
+                    [path, "--version"], capture_output=True, text=True, timeout=5
+                )
                 if result.returncode == 0:
                     # Extract version from first line
-                    lines = result.stdout.strip().split('\n')
+                    lines = result.stdout.strip().split("\n")
                     if lines:
-                        return lines[0].replace('tesseract ', '').strip()
-                        
+                        return lines[0].replace("tesseract ", "").strip()
+
         except (subprocess.SubprocessError, OSError, FileNotFoundError):
             pass
-        
+
         return None
 
     def refresh_all_dependencies(self) -> Dict[str, Optional[str]]:
         """
         Refresh detection for all dependencies.
-        
+
         Returns:
             Dictionary mapping dependency names to their detected paths
         """
         results = {}
         for dep_name in ["ollama", "tesseract"]:
             results[dep_name] = self.find_dependency(dep_name, force_refresh=True)
-        
+
         return results
 
     def get_config_path(self) -> Path:
@@ -250,21 +254,21 @@ class DependencyManager:
     def validate_dependency(self, name: str) -> Tuple[bool, str]:
         """
         Validate that a dependency is properly configured and working.
-        
+
         Args:
             name: Dependency name to validate
-            
+
         Returns:
             Tuple of (is_valid, status_message)
         """
         dep_path = self.find_dependency(name)
-        
+
         if not dep_path:
             return False, f"{name} not found in PATH or common locations"
-        
+
         if not os.path.exists(dep_path):
             return False, f"{name} path no longer exists: {dep_path}"
-        
+
         try:
             version = self._get_version(name, dep_path)
             if version:
@@ -277,6 +281,7 @@ class DependencyManager:
 
 # Global instance for easy access
 _dependency_manager = None
+
 
 def get_dependency_manager() -> DependencyManager:
     """Get or create global dependency manager instance."""

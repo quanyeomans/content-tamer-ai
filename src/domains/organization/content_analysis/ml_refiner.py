@@ -7,16 +7,18 @@ Uses state-of-the-art sentence transformers with simple clustering for reliable 
 """
 
 import logging
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
 try:
     from sentence_transformers import SentenceTransformer
-    from sklearn.cluster import DBSCAN, KMeans
+    from sklearn.cluster import KMeans
     from sklearn.metrics import silhouette_score
-    from sklearn.preprocessing import StandardScaler
+
+    # StandardScaler imported but not used - keeping for future ML enhancements
+    from sklearn.preprocessing import StandardScaler  # pylint: disable=unused-import
 
     TRANSFORMERS_AVAILABLE = True
     SentenceTransformer_available = SentenceTransformer
@@ -72,14 +74,10 @@ class SelectiveMLRefinement:
             return {}
 
         if len(uncertain_docs) < self.min_documents_for_ml:
-            logging.info(
-                f"Skipping ML refinement - only {len(uncertain_docs)} uncertain documents"
-            )
+            logging.info(f"Skipping ML refinement - only {len(uncertain_docs)} uncertain documents")
             return {}
 
-        logging.info(
-            f"Applying ML refinement to {len(uncertain_docs)} uncertain documents"
-        )
+        logging.info(f"Applying ML refinement to {len(uncertain_docs)} uncertain documents")
 
         try:
             # Generate embeddings for uncertain documents
@@ -88,9 +86,7 @@ class SelectiveMLRefinement:
                 return {}
 
             # Apply intelligent clustering
-            cluster_assignments = self._apply_smart_clustering(
-                embeddings, uncertain_docs
-            )
+            cluster_assignments = self._apply_smart_clustering(embeddings, uncertain_docs)
 
             # Interpret clusters semantically using high-confidence documents as reference
             refined_classifications = self._interpret_clusters_semantically(
@@ -103,9 +99,7 @@ class SelectiveMLRefinement:
             logging.warning(f"ML refinement failed: {e}")
             return {}
 
-    def _generate_embeddings(
-        self, documents: List[Dict[str, Any]]
-    ) -> Optional[np.ndarray]:
+    def _generate_embeddings(self, documents: List[Dict[str, Any]]) -> Optional[np.ndarray]:
         """Generate sentence embeddings for documents."""
         try:
             # Create document summaries for embedding
@@ -117,9 +111,7 @@ class SelectiveMLRefinement:
             # Generate embeddings
             if self.embedding_model is None:
                 raise RuntimeError("Embedding model not available")
-            embeddings = self.embedding_model.encode(
-                document_texts, convert_to_numpy=True
-            )
+            embeddings = self.embedding_model.encode(document_texts, convert_to_numpy=True)
             return embeddings
 
         except Exception as e:
@@ -179,9 +171,7 @@ class SelectiveMLRefinement:
             logging.warning(f"Clustering failed: {e}")
             return list(range(n_docs))  # Each doc in its own cluster
 
-    def _determine_optimal_cluster_count(
-        self, embeddings: np.ndarray, n_docs: int
-    ) -> int:
+    def _determine_optimal_cluster_count(self, embeddings: np.ndarray, n_docs: int) -> int:
         """Determine optimal number of clusters using multiple methods."""
         max_k = min(8, n_docs // 2)  # Don't create too many small clusters
         if max_k < 2:
@@ -237,7 +227,7 @@ class SelectiveMLRefinement:
             )
 
             # Assign refined classification to all documents in cluster
-            for doc_idx, doc in cluster_docs:
+            for _doc_idx, doc in cluster_docs:
                 refined_classifications[doc["filename"]] = {
                     "category": cluster_category["category"],
                     "confidence": cluster_category["confidence"],
@@ -312,15 +302,11 @@ class SelectiveMLRefinement:
                         best_category = category
 
                 except Exception as e:
-                    logging.debug(
-                        f"Failed to process reference category {category}: {e}"
-                    )
+                    logging.debug(f"Failed to process reference category {category}: {e}")
                     continue
 
             # Convert similarity to confidence score
-            confidence = (
-                max(0.4, min(0.9, best_similarity)) if best_similarity > 0.3 else 0.4
-            )
+            confidence = max(0.4, min(0.9, best_similarity)) if best_similarity > 0.3 else 0.4
 
             return {"category": best_category, "confidence": confidence}
 

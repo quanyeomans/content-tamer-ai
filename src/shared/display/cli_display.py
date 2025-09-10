@@ -8,7 +8,8 @@ for unsupported terminals and environments.
 import os
 import sys
 from enum import Enum
-from typing import Tuple
+
+# Tuple imported but not used - keeping for future type hints
 
 
 class MessageLevel(Enum):

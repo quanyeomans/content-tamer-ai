@@ -32,9 +32,7 @@ class ErrorType(Enum):
     # Organization-specific errors
     ORGANIZATION_ML_UNAVAILABLE = "org_ml_unavailable"  # ML dependencies missing
     ORGANIZATION_CONFIG_ERROR = "org_config_error"  # Configuration issues
-    ORGANIZATION_INSUFFICIENT_DATA = (
-        "org_insufficient_data"  # Not enough data for organization
-    )
+    ORGANIZATION_INSUFFICIENT_DATA = "org_insufficient_data"  # Not enough data for organization
     ORGANIZATION_CLASSIFIER_ERROR = "org_classifier_error"  # Classification failures
     ORGANIZATION_FOLDER_ERROR = "org_folder_error"  # Folder creation/access issues
 
@@ -133,7 +131,7 @@ class ErrorClassifier:
     @staticmethod
     def _classify_organization_error(
         error_str: str, exception: Exception
-    ) -> ErrorClassification:
+    ) -> ErrorClassification:  # pylint: disable=unused-argument
         """Classify organization-specific errors."""
 
         # ML/NLP dependencies missing
@@ -317,9 +315,7 @@ class RetryHandler:
 
                 # Log the attempt with sanitized error message
                 sanitized_error = sanitize_log_message(str(e))
-                logger.debug(
-                    f"Attempt {attempt + 1} failed for {filename}: {sanitized_error}"
-                )
+                logger.debug(f"Attempt {attempt + 1} failed for {filename}: {sanitized_error}")
 
                 # Check if we should retry
                 if (

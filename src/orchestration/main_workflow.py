@@ -5,10 +5,9 @@ Main application logic coordinating all components for document processing.
 """
 
 import os
-from typing import Any, Optional, Tuple, List, Dict, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple
 
 from core.application_container import ApplicationContainer
-
 from shared.infrastructure.directory_manager import (
     DEFAULT_PROCESSED_DIR,
     DEFAULT_PROCESSING_DIR,
@@ -22,27 +21,27 @@ except ImportError:
 
 # Import utils with Rich display system
 try:
-    from shared.infrastructure.error_handling import create_retry_handler
     from shared.display.rich_display_manager import RichDisplayManager as DisplayManager
     from shared.display.rich_display_manager import RichDisplayOptions as DisplayOptions
+    from shared.infrastructure.error_handling import create_retry_handler
 except ImportError:
     import os
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    from shared.infrastructure.error_handling import create_retry_handler
     from shared.display.rich_display_manager import RichDisplayManager as DisplayManager
     from shared.display.rich_display_manager import RichDisplayOptions as DisplayOptions
+    from shared.infrastructure.error_handling import create_retry_handler
 
 
 # Create fallback implementations for missing modules
 class AIProviderFactory:
     @staticmethod
-    def get_default_model(provider: str) -> str:
+    def get_default_model(provider: str) -> str:  # pylint: disable=unused-argument
         return "default"
 
     @staticmethod
-    def create(provider: str, model: str, api_key: str) -> Any:
+    def create(provider: str, model: str, api_key: str) -> Any:  # pylint: disable=unused-argument
         return None
 
 
@@ -50,7 +49,7 @@ class ContentProcessorFactory:
     def __init__(self, ocr_lang: str = "eng"):
         pass
 
-    def get_processor(self, file_path: str) -> Any:
+    def get_processor(self, file_path: str) -> Any:  # pylint: disable=unused-argument
         return None
 
     def get_supported_extensions(self) -> List[str]:
@@ -64,12 +63,14 @@ class FileOrganizer:
     def create_directories(self, *args: Any) -> None:
         pass
 
-    def run_post_processing_organization(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+    def run_post_processing_organization(
+        self, *args: Any, **kwargs: Any
+    ) -> Dict[str, Any]:  # pylint: disable=unused-argument
         return {"success": False, "reason": "Not implemented"}
 
 
 class MockProgressTracker:
-    def load_progress(self, *args: Any) -> set:
+    def load_progress(self, *args: Any) -> set:  # pylint: disable=unused-argument
         return set()
 
 
@@ -255,7 +256,9 @@ def _setup_processing_environment(
     display_manager,
     unprocessed_dir: str,
     renamed_dir: str,
-) -> Tuple[Optional[Any], Optional[str], FileOrganizer, ContentProcessorFactory]:
+) -> Tuple[
+    Optional[Any], Optional[str], Optional[FileOrganizer], Optional[ContentProcessorFactory]
+]:
     """Setup AI client, organizer, and content processor."""
     # Setup AI client
     ai_client, model = _setup_ai_client(provider, model, display_manager)
@@ -493,7 +496,7 @@ def organize_content(
     )
 
     # Find processable files
-    supported_extensions = content_factory.get_supported_extensions()
+    supported_extensions = content_factory.get_supported_extensions() if content_factory else []
     processable_files = _find_processable_files(input_dir, content_factory)
 
     total_files = len(processable_files)
@@ -512,8 +515,10 @@ def organize_content(
 
     # Setup progress tracking
     progress_file = _determine_progress_file_path(renamed_dir)
-    processed_files = organizer.progress_tracker.load_progress(
-        progress_file, input_dir, reset_progress
+    processed_files = (
+        organizer.progress_tracker.load_progress(progress_file, input_dir, reset_progress)
+        if organizer
+        else set()
     )
 
     # Initialize retry handler and process files
@@ -571,12 +576,15 @@ def organize_content(
                     )
 
                     # Run post-processing organization with ML level
-                    organization_result = organizer.run_post_processing_organization(
-                        processed_files,
-                        renamed_dir,
-                        enable_organization=True,
-                        ml_enhancement_level=ml_enhancement_level,
-                    )
+                    if organizer:
+                        organization_result = organizer.run_post_processing_organization(
+                            processed_files,
+                            renamed_dir,
+                            enable_organization=True,
+                            ml_enhancement_level=ml_enhancement_level,
+                        )
+                    else:
+                        organization_result = {"success": False, "reason": "No organizer available"}
 
                     if organization_result.get("success", False):
                         if organization_result.get("organization_applied", False):

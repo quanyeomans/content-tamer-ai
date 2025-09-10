@@ -22,6 +22,7 @@ sys.path.append(
 from shared.display.display_manager import DisplayManager
 from shared.display.rich_display_manager import RichDisplayOptions
 
+
 @pytest.fixture
 def progress_context():
     """Context for progress display tests."""
@@ -34,18 +35,22 @@ def progress_context():
     if os.path.exists(context.temp_dir):
         shutil.rmtree(context.temp_dir)
 
+
 # Scenario imports
 @scenario("../progress_display.feature", "User sees progress counters increment correctly")
 def test_user_sees_progress_counters_increment_correctly():
     pass
 
+
 @scenario("../progress_display.feature", "User sees accurate completion statistics")
 def test_user_sees_accurate_completion_statistics():
     pass
 
+
 @scenario("../progress_display.feature", "User sees clear file status progression")
 def test_user_sees_clear_file_status_progression():
     pass
+
 
 # Step definitions focusing on user-observable progress behavior
 @given("I have a clean progress environment")
@@ -55,6 +60,7 @@ def clean_progress_environment(progress_context):
     progress_context.initial_failed = progress_context.display_manager.progress.stats.failed
     progress_context.initial_completed = progress_context.display_manager.progress.stats.completed
 
+
 @when("I process 2 files successfully")
 def process_two_files_successfully(progress_context):
     """Simulate processing 2 files successfully."""
@@ -63,6 +69,7 @@ def process_two_files_successfully(progress_context):
         display_context.complete_file("file1.pd", "renamed_file1.pd")
         display_context.complete_file("file2.pd", "renamed_file2.pd")
         progress_context.processing_context = display_context
+
 
 @when("I complete a full processing session with 3 successes and 1 failure")
 def complete_full_processing_session(progress_context):
@@ -77,6 +84,7 @@ def complete_full_processing_session(progress_context):
         display_context.fail_file("failed1.pd", "File processing error")
 
         progress_context.processing_context = display_context
+
 
 @when("I track file processing status changes")
 def track_file_processing_status_changes(progress_context):
@@ -99,6 +107,7 @@ def track_file_processing_status_changes(progress_context):
 
         progress_context.processing_context = display_context
 
+
 @then("I should see the success counter increase by 2")
 def verify_success_counter_increase(progress_context):
     """Verify success counter increased by exactly 2."""
@@ -108,6 +117,7 @@ def verify_success_counter_increase(progress_context):
     assert (
         current_success == expected_success
     ), "Success counter should increase by 2. Expected: {expected_success}, Got: {current_success}"
+
 
 @then("I should see the total completed counter increase by 2")
 def verify_completed_counter_increase(progress_context):
@@ -119,6 +129,7 @@ def verify_completed_counter_increase(progress_context):
         current_completed == expected_completed
     ), "Completed counter should increase by 2. Expected: {expected_completed}, Got: {current_completed}"
 
+
 @then("I should see 0 errors in the counter")
 def verify_no_errors_in_counter(progress_context):
     """Verify error counter didn't change."""
@@ -128,6 +139,7 @@ def verify_no_errors_in_counter(progress_context):
     assert (
         current_failed == expected_failed
     ), "Error counter should remain unchanged. Expected: {expected_failed}, Got: {current_failed}"
+
 
 @then(parsers.parse("I should see final statistics showing {num:d} successful files"))
 def verify_final_success_statistics(progress_context, num):
@@ -139,6 +151,7 @@ def verify_final_success_statistics(progress_context, num):
         current_success == expected_success
     ), "Final statistics should show {num} successful files. Expected: {expected_success}, Got: {current_success}"
 
+
 @then(parsers.parse("I should see final statistics showing {num:d} failed file"))
 def verify_final_failure_statistics(progress_context, num):
     """Verify final statistics show correct number of failed files."""
@@ -149,6 +162,7 @@ def verify_final_failure_statistics(progress_context, num):
         current_failed == expected_failed
     ), "Final statistics should show {num} failed file. Expected: {expected_failed}, Got: {current_failed}"
 
+
 @then(parsers.parse("I should see final statistics showing {num:d} total files processed"))
 def verify_total_files_processed_statistics(progress_context, num):
     """Verify final statistics show correct total processed count."""
@@ -158,6 +172,7 @@ def verify_total_files_processed_statistics(progress_context, num):
     assert (
         current_completed == expected_completed
     ), "Final statistics should show {num} total processed. Expected: {expected_completed}, Got: {current_completed}"
+
 
 @then("the success rate should be calculated correctly")
 def verify_success_rate_calculation(progress_context):
@@ -180,6 +195,7 @@ def verify_success_rate_calculation(progress_context):
     else:
         pytest.fail("No files were processed to calculate success rate")
 
+
 @then("I should see files start in processing state")
 def verify_files_start_in_processing_state(progress_context):
     """Verify files start in processing state."""
@@ -187,12 +203,14 @@ def verify_files_start_in_processing_state(progress_context):
         "started" in progress_context.status_progression
     ), "Files should start in processing state"
 
+
 @then("I should see files transition to completed state")
 def verify_files_transition_to_completed(progress_context):
     """Verify files transition to completed state."""
     assert (
         "completed" in progress_context.status_progression
     ), "Files should transition to completed state"
+
 
 @then("I should see appropriate status messages throughout")
 def verify_appropriate_status_messages(progress_context):

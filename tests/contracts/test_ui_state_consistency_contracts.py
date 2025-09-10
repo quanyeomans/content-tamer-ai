@@ -17,10 +17,15 @@ import unittest
 import pytest
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"
+    )
+)
 
 from shared.display.rich_display_manager import RichDisplayOptions
 from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
     """Contracts ensuring UI components maintain consistent state."""
@@ -39,16 +44,12 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
         """CONTRACT: Rich display must consistently handle completion stats."""
         # Use proper container injection for Rich display manager
         from core.application_container import TestApplicationContainer
+
         container = TestApplicationContainer()
         options = RichDisplayOptions(quiet=True)
         rich_manager = container.create_display_manager(options)
 
-        test_stats = {
-            'total_files': 4,
-            'successful': 3,
-            'errors': 1,
-            'warnings': 0
-        }
+        test_stats = {"total_files": 4, "successful": 3, "errors": 1, "warnings": 0}
 
         # Contract: Rich display must handle completion stats without error
         try:
@@ -72,41 +73,44 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
             operations = [
                 ("file1.pd", "result1.pd", "complete"),
                 ("file2.pd", "", "fail"),
-                ("file3.pd", "result3.pd", "complete")
+                ("file3.pd", "result3.pd", "complete"),
             ]
 
             for filename, target, operation in operations:
                 # Capture state before operation
                 before_stats = {
-                    'total': ctx.display.progress.stats.total,
-                    'succeeded': ctx.display.progress.stats.succeeded,
-                    'failed': ctx.display.progress.stats.failed
+                    "total": ctx.display.progress.stats.total,
+                    "succeeded": ctx.display.progress.stats.succeeded,
+                    "failed": ctx.display.progress.stats.failed,
                 }
 
                 # Perform operation
                 if operation == "complete":
                     ctx.complete_file(filename, target)
-                    expected_succeeded = before_stats['succeeded'] + 1
-                    expected_failed = before_stats['failed']
+                    expected_succeeded = before_stats["succeeded"] + 1
+                    expected_failed = before_stats["failed"]
                 else:
                     ctx.fail_file(filename, "Error message")
-                    expected_succeeded = before_stats['succeeded']
-                    expected_failed = before_stats['failed'] + 1
+                    expected_succeeded = before_stats["succeeded"]
+                    expected_failed = before_stats["failed"] + 1
 
                 # Contract: State must be consistently updated
                 after_stats = ctx.display.progress.stats
 
                 self.assertEqual(
-                    after_stats.total, before_stats['total'],
-                    "Total count changed during {operation} operation (state inconsistency)"
+                    after_stats.total,
+                    before_stats["total"],
+                    "Total count changed during {operation} operation (state inconsistency)",
                 )
                 self.assertEqual(
-                    after_stats.succeeded, expected_succeeded,
-                    "Succeeded count inconsistent after {operation} operation"
+                    after_stats.succeeded,
+                    expected_succeeded,
+                    "Succeeded count inconsistent after {operation} operation",
                 )
                 self.assertEqual(
-                    after_stats.failed, expected_failed,
-                    "Failed count inconsistent after {operation} operation"
+                    after_stats.failed,
+                    expected_failed,
+                    "Failed count inconsistent after {operation} operation",
                 )
 
     @pytest.mark.contract
@@ -122,11 +126,11 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
 
             # Capture state before any refresh operations
             before_refresh = {
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed,
-                'success_rate': ctx.display.progress.stats.success_rate,
-                'processed_files_count': len(ctx.display.progress.stats._processed_files)
+                "total": ctx.display.progress.stats.total,
+                "succeeded": ctx.display.progress.stats.succeeded,
+                "failed": ctx.display.progress.stats.failed,
+                "success_rate": ctx.display.progress.stats.success_rate,
+                "processed_files_count": len(ctx.display.progress.stats._processed_files),
             }
 
             # Contract: State must be preserved across any refresh operations
@@ -134,16 +138,15 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
 
             # Verify state hasn't changed
             after_check = {
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed,
-                'success_rate': ctx.display.progress.stats.success_rate,
-                'processed_files_count': len(ctx.display.progress.stats._processed_files)
+                "total": ctx.display.progress.stats.total,
+                "succeeded": ctx.display.progress.stats.succeeded,
+                "failed": ctx.display.progress.stats.failed,
+                "success_rate": ctx.display.progress.stats.success_rate,
+                "processed_files_count": len(ctx.display.progress.stats._processed_files),
             }
 
             self.assertEqual(
-                before_refresh, after_check,
-                "Display state was not preserved (state inconsistency)"
+                before_refresh, after_check, "Display state was not preserved (state inconsistency)"
             )
 
     @pytest.mark.contract
@@ -166,10 +169,10 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
             accesses = []
             for i in range(5):
                 access = {
-                    'total': stats.total,
-                    'succeeded': stats.succeeded,
-                    'failed': stats.failed,
-                    'success_rate': stats.success_rate
+                    "total": stats.total,
+                    "succeeded": stats.succeeded,
+                    "failed": stats.failed,
+                    "success_rate": stats.success_rate,
                 }
                 accesses.append(access)
 
@@ -177,8 +180,9 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
             first_access = accesses[0]
             for i, access in enumerate(accesses[1:], 1):
                 self.assertEqual(
-                    access, first_access,
-                    f"State access {i} returned different values (state inconsistency)"
+                    access,
+                    first_access,
+                    f"State access {i} returned different values (state inconsistency)",
                 )
 
     @pytest.mark.contract
@@ -193,9 +197,9 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
             ctx1.complete_file("ctx1_file1.pd", "ctx1_result1.pd")
             ctx1.fail_file("ctx1_file2.pd", "Context 1 error")
             context1_final_stats = {
-                'total': ctx1.display.progress.stats.total,
-                'succeeded': ctx1.display.progress.stats.succeeded,
-                'failed': ctx1.display.progress.stats.failed
+                "total": ctx1.display.progress.stats.total,
+                "succeeded": ctx1.display.progress.stats.succeeded,
+                "failed": ctx1.display.progress.stats.failed,
             }
 
         # Second processing context
@@ -205,19 +209,19 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
             ctx2.complete_file("ctx2_file2.pd", "ctx2_result2.pd")
             ctx2.complete_file("ctx2_file3.pd", "ctx2_result3.pd")
             context2_final_stats = {
-                'total': ctx2.display.progress.stats.total,
-                'succeeded': ctx2.display.progress.stats.succeeded,
-                'failed': ctx2.display.progress.stats.failed
+                "total": ctx2.display.progress.stats.total,
+                "succeeded": ctx2.display.progress.stats.succeeded,
+                "failed": ctx2.display.progress.stats.failed,
             }
 
         # Contract: Each context must maintain isolated state
-        self.assertEqual(context1_final_stats['total'], 2, "Context 1 total incorrect")
-        self.assertEqual(context1_final_stats['succeeded'], 1, "Context 1 succeeded incorrect")
-        self.assertEqual(context1_final_stats['failed'], 1, "Context 1 failed incorrect")
+        self.assertEqual(context1_final_stats["total"], 2, "Context 1 total incorrect")
+        self.assertEqual(context1_final_stats["succeeded"], 1, "Context 1 succeeded incorrect")
+        self.assertEqual(context1_final_stats["failed"], 1, "Context 1 failed incorrect")
 
-        self.assertEqual(context2_final_stats['total'], 3, "Context 2 total incorrect")
-        self.assertEqual(context2_final_stats['succeeded'], 3, "Context 2 succeeded incorrect")
-        self.assertEqual(context2_final_stats['failed'], 0, "Context 2 failed incorrect")
+        self.assertEqual(context2_final_stats["total"], 3, "Context 2 total incorrect")
+        self.assertEqual(context2_final_stats["succeeded"], 3, "Context 2 succeeded incorrect")
+        self.assertEqual(context2_final_stats["failed"], 0, "Context 2 failed incorrect")
 
     @pytest.mark.contract
     @pytest.mark.critical
@@ -229,10 +233,10 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
         with manager.processing_context(total_files, "Progress Accuracy Test") as ctx:
             # Test progress accuracy at various completion points
             test_points = [
-                (2, 20.0),   # 2/10 = 20%
-                (5, 50.0),   # 5/10 = 50%
-                (7, 70.0),   # 7/10 = 70%
-                (10, 100.0)  # 10/10 = 100%
+                (2, 20.0),  # 2/10 = 20%
+                (5, 50.0),  # 5/10 = 50%
+                (7, 70.0),  # 7/10 = 70%
+                (10, 100.0),  # 10/10 = 100%
             ]
 
             files_processed = 0
@@ -249,8 +253,10 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
                 if total_processed > 0:
                     actual_percentage = (total_processed / stats.total) * 100
                     self.assertAlmostEqual(
-                        actual_percentage, expected_percentage, places=1,
-                        msg="Progress percentage inaccurate: expected {expected_percentage}%, got {actual_percentage}%"
+                        actual_percentage,
+                        expected_percentage,
+                        places=1,
+                        msg="Progress percentage inaccurate: expected {expected_percentage}%, got {actual_percentage}%",
                     )
 
     @pytest.mark.contract
@@ -265,9 +271,9 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
 
             # Capture good state
             good_state = {
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed
+                "total": ctx.display.progress.stats.total,
+                "succeeded": ctx.display.progress.stats.succeeded,
+                "failed": ctx.display.progress.stats.failed,
             }
 
             # Process one failed file
@@ -286,9 +292,12 @@ class TestUIStateConsistencyContracts(unittest.TestCase, RichTestCase):
             # Contract: Success rate must be calculable after error recovery
             expected_success_rate = (2 / 3) * 100  # 66.7%
             self.assertAlmostEqual(
-                final_state.success_rate, expected_success_rate, places=1,
-                msg="Success rate calculation incorrect after error recovery"
+                final_state.success_rate,
+                expected_success_rate,
+                places=1,
+                msg="Success rate calculation incorrect after error recovery",
             )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -50,28 +50,30 @@ def setup_directories(args) -> Tuple[str, str, str]:
         # User specified custom paths
         input_dir = args.input or input("Enter the input folder path: ")
         renamed_dir = args.renamed or input("Enter the renamed PDFs folder path: ")
-        unprocessed_dir = args.unprocessed or input(
-            "Enter the unprocessed files folder path: "
-        )
+        unprocessed_dir = args.unprocessed or input("Enter the unprocessed files folder path: ")
     else:
         # Use default directory structure
         if not args.quiet:
             try:
                 from interfaces.human.rich_console_manager import RichConsoleManager
+
                 console = RichConsoleManager().console
                 console.print("📂 [cyan]Using default directory structure:[/cyan]")
             except ImportError:
                 print("Using default directory structure:")
-        
+
         input_dir, renamed_dir, unprocessed_dir = ensure_default_directories()
-        
+
         if not args.quiet:
             try:
                 from interfaces.human.rich_console_manager import RichConsoleManager
+
                 console = RichConsoleManager().console
                 console.print(f"   📥 [blue]Input:[/blue] [white]{input_dir}[/white]")
                 console.print(f"   📤 [green]Processed:[/green] [white]{renamed_dir}[/white]")
-                console.print(f"   📋 [yellow]Unprocessed:[/yellow] [white]{unprocessed_dir}[/white]")
+                console.print(
+                    f"   📋 [yellow]Unprocessed:[/yellow] [white]{unprocessed_dir}[/white]"
+                )
             except ImportError:
                 print(f"  Input: {input_dir}")
                 print(f"  Processed: {renamed_dir}")
@@ -85,6 +87,7 @@ def _validate_provider_and_model(provider: str, model: str) -> None:
     # Import here to avoid circular imports
     try:
         from ...domains.ai_integration.provider_service import ProviderConfiguration
+
         AI_PROVIDERS = ProviderConfiguration.AI_PROVIDERS
     except ImportError:
         # Fallback for testing or standalone usage
@@ -107,23 +110,32 @@ def _display_api_key_instructions(provider: str) -> None:
     """Display instructions for API key input using Rich Console."""
     try:
         from interfaces.human.rich_console_manager import RichConsoleManager
+
         console = RichConsoleManager().console
-        
+
         console.print()
         console.print("🔑 [bold blue]API Key Input[/bold blue]")
         console.print("• [white]Type or paste your API key (you'll see it as you type)[/white]")
-        
-        key_format = 'sk-ant-' if provider == 'claude' else 'sk-'
-        console.print(f"• [cyan]{provider.capitalize()} keys start with[/cyan] [yellow]'{key_format}'[/yellow] [white]and are typically 40-60 characters[/white]")
-        
-        console.print(f"• [white]You can set[/white] [green]{provider.upper()}_API_KEY[/green] [white]environment variable to skip this step[/white]")
-        console.print("• [white]Your key will be validated and cleared from display after entry[/white]")
-        
+
+        key_format = "sk-ant-" if provider == "claude" else "sk-"
+        console.print(
+            f"• [cyan]{provider.capitalize()} keys start with[/cyan] [yellow]'{key_format}'[/yellow] [white]and are typically 40-60 characters[/white]"
+        )
+
+        console.print(
+            f"• [white]You can set[/white] [green]{provider.upper()}_API_KEY[/green] [white]environment variable to skip this step[/white]"
+        )
+        console.print(
+            "• [white]Your key will be validated and cleared from display after entry[/white]"
+        )
+
     except ImportError:
         # Fallback if Rich not available
         print("\nAPI Key Input:")
         print("• Type or paste your API key (you'll see it as you type)")
-        print(f"• {provider.capitalize()} keys start with '{'sk-ant-' if provider == 'claude' else 'sk-'}' and are typically 40-60 characters")
+        print(
+            f"• {provider.capitalize()} keys start with '{'sk-ant-' if provider == 'claude' else 'sk-'}' and are typically 40-60 characters"
+        )
         print(f"• You can set {provider.upper()}_API_KEY environment variable to skip this step")
         print("• Your key will be validated and cleared from display after entry")
 
@@ -140,25 +152,28 @@ def _clean_and_validate_input(api_key: str, provider: str) -> str:
 
     # Show partial key for user verification
     if len(api_key) >= 14:
-        partial_display = (
-            f"{api_key[:10]}{'*' * max(0, len(api_key) - 14)}{api_key[-4:]}"
-        )
+        partial_display = f"{api_key[:10]}{'*' * max(0, len(api_key) - 14)}{api_key[-4:]}"
     else:
-        partial_display = (
-            f"{api_key[:min(6, len(api_key))]}{'*' * max(0, len(api_key) - 6)}"
-        )
+        partial_display = f"{api_key[:min(6, len(api_key))]}{'*' * max(0, len(api_key) - 6)}"
 
     try:
         from interfaces.human.rich_console_manager import RichConsoleManager
+
         console = RichConsoleManager().console
-        console.print(f"✅ [green]Received API key:[/green] [white]{partial_display}[/white] [dim]({len(api_key)} characters)[/dim]")
-        
+        console.print(
+            f"✅ [green]Received API key:[/green] [white]{partial_display}[/white] [dim]({len(api_key)} characters)[/dim]"
+        )
+
         if len(api_key) < 20:
-            console.print(f"⚠️  [yellow]Key seems short for {provider.capitalize()}[/yellow] [white](got {len(api_key)} chars, expected 40+)[/white]")
+            console.print(
+                f"⚠️  [yellow]Key seems short for {provider.capitalize()}[/yellow] [white](got {len(api_key)} chars, expected 40+)[/white]"
+            )
     except ImportError:
         print(f"[OK] Received API key: {partial_display} ({len(api_key)} characters)")
         if len(api_key) < 20:
-            print(f"[WARNING] Key seems short for {provider.capitalize()} (got {len(api_key)} chars, expected 40+)")
+            print(
+                f"[WARNING] Key seems short for {provider.capitalize()} (got {len(api_key)} chars, expected 40+)"
+            )
 
     return api_key
 
@@ -181,10 +196,13 @@ def _prompt_for_api_key(provider: str) -> str:
                     validated_key = _validate_api_key(api_key, provider)
                     try:
                         from interfaces.human.rich_console_manager import RichConsoleManager
+
                         console = RichConsoleManager().console
                         console.print("✅ [green]API key format validated successfully[/green]")
                         _clear_screen_secure()
-                        console.print(f"🔐 [green]{provider.capitalize()} API key accepted and secured[/green]")
+                        console.print(
+                            f"🔐 [green]{provider.capitalize()} API key accepted and secured[/green]"
+                        )
                     except ImportError:
                         print("[OK] API key format validated successfully")
                         _clear_screen_secure()
@@ -194,6 +212,7 @@ def _prompt_for_api_key(provider: str) -> str:
                 except ValueError as e:
                     try:
                         from interfaces.human.rich_console_manager import RichConsoleManager
+
                         console = RichConsoleManager().console
                         console.print(f"❌ [red]Validation failed:[/red] [white]{e}[/white]")
                         if attempt < max_attempts - 1:
@@ -208,6 +227,7 @@ def _prompt_for_api_key(provider: str) -> str:
             else:
                 try:
                     from interfaces.human.rich_console_manager import RichConsoleManager
+
                     console = RichConsoleManager().console
                     console.print("❌ [red]No input received[/red]")
                     if attempt < max_attempts - 1:
@@ -313,7 +333,7 @@ def _perform_basic_security_checks(api_key: str, provider: str) -> None:
 
 def _check_provider_mismatch(
     api_key: str, provider: str, detected_provider: str
-) -> None:
+) -> None:  # pylint: disable=unused-argument
     """Check for provider mismatch and provide helpful error."""
     if detected_provider == "unknown" or detected_provider == provider:
         return
@@ -337,9 +357,7 @@ def _check_provider_mismatch(
     )
 
 
-def _validate_provider_specific_format(
-    api_key: str, provider: str, detected_provider: str
-) -> None:
+def _validate_provider_specific_format(api_key: str, provider: str, detected_provider: str) -> None:
     """Validate provider-specific API key format requirements."""
     if provider == "openai":
         if not api_key.startswith("sk-"):
@@ -402,9 +420,7 @@ def _check_for_suspicious_characters(api_key: str) -> None:
     if not re.match(r"^[a-zA-Z0-9\-_.+]+$", api_key):
         # Show what characters were found for debugging
         invalid_chars = set(re.findall(r"[^a-zA-Z0-9\-_.+]", api_key))
-        raise ValueError(
-            f"API key contains invalid characters: {sorted(invalid_chars)}"
-        )
+        raise ValueError(f"API key contains invalid characters: {sorted(invalid_chars)}")
 
 
 def _validate_api_key(api_key: str, provider: str) -> str:
@@ -434,11 +450,12 @@ def _validate_api_key(api_key: str, provider: str) -> str:
 def _clear_screen_secure():
     """
     Securely clear the terminal screen using Rich Console.
-    
+
     Rich handles terminal capabilities and clearing automatically.
     """
     try:
         from interfaces.human.rich_console_manager import RichConsoleManager
+
         console = RichConsoleManager().console
         console.clear()
     except ImportError:
@@ -449,9 +466,7 @@ def _clear_screen_secure():
                 print("\033[2J\033[H", end="")
             else:
                 # Unix/Linux/macOS: Use subprocess with shell=False for security
-                subprocess.run(
-                    ["clear"], shell=False, check=False, capture_output=True, timeout=1
-                )
+                subprocess.run(["clear"], shell=False, check=False, capture_output=True, timeout=1)
         except (subprocess.SubprocessError, subprocess.TimeoutExpired, FileNotFoundError):
             # Fallback: Print newlines to simulate screen clear if commands fail
             print("\n" * 50)

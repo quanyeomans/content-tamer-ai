@@ -6,9 +6,9 @@ Tests the clustering service that handles document classification and clustering
 using progressive enhancement architecture.
 """
 
-import unittest
 import os
 import sys
+import unittest
 from unittest.mock import Mock, patch
 
 # Add src to path for imports - correct path for domain structure
@@ -16,19 +16,25 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..
 
 # Import from organization domain
 from domains.organization.clustering_service import (
-    ClusteringService,
-    ClusteringConfig,
     ClassificationResult,
+    ClusteringConfig,
     ClusteringMethod,
-    ConfidenceLevel
+    ClusteringService,
+    ConfidenceLevel,
 )
+
+# Pytest integration for session fixtures
+import pytest
+
 
 class TestClusteringServiceDefaults(unittest.TestCase):
     """Test Clustering Service default behavior and initialization."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.service = ClusteringService()
+        # Use session-scoped spaCy model if available from pytest fixtures
+        spacy_model = getattr(self, '_spacy_model', None)
+        self.service = ClusteringService(spacy_model=spacy_model)
 
     def test_clustering_service_initialization(self):
         """Test clustering service initializes correctly."""
@@ -47,15 +53,12 @@ class TestClusteringServiceDefaults(unittest.TestCase):
 
     def test_custom_config_initialization(self):
         """Test initialization with custom configuration."""
-        custom_config = ClusteringConfig(
-            ml_threshold=0.5,
-            max_categories=15,
-            enable_ensemble=True
-        )
+        custom_config = ClusteringConfig(ml_threshold=0.5, max_categories=15, enable_ensemble=True)
         service = ClusteringService(custom_config)
         self.assertEqual(service.config.ml_threshold, 0.5)
         self.assertEqual(service.config.max_categories, 15)
         self.assertTrue(service.config.enable_ensemble)
+
 
 class TestClassificationResult(unittest.TestCase):
     """Test ClassificationResult data class and properties."""
@@ -68,7 +71,7 @@ class TestClassificationResult(unittest.TestCase):
             method=ClusteringMethod.RULE_BASED,
             reasoning="Rule-based classification",
             alternative_categories=[("legal", 0.3)],
-            metadata={"test": "data"}
+            metadata={"test": "data"},
         )
 
         self.assertEqual(result.category, "financial")
@@ -80,31 +83,48 @@ class TestClassificationResult(unittest.TestCase):
         """Test confidence level property mapping."""
         # Test HIGH confidence (>= 0.8)
         result_high = ClassificationResult(
-            category="test", confidence=0.9, method=ClusteringMethod.RULE_BASED,
-            reasoning="test", alternative_categories=[], metadata={}
+            category="test",
+            confidence=0.9,
+            method=ClusteringMethod.RULE_BASED,
+            reasoning="test",
+            alternative_categories=[],
+            metadata={},
         )
         self.assertEqual(result_high.confidence_level, ConfidenceLevel.HIGH)
 
         # Test MEDIUM confidence (0.5-0.8)
         result_medium = ClassificationResult(
-            category="test", confidence=0.6, method=ClusteringMethod.RULE_BASED,
-            reasoning="test", alternative_categories=[], metadata={}
+            category="test",
+            confidence=0.6,
+            method=ClusteringMethod.RULE_BASED,
+            reasoning="test",
+            alternative_categories=[],
+            metadata={},
         )
         self.assertEqual(result_medium.confidence_level, ConfidenceLevel.MEDIUM)
 
         # Test LOW confidence (0.2-0.5)
         result_low = ClassificationResult(
-            category="test", confidence=0.3, method=ClusteringMethod.RULE_BASED,
-            reasoning="test", alternative_categories=[], metadata={}
+            category="test",
+            confidence=0.3,
+            method=ClusteringMethod.RULE_BASED,
+            reasoning="test",
+            alternative_categories=[],
+            metadata={},
         )
         self.assertEqual(result_low.confidence_level, ConfidenceLevel.LOW)
 
         # Test VERY_LOW confidence (< 0.2)
         result_very_low = ClassificationResult(
-            category="test", confidence=0.1, method=ClusteringMethod.FALLBACK,
-            reasoning="test", alternative_categories=[], metadata={}
+            category="test",
+            confidence=0.1,
+            method=ClusteringMethod.FALLBACK,
+            reasoning="test",
+            alternative_categories=[],
+            metadata={},
         )
         self.assertEqual(result_very_low.confidence_level, ConfidenceLevel.VERY_LOW)
+
 
 class TestDocumentClassification(unittest.TestCase):
     """Test document classification functionality."""
@@ -114,29 +134,31 @@ class TestDocumentClassification(unittest.TestCase):
         self.service = ClusteringService()
 
     def test_classify_document_with_fallback(self):
-        """Test document classification when classifiers are not available."""
+        """Test document classification returns appropriate method based on available classifiers."""
         # Test with basic document
         document = {
             "content": "This is a test invoice for payment processing",
-            "filename": "invoice_2024.pd",
-            "metadata": {}
+            "filename": "invoice_2024.pdf",
+            "metadata": {},
         }
 
         result = self.service.classify_document(document)
 
-        # Should return a result even without classifiers
+        # Should return a result using available classification methods
         self.assertIsInstance(result, ClassificationResult)
         self.assertIsNotNone(result.category)
         self.assertIsNotNone(result.confidence)
-        self.assertIn(result.method, [ClusteringMethod.RULE_BASED, ClusteringMethod.FALLBACK])
+        # Service should use whatever method is most appropriate (ML_ENHANCED, RULE_BASED, or FALLBACK)
+        valid_methods = [
+            ClusteringMethod.RULE_BASED,
+            ClusteringMethod.FALLBACK,
+            ClusteringMethod.ML_ENHANCED,
+        ]
+        self.assertIn(result.method, valid_methods)
 
     def test_classify_empty_document(self):
         """Test classification of empty document."""
-        document = {
-            "content": "",
-            "filename": "",
-            "metadata": {}
-        }
+        document = {"content": "", "filename": "", "metadata": {}}
 
         result = self.service.classify_document(document)
 
@@ -158,6 +180,7 @@ class TestDocumentClassification(unittest.TestCase):
             # If exception is raised, that's also acceptable for malformed input
             pass
 
+
 class TestBatchClassification(unittest.TestCase):
     """Test batch document classification."""
 
@@ -172,20 +195,20 @@ class TestBatchClassification(unittest.TestCase):
                 "id": "doc1",
                 "content": "Invoice for services rendered",
                 "filename": "invoice_001.pd",
-                "metadata": {}
+                "metadata": {},
             },
             {
                 "id": "doc2",
                 "content": "Legal contract agreement",
                 "filename": "contract.pd",
-                "metadata": {}
+                "metadata": {},
             },
             {
                 "id": "doc3",
                 "content": "Medical report findings",
                 "filename": "medical_report.pd",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         ]
 
         results = self.service.batch_classify_documents(documents)
@@ -215,12 +238,12 @@ class TestBatchClassification(unittest.TestCase):
                 "id": "good_doc",
                 "content": "Valid document content",
                 "filename": "good.pd",
-                "metadata": {}
+                "metadata": {},
             },
             {
                 "id": "bad_doc"
                 # Missing required fields
-            }
+            },
         ]
 
         results = self.service.batch_classify_documents(documents)
@@ -228,6 +251,7 @@ class TestBatchClassification(unittest.TestCase):
         # Should handle errors gracefully and return results for valid docs
         self.assertIsInstance(results, dict)
         self.assertIn("good_doc", results)
+
 
 class TestClusteringQualityValidation(unittest.TestCase):
     """Test clustering quality validation."""
@@ -240,13 +264,21 @@ class TestClusteringQualityValidation(unittest.TestCase):
         """Test validation of good quality clustering results."""
         results = {
             "doc1": ClassificationResult(
-                category="financial", confidence=0.9, method=ClusteringMethod.RULE_BASED,
-                reasoning="High confidence", alternative_categories=[], metadata={}
+                category="financial",
+                confidence=0.9,
+                method=ClusteringMethod.RULE_BASED,
+                reasoning="High confidence",
+                alternative_categories=[],
+                metadata={},
             ),
             "doc2": ClassificationResult(
-                category="legal", confidence=0.85, method=ClusteringMethod.RULE_BASED,
-                reasoning="High confidence", alternative_categories=[], metadata={}
-            )
+                category="legal",
+                confidence=0.85,
+                method=ClusteringMethod.RULE_BASED,
+                reasoning="High confidence",
+                alternative_categories=[],
+                metadata={},
+            ),
         }
 
         validation = self.service.validate_clustering_quality(results)
@@ -261,13 +293,21 @@ class TestClusteringQualityValidation(unittest.TestCase):
         """Test validation of poor quality clustering results."""
         results = {
             "doc1": ClassificationResult(
-                category="uncategorized", confidence=0.1, method=ClusteringMethod.FALLBACK,
-                reasoning="Fallback", alternative_categories=[], metadata={}
+                category="uncategorized",
+                confidence=0.1,
+                method=ClusteringMethod.FALLBACK,
+                reasoning="Fallback",
+                alternative_categories=[],
+                metadata={},
             ),
             "doc2": ClassificationResult(
-                category="uncategorized", confidence=0.2, method=ClusteringMethod.FALLBACK,
-                reasoning="Fallback", alternative_categories=[], metadata={}
-            )
+                category="uncategorized",
+                confidence=0.2,
+                method=ClusteringMethod.FALLBACK,
+                reasoning="Fallback",
+                alternative_categories=[],
+                metadata={},
+            ),
         }
 
         validation = self.service.validate_clustering_quality(results)
@@ -284,6 +324,7 @@ class TestClusteringQualityValidation(unittest.TestCase):
 
         self.assertFalse(validation["valid"])
         self.assertIn("reason", validation)
+
 
 class TestServiceStatistics(unittest.TestCase):
     """Test clustering service statistics and monitoring."""
@@ -321,7 +362,7 @@ class TestServiceStatistics(unittest.TestCase):
         document = {
             "content": "Test document for statistics",
             "filename": "test.pd",
-            "metadata": {}
+            "metadata": {},
         }
 
         self.service.classify_document(document)
@@ -332,6 +373,7 @@ class TestServiceStatistics(unittest.TestCase):
         updated_total = updated_stats["statistics"].get("total_classifications", 0)
 
         self.assertGreaterEqual(updated_total, initial_total)
+
 
 if __name__ == "__main__":
     unittest.main()

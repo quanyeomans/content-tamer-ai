@@ -4,10 +4,10 @@ Log Sanitization Utility
 Sanitizes existing log files to remove any exposed API keys or secrets.
 """
 
-import os
-import sys
 import glob
+import os
 import shutil
+import sys
 from datetime import datetime
 
 # Add src to path to import security utilities
@@ -18,21 +18,21 @@ try:
 except ImportError:
     # Fallback sanitization function
     import re
-    
+
     def sanitize_log_message(message: str) -> str:
         """Basic fallback sanitization function."""
         # Remove API key patterns
         patterns = [
-            (r'sk-ant-[a-zA-Z0-9_-]+', '[SANITIZED_CLAUDE_KEY]'),
-            (r'sk-proj-[a-zA-Z0-9_-]+', '[SANITIZED_OPENAI_KEY]'),
-            (r'sk-[a-zA-Z0-9_-]{48,}', '[SANITIZED_API_KEY]'),
-            (r'Bearer [a-zA-Z0-9_-]+', 'Bearer [SANITIZED_TOKEN]'),
+            (r"sk-ant-[a-zA-Z0-9_-]+", "[SANITIZED_CLAUDE_KEY]"),
+            (r"sk-proj-[a-zA-Z0-9_-]+", "[SANITIZED_OPENAI_KEY]"),
+            (r"sk-[a-zA-Z0-9_-]{48,}", "[SANITIZED_API_KEY]"),
+            (r"Bearer [a-zA-Z0-9_-]+", "Bearer [SANITIZED_TOKEN]"),
         ]
-        
+
         result = message
         for pattern, replacement in patterns:
             result = re.sub(pattern, replacement, result)
-        
+
         return result
 
 
@@ -58,7 +58,7 @@ def sanitize_log_file(log_file_path: str) -> tuple[int, int]:
     lines_sanitized = 0
 
     # Read and sanitize the log file
-    with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as infile:
+    with open(log_file_path, "r", encoding="utf-8", errors="ignore") as infile:
         lines = infile.readlines()
 
     sanitized_lines = []
@@ -74,7 +74,7 @@ def sanitize_log_file(log_file_path: str) -> tuple[int, int]:
         sanitized_lines.append(sanitized_line)
 
     # Write sanitized content back to the file
-    with open(log_file_path, 'w', encoding='utf-8') as outfile:
+    with open(log_file_path, "w", encoding="utf-8") as outfile:
         outfile.writelines(sanitized_lines)
 
     return lines_processed, lines_sanitized
@@ -99,7 +99,7 @@ def find_and_sanitize_logs(project_root: str = None) -> None:
         "**/debug.log",
         "**/app.log",
         "**/.processing/*.log",
-        "**/logs/**/*.log"
+        "**/logs/**/*.log",
     ]
 
     total_files = 0
@@ -117,13 +117,15 @@ def find_and_sanitize_logs(project_root: str = None) -> None:
                 total_lines_sanitized += file_lines_san
 
                 if file_lines_san > 0:
-                    print(f"  [WARNING] {file_lines_san} lines contained secrets and were sanitized")
+                    print(
+                        f"  [WARNING] {file_lines_san} lines contained secrets and were sanitized"
+                    )
                 else:
                     print(f"  [OK] {file_lines_proc} lines processed, no secrets found")
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("LOG SANITIZATION SUMMARY")
-    print("="*50)
+    print("=" * 50)
     print(f"Files processed: {total_files}")
     print(f"Lines processed: {total_lines_processed}")
     print(f"Lines sanitized: {total_lines_sanitized}")
@@ -142,7 +144,9 @@ def find_and_sanitize_logs(project_root: str = None) -> None:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Sanitize log files to remove API keys and secrets")
+    parser = argparse.ArgumentParser(
+        description="Sanitize log files to remove API keys and secrets"
+    )
     parser.add_argument("--path", help="Project root path to search (default: auto-detect)")
     parser.add_argument("--file", help="Specific log file to sanitize")
 

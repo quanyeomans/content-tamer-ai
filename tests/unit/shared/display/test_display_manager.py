@@ -6,25 +6,33 @@ import os
 import sys
 import unittest
 from io import StringIO
-from unittest.mock import call, patch, Mock, MagicMock
+from unittest.mock import MagicMock, Mock, call, patch
 
 # Add src directory to path - correct path for domain structure
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
-# Import from shared display architecture
-from shared.display.unified_display_manager import UnifiedDisplayManager
-from shared.display.display_manager import DisplayManager, DisplayOptions, ProcessingContext
-from shared.display.progress_display import ProgressDisplay
-from shared.display.message_handler import MessageHandler, SimpleMessageHandler
 from interfaces.human.rich_console_manager import RichConsoleManager
-from tests.utils.rich_test_utils import RichTestCase
 
 # Import convenience functions
-from shared.display.display_manager import create_simple_display, create_rich_display
+from shared.display.display_manager import (
+    DisplayManager,
+    DisplayOptions,
+    ProcessingContext,
+    create_rich_display,
+    create_simple_display,
+)
+from shared.display.message_handler import MessageHandler, SimpleMessageHandler
+from shared.display.progress_display import ProgressDisplay
+
+# Import from shared display architecture
+from shared.display.unified_display_manager import UnifiedDisplayManager
+from tests.utils.rich_test_utils import RichTestCase
+
 
 # Create the missing create_display_manager function
 def create_display_manager(**kwargs):
     return DisplayManager(DisplayOptions(**kwargs))
+
 
 class TestUnifiedDisplayManager(unittest.TestCase, RichTestCase):
     """Test Unified Display Manager functionality."""
@@ -85,6 +93,7 @@ class TestUnifiedDisplayManager(unittest.TestCase, RichTestCase):
         self.assertFalse(options.show_stats)
         self.assertIs(options.file, output)
 
+
 class TestProcessingContext(unittest.TestCase):
     """Test processing context functionality."""
 
@@ -128,6 +137,7 @@ class TestProcessingContext(unittest.TestCase):
         self.context.show_info("Informational message")
 
         # All methods should execute without errors
+
 
 class TestDisplayManager(unittest.TestCase):
     """Test display manager core functionality."""
@@ -262,6 +272,7 @@ class TestDisplayManager(unittest.TestCase):
 
         # All should execute without errors
 
+
 class TestConvenienceFunctions(unittest.TestCase):
     """Test convenience functions for creating display managers."""
 
@@ -289,6 +300,7 @@ class TestConvenienceFunctions(unittest.TestCase):
         self.assertIsInstance(manager, DisplayManager)
         self.assertTrue(manager.options.verbose)
         self.assertTrue(manager.options.show_stats)
+
 
 class TestIntegrationScenarios(unittest.TestCase):
     """Test integration scenarios and workflows."""
@@ -363,6 +375,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         self.assertIsInstance(len(quiet_content), int)
         self.assertIsInstance(len(verbose_content), int)
 
+
 class TestEdgeCasesAndErrorHandling(unittest.TestCase):
     """Test edge cases and error handling."""
 
@@ -412,6 +425,7 @@ class TestEdgeCasesAndErrorHandling(unittest.TestCase):
         output_content = output.getvalue()
         self.assertGreater(len(output_content), 0)
 
+
 class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
     """Test Rich UI enhancement features as described in README."""
 
@@ -421,6 +435,7 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
         # Import Rich components for testing
         try:
             from utils.rich_display_manager import RichDisplayManager, RichDisplayOptions
+
             self.RichDisplayManager = RichDisplayManager
             self.RichDisplayOptions = RichDisplayOptions
             self.rich_available = True
@@ -438,9 +453,7 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
             self.skipTest("Rich not available")
 
         # Use the test container and display manager from RichTestCase
-        display_options = self.RichDisplayOptions(
-            verbose=True, no_color=True, show_stats=False
-        )
+        display_options = self.RichDisplayOptions(verbose=True, no_color=True, show_stats=False)
         manager = self.test_container.create_display_manager(display_options)
 
         with manager.processing_context(1, "Processing Documents") as ctx:
@@ -453,7 +466,9 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
         # Check that output contains the arrow and target filename
         output = self.get_console_output()
         self.assertIn("→", output, "Progress should show arrow indicator")
-        self.assertIn("quarterly_report_2024_financials.pd", output, "Target filename should be visible")
+        self.assertIn(
+            "quarterly_report_2024_financials.pd", output, "Target filename should be visible"
+        )
 
     def test_processing_stage_indicators(self):
         """Test that different processing stages show appropriate indicators."""
@@ -461,21 +476,14 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
             self.skipTest("Rich not available")
 
         # Use the test container and display manager from RichTestCase
-        display_options = self.RichDisplayOptions(
-            verbose=True, no_color=True, show_stats=False
-        )
+        display_options = self.RichDisplayOptions(verbose=True, no_color=True, show_stats=False)
         manager = self.test_container.create_display_manager(display_options)
 
         with manager.processing_context(1, "Processing Documents") as ctx:
             ctx.start_file("test_document.pd")
 
             # Test different processing stages
-            stages = [
-                "extracting_content",
-                "generating_filename",
-                "moving_file",
-                "completed"
-            ]
+            stages = ["extracting_content", "generating_filename", "moving_file", "completed"]
 
             for stage in stages:
                 ctx.set_status(stage)
@@ -484,9 +492,13 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
         output = self.get_console_output()
         # Rich Live progress display doesn't capture to StringIO, but we can check:
         # 1. Debug message appears (confirming verbose mode works)
-        self.assertIn("Starting file: test_document.pd", output, "Should show verbose debug message")
+        self.assertIn(
+            "Starting file: test_document.pd", output, "Should show verbose debug message"
+        )
         # 2. Completion message appears
-        self.assertIn("Content organization completed successfully", output, "Should show completion message")
+        self.assertIn(
+            "Content organization completed successfully", output, "Should show completion message"
+        )
         # 3. Progress statistics are captured
         self.assertIn("Results:", output, "Should show results summary")
 
@@ -496,9 +508,7 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
             self.skipTest("Rich not available")
 
         # Test perfect success (100%)
-        display_options = self.RichDisplayOptions(
-            no_color=True, show_stats=False
-        )
+        display_options = self.RichDisplayOptions(no_color=True, show_stats=False)
         manager = self.test_container.create_display_manager(display_options)
 
         with manager.processing_context(2, "Testing Celebrations") as ctx:
@@ -512,9 +522,7 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
         self.assertEqual(progress_stats.success_rate, 100.0, "Should calculate 100% success rate")
 
         # Test partial success (~67%)
-        display_options2 = self.RichDisplayOptions(
-            no_color=True, show_stats=False
-        )
+        display_options2 = self.RichDisplayOptions(no_color=True, show_stats=False)
         manager2 = self.test_container.create_display_manager(display_options2)
 
         with manager2.processing_context(3, "Testing Partial Success") as ctx:
@@ -527,7 +535,9 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
         self.assertEqual(progress_stats2.total, 3, "Should track total files")
         self.assertEqual(progress_stats2.succeeded, 2, "Should track successful files")
         self.assertEqual(progress_stats2.failed, 1, "Should track failed files")
-        self.assertAlmostEqual(progress_stats2.success_rate, 66.7, places=1, msg="Should calculate ~67% success rate")
+        self.assertAlmostEqual(
+            progress_stats2.success_rate, 66.7, places=1, msg="Should calculate ~67% success rate"
+        )
 
     def test_no_duplicate_completion_messages(self):
         """Test that completion messages are not duplicated when using Rich progress."""
@@ -536,9 +546,7 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
 
         # Use the test container and clear output
         self.clear_console_output()
-        display_options = self.RichDisplayOptions(
-            no_color=True, show_stats=False
-        )
+        display_options = self.RichDisplayOptions(no_color=True, show_stats=False)
         manager = self.test_container.create_display_manager(display_options)
 
         # Simulate normal processing workflow with Rich progress
@@ -555,7 +563,7 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
             "warnings": progress_stats.warnings,
             "recoverable_errors": 0,
             "successful_retries": 0,
-            "error_details": []
+            "error_details": [],
         }
 
         manager.show_completion_stats(completion_stats)
@@ -578,8 +586,8 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
             self.skipTest("Rich not available")
 
         test_cases = [
-            ("quiet", True, False),    # minimal
-            ("standard", False, False), # standard
+            ("quiet", True, False),  # minimal
+            ("standard", False, False),  # standard
             ("verbose", False, True),  # detailed/debug
         ]
 
@@ -614,7 +622,7 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
 
     def test_fallback_compatibility_chain(self):
         """Test Rich → Unicode → ASCII fallback chain."""
-        from utils.cli_display import TerminalCapabilities, create_formatter, MessageLevel
+        from utils.cli_display import MessageLevel, TerminalCapabilities, create_formatter
 
         # Test ASCII fallback (forced)
         caps_no_unicode = TerminalCapabilities(force_no_unicode=True)
@@ -646,13 +654,15 @@ class TestRichUIEnhancements(unittest.TestCase, RichTestCase):
         progress.finish("Test completed")
         # Progress system should handle percentage calculations correctly
 
+
 class TestRichUICompatibility(unittest.TestCase):
     """Test Rich UI system compatibility and fallback behavior."""
 
     def test_windows_unicode_handling(self):
         """Test that Windows Unicode issues are handled properly."""
-        from utils.cli_display import TerminalCapabilities
         import platform
+
+        from utils.cli_display import TerminalCapabilities
 
         caps = TerminalCapabilities()
 
@@ -665,27 +675,28 @@ class TestRichUICompatibility(unittest.TestCase):
 
     def test_no_color_environment_variable(self):
         """Test that NO_COLOR environment variable is respected."""
-        original_no_color = os.environ.get('NO_COLOR')
+        original_no_color = os.environ.get("NO_COLOR")
 
         try:
             # Test with NO_COLOR set
-            os.environ['NO_COLOR'] = '1'
+            os.environ["NO_COLOR"] = "1"
             from utils.cli_display import TerminalCapabilities
+
             caps = TerminalCapabilities()
             self.assertFalse(caps.supports_color, "NO_COLOR should disable color support")
 
             # Test with NO_COLOR unset
-            if 'NO_COLOR' in os.environ:
-                del os.environ['NO_COLOR']
+            if "NO_COLOR" in os.environ:
+                del os.environ["NO_COLOR"]
             caps = TerminalCapabilities()
             # Color support depends on terminal detection, just ensure it doesn't crash
 
         finally:
             # Restore original state
             if original_no_color is not None:
-                os.environ['NO_COLOR'] = original_no_color
-            elif 'NO_COLOR' in os.environ:
-                del os.environ['NO_COLOR']
+                os.environ["NO_COLOR"] = original_no_color
+            elif "NO_COLOR" in os.environ:
+                del os.environ["NO_COLOR"]
 
     def test_terminal_width_detection(self):
         """Test terminal width detection with fallbacks."""
@@ -697,6 +708,7 @@ class TestRichUICompatibility(unittest.TestCase):
         # Should have a reasonable width (at least 20, likely 80 or more)
         self.assertGreaterEqual(width, 20, "Terminal width should be reasonable")
         self.assertLessEqual(width, 500, "Terminal width should not be excessive")
+
 
 if __name__ == "__main__":
     unittest.main()

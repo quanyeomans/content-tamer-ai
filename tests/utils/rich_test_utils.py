@@ -8,7 +8,8 @@ Follows Rich testing best practices with StringIO capture and proper isolation.
 import os
 import sys
 from io import StringIO
-from typing import Optional, TextIO, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, TextIO
+
 from rich.console import Console
 
 # Ensure src directory is in path for imports
@@ -33,6 +34,7 @@ else:
     except ImportError:
         List = list
 
+
 def create_test_console() -> Console:
     """
     Create test-friendly Console with StringIO capture.
@@ -49,22 +51,36 @@ def create_test_console() -> Console:
         legacy_windows=False,
         safe_box=True,
         highlight=False,  # Disable highlighting for consistent test output
-        log_time=False,   # Disable timestamps for predictable output
-        log_path=False,   # Disable paths for cleaner output
+        log_time=False,  # Disable timestamps for predictable output
+        log_path=False,  # Disable paths for cleaner output
     )
 
-def create_test_container(console: Optional[Console] = None) -> ApplicationContainer:
+
+def create_test_container(console: Optional[Console] = None, fresh_state: bool = True) -> ApplicationContainer:
     """
-    Create ApplicationContainer with test console.
+    Create ApplicationContainer with test console and optional state isolation.
 
     Args:
         console: Optional Console instance. If None, creates test console
+        fresh_state: Whether to use function-scoped container with state isolation
 
     Returns:
         ApplicationContainer: Container configured for testing
     """
+    if fresh_state:
+        # Use the new function-scoped container for state isolation
+        from core.application_container import create_function_scoped_container
+        if console is not None:
+            container = create_function_scoped_container()
+            # Override the console if provided
+            container._console = console  # pylint: disable=protected-access
+            return container
+        return create_function_scoped_container()
+
+    # Legacy behavior
     test_console = console or create_test_console()
     return ApplicationContainer(console=test_console, test_mode=True)
+
 
 def capture_console_output(console: Console) -> str:
     """
@@ -76,13 +92,14 @@ def capture_console_output(console: Console) -> str:
     Returns:
         str: Captured console output, empty string if not capturable
     """
-    if hasattr(console.file, 'getvalue') and callable(getattr(console.file, 'getvalue')):
+    if hasattr(console.file, "getvalue") and callable(getattr(console.file, "getvalue")):
         file_io = console.file
         if isinstance(file_io, StringIO):
             return file_io.getvalue()
         # For other IO types with getvalue method
-        return str(getattr(file_io, 'getvalue')())
+        return str(getattr(file_io, "getvalue")())
     return ""
+
 
 def reset_console_manager():
     """
@@ -91,6 +108,7 @@ def reset_console_manager():
     Call this in test tearDown to prevent test interference.
     """
     ConsoleManager.reset()
+
 
 class RichTestCase:
     """
@@ -107,38 +125,49 @@ class RichTestCase:
     """
 
     def setUp(self):
-        """Set up test environment with Rich testing patterns."""
+        """Set up test environment with Rich testing patterns and state isolation."""
         # Reset any existing console manager state
         reset_console_manager()
 
-        # Create test console and container
+        # Create test console and container with state isolation
         self.test_console = create_test_console()
-        self.test_container = create_test_container(self.test_console)
+        self.test_container = create_test_container(self.test_console, fresh_state=True)
 
         # Create default display manager for testing
         from typing import cast
+
         self.display_options = RichDisplayOptions(
             verbose=False,
             quiet=False,
             no_color=True,  # Ensure consistent output for testing
             show_stats=False,  # Disable stats for cleaner test output
             file=cast(TextIO, self.test_console.file),
-            width=80
+            width=80,
         )
         self.display_manager = self.test_container.create_display_manager(self.display_options)
 
     def tearDown(self):
-        """Clean up test environment."""
+        """Clean up test environment with comprehensive state reset."""
+        # Reset container state if using TestApplicationContainer
+        if hasattr(self.test_container, 'reset_state'):
+            self.test_container.reset_state()
+
         # Ensure console file is properly closed to prevent pytest capture conflicts
-        if hasattr(self, 'test_console') and hasattr(self.test_console, 'file'):
+        if hasattr(self, "test_console") and hasattr(self.test_console, "file"):
             try:
-                if hasattr(self.test_console.file, 'close') and not self.test_console.file.closed:
+                if hasattr(self.test_console.file, "close") and not self.test_console.file.closed:
                     self.test_console.file.close()
             except (AttributeError, ValueError):
                 pass  # File already closed or doesn't support close
 
         # Reset console manager to prevent test interference
         reset_console_manager()
+
+        # Clean up references to prevent memory leaks
+        if hasattr(self, 'test_container'):
+            del self.test_container
+        if hasattr(self, 'display_manager'):
+            del self.display_manager
 
     def get_console_output(self) -> str:
         """
@@ -151,11 +180,13 @@ class RichTestCase:
 
     def clear_console_output(self):
         """Clear the console output buffer."""
-        if hasattr(self.test_console.file, 'seek') and hasattr(self.test_console.file, 'truncate'):
+        if hasattr(self.test_console.file, "seek") and hasattr(self.test_console.file, "truncate"):
             self.test_console.file.seek(0)
             self.test_console.file.truncate(0)
 
-    def create_display_manager(self, options: Optional[RichDisplayOptions] = None) -> RichDisplayManager:
+    def create_display_manager(
+        self, options: Optional[RichDisplayOptions] = None
+    ) -> RichDisplayManager:
         """
         Create a display manager for testing.
 
@@ -180,14 +211,14 @@ class RichTestCase:
             "error:",
             "failed to render",
             "rich rendering error",
-            "markup error"
+            "markup error",
         ]
 
         for pattern in error_patterns:
             self.assertNotIn(
                 pattern.lower(),
                 output.lower(),
-                f"Rich rendering error detected: '{pattern}' found in output"
+                f"Rich rendering error detected: '{pattern}' found in output",
             )
 
     def assert_console_contains(self, text: str, msg: Optional[str] = None):
@@ -200,10 +231,10 @@ class RichTestCase:
         """
         output = self.get_console_output()
         if text not in output:
-            error_msg = "Console output does not contain '{text}'"
+            error_msg = f"Console output does not contain '{text}'"
             if msg:
-                error_msg = "{msg}: {error_msg}"
-            error_msg += "\nActual output: {repr(output)}"
+                error_msg = f"{msg}: {error_msg}"
+            error_msg += f"\nActual output: {repr(output)}"
             raise AssertionError(error_msg)
 
     def assert_console_not_contains(self, text: str, msg: Optional[str] = None):
@@ -216,10 +247,10 @@ class RichTestCase:
         """
         output = self.get_console_output()
         if text in output:
-            error_msg = "Console output unexpectedly contains '{text}'"
+            error_msg = f"Console output unexpectedly contains '{text}'"
             if msg:
-                error_msg = "{msg}: {error_msg}"
-            error_msg += "\nActual output: {repr(output)}"
+                error_msg = f"{msg}: {error_msg}"
+            error_msg += f"\nActual output: {repr(output)}"
             raise AssertionError(error_msg)
 
     def assert_console_empty(self, msg: Optional[str] = None):
@@ -233,8 +264,8 @@ class RichTestCase:
         if output.strip():
             error_msg = "Console output is not empty"
             if msg:
-                error_msg = "{msg}: {error_msg}"
-            error_msg += "\nActual output: {repr(output)}"
+                error_msg = f"{msg}: {error_msg}"
+            error_msg += f"\nActual output: {repr(output)}"
             raise AssertionError(error_msg)
 
     def get_console_lines(self) -> "List[str]":
@@ -245,7 +276,7 @@ class RichTestCase:
             List[str]: Console output split into lines, empty lines removed
         """
         output = self.get_console_output()
-        return [line.strip() for line in output.split('\n') if line.strip()]
+        return [line.strip() for line in output.split("\n") if line.strip()]
 
     def assert_no_rich_io_errors(self) -> None:
         """Assert that no Rich I/O errors occurred in console output."""
@@ -254,12 +285,13 @@ class RichTestCase:
             "I/O operation on closed file",
             "ValueError: I/O",
             "Rich console error",
-            "AttributeError: 'NoneType'"
+            "AttributeError: 'NoneType'",
         ]
 
         for error_pattern in error_patterns:
             if error_pattern in output:
-                raise AssertionError("Rich I/O error detected: {error_pattern}")
+                raise AssertionError(f"Rich I/O error detected: {error_pattern}")
+
 
 class MockApplicationContainer(ApplicationContainer):
     """
@@ -279,11 +311,14 @@ class MockApplicationContainer(ApplicationContainer):
         super().__init__(console=console or create_test_console(), test_mode=True)
         self._mock_components = mock_components
 
-    def create_display_manager(self, options: Optional[RichDisplayOptions] = None) -> RichDisplayManager:
+    def create_display_manager(
+        self, options: Optional[RichDisplayOptions] = None
+    ) -> RichDisplayManager:
         """Create display manager, using mock if provided."""
-        if 'display_manager' in self._mock_components:
-            return self._mock_components['display_manager']
+        if "display_manager" in self._mock_components:
+            return self._mock_components["display_manager"]
         return super().create_display_manager(options)
+
 
 def with_test_console(test_func):
     """
@@ -295,10 +330,13 @@ def with_test_console(test_func):
             # test_console is pre-configured test Console
             pass
     """
+
     def wrapper(*args, **kwargs):
         test_console = create_test_console()
         return test_func(*args, test_console=test_console, **kwargs)
+
     return wrapper
+
 
 def assert_rich_output_equals(expected: str, console: Console):
     """
@@ -311,11 +349,53 @@ def assert_rich_output_equals(expected: str, console: Console):
     actual = capture_console_output(console)
     if actual != expected:
         raise AssertionError(
-            "Rich output mismatch:\n"
-            "Expected: {repr(expected)}\n"
-            "Actual:   {repr(actual)}"
+            f"Rich output mismatch:\nExpected: {repr(expected)}\nActual:   {repr(actual)}"
         )
+
+
+def create_isolated_test_container(capture_output: bool = True) -> ApplicationContainer:
+    """
+    Create a TestApplicationContainer with guaranteed state isolation.
+
+    This is a convenience function that creates a fresh container with
+    sys.path preservation and automatic cleanup. Use this when you need
+    reliable test isolation.
+
+    Args:
+        capture_output: Whether to capture Console output
+
+    Returns:
+        TestApplicationContainer: Container with state isolation
+    """
+    from core.application_container import create_function_scoped_container
+    return create_function_scoped_container(capture_output=capture_output)
+
+
+def with_isolated_container(test_method):
+    """
+    Decorator that provides an isolated test container for a test method.
+
+    Usage:
+        @with_isolated_container
+        def test_something(self, isolated_container):
+            # isolated_container is a fresh TestApplicationContainer
+            # with guaranteed state isolation
+            pass
+    """
+    def wrapper(self, *args, **kwargs):
+        isolated_container = create_isolated_test_container()
+        try:
+            # Add container to kwargs so test method can access it
+            return test_method(self, isolated_container=isolated_container, *args, **kwargs)
+        finally:
+            # Ensure cleanup
+            if hasattr(isolated_container, 'reset_state'):
+                isolated_container.reset_state()
+
+    return wrapper
+
 
 # Convenience aliases for common testing patterns
 TestConsole = create_test_console
 TestContainer = create_test_container
+IsolatedTestContainer = create_isolated_test_container

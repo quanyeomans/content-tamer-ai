@@ -231,9 +231,7 @@ class HardwareDetector:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.error(
-                "Unexpected error in GPU detection: %s: %s", type(e).__name__, e
-            )
+            logger.error("Unexpected error in GPU detection: %s: %s", type(e).__name__, e)
 
         return has_gpu, gpu_info
 
@@ -302,9 +300,7 @@ class HardwareDetector:
             reason = f"Tight fit: {available_ram:.1f}GB RAM available, {primary_req['min_ram_gb']}GB required"
 
         # Alternative models (smaller ones that would also work)
-        alternatives = [
-            model for model, _ in compatible_models[1:3]
-        ]  # Top 2 alternatives
+        alternatives = [model for model, _ in compatible_models[1:3]]  # Top 2 alternatives
 
         primary_recommendation = ModelRecommendation(
             model_name=primary_model,
@@ -334,8 +330,7 @@ class HardwareDetector:
         system_info = self.detect_system_info()
 
         compatibility = {
-            "supported_platform": system_info.platform_system
-            in ["Linux", "Darwin", "Windows"],
+            "supported_platform": system_info.platform_system in ["Linux", "Darwin", "Windows"],
             "sufficient_ram": system_info.available_ram_gb >= 2.0,
             "supported_architecture": system_info.platform_machine
             in ["x86_64", "AMD64", "arm64", "aarch64"],
@@ -372,9 +367,7 @@ class HardwareDetector:
             }
 
         headroom_ratio = available_ram / required_ram
-        cpu_factor = min(
-            system_info.cpu_count / 4.0, 2.0
-        )  # Normalize to 4 cores, cap at 2x
+        cpu_factor = min(system_info.cpu_count / 4.0, 2.0)  # Normalize to 4 cores, cap at 2x
 
         # Rough performance estimates
         if headroom_ratio > 2.0 and cpu_factor > 1.5:

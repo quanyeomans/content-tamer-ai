@@ -9,10 +9,10 @@ Automatically routes requests to appropriate interface based on context:
 Provides persona-driven interface selection and consistent experience.
 """
 
-import sys
 import os
-from typing import Optional, Dict, Any, Union, List
+import sys
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
 
 from .base_interfaces import HumanInterface, ProgrammaticInterface, ProtocolInterface
 from .human.interactive_cli import InteractiveCLI
@@ -22,6 +22,7 @@ from .protocols.mcp_server import MCPServer
 
 class InterfaceType(Enum):
     """Available interface types."""
+
     HUMAN = "human"
     PROGRAMMATIC = "programmatic"
     PROTOCOL = "protocol"
@@ -67,7 +68,7 @@ class ContextDetector:
             os.getenv("MCP_SERVER_MODE"),
             os.getenv("CLAUDE_MCP_SERVER"),
             "--mcp-server" in sys.argv,
-            "--protocol-mode" in sys.argv
+            "--protocol-mode" in sys.argv,
         ]
 
         return any(mcp_indicators)
@@ -105,7 +106,7 @@ class ContextDetector:
                 "AUTOMATED_MODE": os.getenv("AUTOMATED_MODE"),
                 "CONTENT_TAMER_API_MODE": os.getenv("CONTENT_TAMER_API_MODE"),
             },
-            "execution_context": __name__
+            "execution_context": __name__,
         }
 
 
@@ -120,8 +121,7 @@ class InterfaceRouter:
         self._current_type = None
 
     def get_interface(
-        self,
-        interface_type: Optional[Union[str, InterfaceType]] = None
+        self, interface_type: Optional[Union[str, InterfaceType]] = None
     ) -> Union[HumanInterface, ProgrammaticInterface, ProtocolInterface]:
         """Get appropriate interface instance.
 
@@ -150,8 +150,7 @@ class InterfaceRouter:
         return self._current_interface
 
     def _create_interface(
-        self,
-        interface_type: InterfaceType
+        self, interface_type: InterfaceType
     ) -> Union[HumanInterface, ProgrammaticInterface, ProtocolInterface]:
         """Create interface instance of specified type."""
         if interface_type == InterfaceType.HUMAN:
@@ -176,10 +175,12 @@ class InterfaceRouter:
             "detected_type": detected_type.value,
             "current_type": self._current_type.value if self._current_type else None,
             "context": context_info,
-            "routing_reasons": self._get_routing_reasons(detected_type, context_info)
+            "routing_reasons": self._get_routing_reasons(detected_type, context_info),
         }
 
-    def _get_routing_reasons(self, interface_type: InterfaceType, context: Dict[str, Any]) -> List[str]:
+    def _get_routing_reasons(
+        self, interface_type: InterfaceType, context: Dict[str, Any]
+    ) -> List[str]:
         """Get human-readable routing decision reasons."""
         reasons = []
 
@@ -215,7 +216,9 @@ class InterfaceRouter:
 _global_router = InterfaceRouter()
 
 
-def get_interface(interface_type: Optional[str] = None) -> Union[HumanInterface, ProgrammaticInterface, ProtocolInterface]:
+def get_interface(
+    interface_type: Optional[str] = None,
+) -> Union[HumanInterface, ProgrammaticInterface, ProtocolInterface]:
     """Get appropriate interface instance (convenience function).
 
     Args:
@@ -270,29 +273,29 @@ class PersonaRouter:
             "verbose": True,
             "show_progress": True,
             "confirm_actions": False,
-            "default_ml_level": 2
+            "default_ml_level": 2,
         },
         "analyst": {
             "interface": "human",
             "verbose": True,
             "show_progress": True,
             "confirm_actions": True,
-            "default_ml_level": 3
+            "default_ml_level": 3,
         },
         "automation": {
             "interface": "programmatic",
             "verbose": False,
             "show_progress": False,
             "confirm_actions": False,
-            "default_ml_level": 2
+            "default_ml_level": 2,
         },
         "integration": {
             "interface": "protocol",
             "verbose": True,
             "show_progress": True,
             "confirm_actions": False,
-            "default_ml_level": 2
-        }
+            "default_ml_level": 2,
+        },
     }
 
     @classmethod
@@ -304,7 +307,9 @@ class PersonaRouter:
         return cls.PERSONA_CONFIGS.get(persona, cls.PERSONA_CONFIGS["developer"])
 
     @classmethod
-    def route_for_persona(cls, persona: Optional[str] = None) -> Union[HumanInterface, ProgrammaticInterface, ProtocolInterface]:
+    def route_for_persona(
+        cls, persona: Optional[str] = None
+    ) -> Union[HumanInterface, ProgrammaticInterface, ProtocolInterface]:
         """Route to interface optimized for persona."""
         config = cls.get_persona_config(persona)
         return get_interface(config["interface"])

@@ -5,13 +5,17 @@ Provides beautiful, engaging command-line interface with colors, formatting,
 and cross-platform compatibility using the Rich library.
 """
 
-from typing import Dict, List, Optional, Union
+# Typing imports not used - keeping for future type hints
 
 from rich.align import Align
-from rich.console import Console, RenderableType
+
+# RenderableType imported but not used - keeping for future rich typing
+from rich.console import Console, RenderableType  # pylint: disable=unused-import
 from rich.panel import Panel
 from rich.rule import Rule
-from rich.style import Style
+
+# Style imported but not used - keeping for future styling enhancements
+from rich.style import Style  # pylint: disable=unused-import
 from rich.table import Table
 from rich.text import Text
 
@@ -280,7 +284,9 @@ class RichCLIDisplay:
 
         self.console.print()
 
-    def print_completion_message(self, success_rate: float, total_files: int) -> None:  # pylint: disable=unused-argument
+    def print_completion_message(
+        self, success_rate: float, total_files: int  # pylint: disable=unused-argument
+    ) -> None:
         """Display completion message with appropriate celebration level."""
         self.console.print()
 

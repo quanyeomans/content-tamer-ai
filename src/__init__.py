@@ -20,9 +20,10 @@ from .main import main
 
 # Domain services for library usage
 try:
-    from .domains.content import ContentService
     from .domains.ai_integration import AIIntegrationService
+    from .domains.content import ContentService
     from .domains.organization import OrganizationService
+
     DOMAIN_SERVICES_AVAILABLE = True
 except ImportError:
     DOMAIN_SERVICES_AVAILABLE = False
@@ -30,6 +31,7 @@ except ImportError:
 # Interface layer for programmatic access
 try:
     from .interfaces.programmatic.library_interface import ContentTamerAPI
+
     LIBRARY_API_AVAILABLE = True
 except ImportError:
     LIBRARY_API_AVAILABLE = False

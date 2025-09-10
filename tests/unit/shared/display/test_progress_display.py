@@ -7,13 +7,14 @@ import sys
 import time
 import unittest
 from io import StringIO
-from unittest.mock import call, patch, Mock, MagicMock
+from unittest.mock import MagicMock, Mock, call, patch
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
 from shared.display.cli_display import Colors
 from shared.display.progress_display import ProgressDisplay, ProgressStats
+
 
 class TestProgressStats(unittest.TestCase):
     """Test progress statistics tracking."""
@@ -48,6 +49,7 @@ class TestProgressStats(unittest.TestCase):
         stats = ProgressStats()
         time.sleep(0.01)  # Small delay
         self.assertGreater(stats.elapsed_time, 0)
+
 
 class TestProgressDisplay(unittest.TestCase):
     """Test enhanced progress display."""
@@ -157,6 +159,7 @@ class TestProgressDisplay(unittest.TestCase):
             output_content = self.output.getvalue()
             self.assertGreater(len(output_content), 0)
 
+
 class TestProgressDisplayWithColors(unittest.TestCase):
     """Test progress display with ANSI colors enabled."""
 
@@ -190,6 +193,7 @@ class TestProgressDisplayWithColors(unittest.TestCase):
         # If colors are supported, should contain ANSI escape sequences
         if self.progress.formatter.capabilities.supports_color:
             self.assertIn("\033[", output_content)
+
 
 class TestProgressDisplayEdgeCases(unittest.TestCase):
     """Test edge cases and error conditions."""
@@ -231,6 +235,7 @@ class TestProgressDisplayEdgeCases(unittest.TestCase):
         output = self.output.getvalue()
         # Content should be present (exact representation may vary)
         self.assertGreater(len(output), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

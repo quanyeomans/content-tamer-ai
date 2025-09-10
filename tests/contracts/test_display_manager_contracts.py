@@ -17,10 +17,15 @@ from io import StringIO
 import pytest
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"
+    )
+)
 
 from shared.display.rich_display_manager import RichDisplayOptions
 from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
     """Contracts for display manager that prevent UI regressions."""
@@ -41,13 +46,13 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
 
         # Must accept this exact format from application.py
         stats = {
-            'total_files': 5,
-            'successful': 3,
-            'errors': 2,
-            'warnings': 1,
-            'recoverable_errors': 0,
-            'successful_retries': 1,
-            'error_details': []
+            "total_files": 5,
+            "successful": 3,
+            "errors": 2,
+            "warnings": 1,
+            "recoverable_errors": 0,
+            "successful_retries": 1,
+            "error_details": [],
         }
 
         # Must not raise exception
@@ -63,19 +68,18 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
         manager = self.test_container.create_display_manager(RichDisplayOptions())
 
         # These attributes must always exist
-        required_attributes = ['total', 'succeeded', 'failed', 'warnings', 'success_rate']
+        required_attributes = ["total", "succeeded", "failed", "warnings", "success_rate"]
 
         for attr in required_attributes:
             self.assertTrue(
                 hasattr(manager.progress.stats, attr),
-                "progress.stats missing required attribute: {attr}"
+                "progress.stats missing required attribute: {attr}",
             )
 
             # Must be numeric types
             value = getattr(manager.progress.stats, attr)
             self.assertIsInstance(
-                value, (int, float),
-                "progress.stats.{attr} must be numeric, got {type(value)}"
+                value, (int, float), "progress.stats.{attr} must be numeric, got {type(value)}"
             )
 
     @pytest.mark.contract
@@ -83,7 +87,9 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
     def test_no_duplicate_completion_messages_contract(self):
         """CONTRACT: Only one completion message should appear in output."""
         output = StringIO()
-        manager = self.test_container.create_display_manager(RichDisplayOptions(no_color=True, file=output))
+        manager = self.test_container.create_display_manager(
+            RichDisplayOptions(no_color=True, file=output)
+        )
 
         # Simulate full processing workflow
         with manager.processing_context(2, "Contract Test") as ctx:
@@ -91,12 +97,7 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
             ctx.complete_file("file2.pd", "result2.pd")
 
         # Call completion stats (this was causing duplication)
-        stats = {
-            'total_files': 2,
-            'successful': 2,
-            'errors': 0,
-            'warnings': 0
-        }
+        stats = {"total_files": 2, "successful": 2, "errors": 0, "warnings": 0}
         manager.show_completion_stats(stats)
 
         output_content = output.getvalue()
@@ -106,12 +107,10 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
         ok_completions = output_content.count("[OK] Processing complete:")
 
         self.assertEqual(
-            error_completions, 0,
-            "Found {error_completions} error completion messages, expected 0"
+            error_completions, 0, "Found {error_completions} error completion messages, expected 0"
         )
         self.assertLessEqual(
-            ok_completions, 1,
-            "Found {ok_completions} OK completion messages, expected ≤1"
+            ok_completions, 1, "Found {ok_completions} OK completion messages, expected ≤1"
         )
 
     @pytest.mark.contract
@@ -122,18 +121,18 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
 
         # Test various success rate scenarios
         test_cases = [
-            {'total_files': 4, 'successful': 4, 'expected_rate': 100.0},
-            {'total_files': 4, 'successful': 3, 'expected_rate': 75.0},
-            {'total_files': 4, 'successful': 2, 'expected_rate': 50.0},
-            {'total_files': 4, 'successful': 0, 'expected_rate': 0.0},
+            {"total_files": 4, "successful": 4, "expected_rate": 100.0},
+            {"total_files": 4, "successful": 3, "expected_rate": 75.0},
+            {"total_files": 4, "successful": 2, "expected_rate": 50.0},
+            {"total_files": 4, "successful": 0, "expected_rate": 0.0},
         ]
 
         for case in test_cases:
             stats = {
-                'total_files': case['total_files'],
-                'successful': case['successful'],
-                'errors': case['total_files'] - case['successful'],
-                'warnings': 0
+                "total_files": case["total_files"],
+                "successful": case["successful"],
+                "errors": case["total_files"] - case["successful"],
+                "warnings": 0,
             }
 
             # Must calculate correct success rate
@@ -143,5 +142,6 @@ class TestDisplayManagerInterfaceContracts(unittest.TestCase, RichTestCase):
             except Exception as e:
                 self.fail("Success rate calculation failed for {case}: {e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

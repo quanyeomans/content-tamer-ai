@@ -1,7 +1,9 @@
 # Refined Testing Strategy: Contract-First Regression Prevention
-## Master Testing Strategy for Content Tamer AI (Version 2.0)
+## Master Testing Strategy for Content Tamer AI (Version 2.0) - SUPERSEDED
 
-> **Mission**: Eliminate regression bugs through contract enforcement, state validation, and systematic user experience protection.
+> **NOTICE**: This strategy has been superseded by the updated [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) which includes the contract testing concepts along with systematic test pyramid transformation based on current analysis.
+
+> **Legacy Mission**: Eliminate regression bugs through contract enforcement, state validation, and systematic user experience protection.
 
 ## Executive Summary: Strategy Refinement
 

@@ -24,6 +24,7 @@ sys.path.append(
 from shared.display.display_manager import DisplayManager
 from shared.display.rich_display_manager import RichDisplayOptions
 
+
 @pytest.fixture
 def platform_context():
     """Context for platform consistency tests."""
@@ -38,6 +39,7 @@ def platform_context():
     if os.path.exists(context.temp_dir):
         shutil.rmtree(context.temp_dir)
 
+
 # Scenario imports
 @scenario(
     "../platform_consistency.feature",
@@ -46,9 +48,11 @@ def platform_context():
 def test_processing_works_consistently_with_different_path_separators():
     pass
 
+
 @scenario("../platform_consistency.feature", "Error messages are platform-appropriate")
 def test_error_messages_are_platform_appropriate():
     pass
+
 
 @scenario(
     "../platform_consistency.feature",
@@ -56,6 +60,7 @@ def test_error_messages_are_platform_appropriate():
 )
 def test_display_output_works_across_different_terminal_environments():
     pass
+
 
 # Step definitions focusing on cross-platform behavior
 @given("I have a clean platform test environment")
@@ -71,6 +76,7 @@ def clean_platform_test_environment(platform_context):
     os.makedirs(platform_context.input_dir)
     os.makedirs(platform_context.output_dir)
     os.makedirs(platform_context.nested_dir)
+
 
 @when("I create files with platform-appropriate paths")
 def create_files_with_platform_paths(platform_context):
@@ -90,6 +96,7 @@ def create_files_with_platform_paths(platform_context):
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(f"Test content for {os.path.basename(file_path)}")
         platform_context.test_files.append(file_path)
+
 
 @when("I encounter file path errors")
 def encounter_file_path_errors(platform_context):
@@ -118,6 +125,7 @@ def encounter_file_path_errors(platform_context):
         platform_context.error_scenarios.append(f"expected_error: {str(e)}")
     except Exception as e:
         platform_context.error_scenarios.append(f"unexpected_error: {str(e)}")
+
 
 @when("I run processing with various display options")
 def run_processing_with_display_options(platform_context):
@@ -152,6 +160,7 @@ def run_processing_with_display_options(platform_context):
         }
     )
 
+
 @then("file processing should handle paths correctly")
 def verify_path_handling(platform_context):
     """Verify file paths are handled correctly across platforms."""
@@ -163,6 +172,7 @@ def verify_path_handling(platform_context):
         normalized_path = os.path.normpath(file_path)
         assert os.path.exists(normalized_path), f"Normalized path should work: {normalized_path}"
 
+
 @then("the results should be consistent regardless of path format")
 def verify_consistent_results(platform_context):
     """Verify results are consistent across path formats."""
@@ -171,6 +181,7 @@ def verify_consistent_results(platform_context):
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
         assert "Test content" in content, f"File content should be readable: {file_path}"
+
 
 @then("error messages should be clear and platform-appropriate")
 def verify_platform_appropriate_errors(platform_context):
@@ -191,6 +202,7 @@ def verify_platform_appropriate_errors(platform_context):
         has_expected_error or not has_unexpected_crash
     ), f"Error handling should be appropriate for platform. Scenarios: {platform_context.error_scenarios}"
 
+
 @then("file operations should handle platform differences gracefully")
 def verify_graceful_platform_handling(platform_context):
     """Verify platform differences are handled gracefully."""
@@ -205,6 +217,7 @@ def verify_graceful_platform_handling(platform_context):
     # Should have handled error scenarios without crashing
     assert len(platform_context.error_scenarios) > 0, "Should have tested error scenarios"
 
+
 @then("the display should work correctly")
 def verify_display_works(platform_context):
     """Verify display works correctly across configurations."""
@@ -217,6 +230,7 @@ def verify_display_works(platform_context):
     assert (
         quiet_test["length"] <= normal_test["length"]
     ), "Quiet mode should produce less or equal output than normal mode"
+
 
 @then("special characters should be handled appropriately")
 def verify_special_character_handling(platform_context):

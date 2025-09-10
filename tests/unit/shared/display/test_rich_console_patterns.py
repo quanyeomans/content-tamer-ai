@@ -5,18 +5,19 @@ Demonstrates proper Rich testing approach without excessive mocking.
 Uses RichTestCase framework for proper console isolation.
 """
 
+import os
+import sys
 import unittest
 from unittest.mock import patch
 
 # Import Rich testing framework
 from tests.utils.rich_test_utils import RichTestCase
-import sys
-import os
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
 from interfaces.human.rich_console_manager import RichConsoleManager
+
 
 class TestRichConsoleManager(unittest.TestCase, RichTestCase):
     """Test Rich Console Manager using proper Rich testing patterns."""
@@ -40,7 +41,7 @@ class TestRichConsoleManager(unittest.TestCase, RichTestCase):
         self.assertIn("Intelligent document processing", output)
 
         # Should use appropriate format based on console encoding
-        if hasattr(self.test_console, 'options') and self.test_console.options.encoding == 'utf-8':
+        if hasattr(self.test_console, "options") and self.test_console.options.encoding == "utf-8":
             # UTF-8 console should use emojis
             self.assertIn("🎯", output)
         else:
@@ -53,7 +54,7 @@ class TestRichConsoleManager(unittest.TestCase, RichTestCase):
             ("success", "Test success message"),
             ("warning", "Test warning message"),
             ("error", "Test error message"),
-            ("info", "Test info message")
+            ("info", "Test info message"),
         ]
 
         for status, message in test_cases:
@@ -65,7 +66,10 @@ class TestRichConsoleManager(unittest.TestCase, RichTestCase):
             self.assertIn(message, output)
 
             # Should use appropriate icon based on encoding
-            if hasattr(self.test_console, 'options') and self.test_console.options.encoding == 'utf-8':
+            if (
+                hasattr(self.test_console, "options")
+                and self.test_console.options.encoding == "utf-8"
+            ):
                 # UTF-8 should use emoji
                 if status == "success":
                     self.assertIn("✅", output)
@@ -85,10 +89,11 @@ class TestRichConsoleManager(unittest.TestCase, RichTestCase):
         self.assertIn("Processing test", output)
 
         # Should use appropriate spinner based on encoding
-        if hasattr(self.test_console, 'options') and self.test_console.options.encoding == 'utf-8':
+        if hasattr(self.test_console, "options") and self.test_console.options.encoding == "utf-8":
             self.assertIn("🔄", output)
         else:
             self.assertIn("[~]", output)
+
 
 class TestRichConsolePatterns(unittest.TestCase):
     """Test Rich Console patterns without over-mocking."""
@@ -100,8 +105,8 @@ class TestRichConsolePatterns(unittest.TestCase):
 
         self.assertIsNotNone(console)
         # Rich should auto-detect terminal capabilities
-        self.assertTrue(hasattr(console, 'options'))
-        self.assertTrue(hasattr(console.options, 'encoding'))
+        self.assertTrue(hasattr(console, "options"))
+        self.assertTrue(hasattr(console.options, "encoding"))
 
     def test_emoji_detection_logic(self):
         """Test emoji detection logic works correctly."""
@@ -109,10 +114,7 @@ class TestRichConsolePatterns(unittest.TestCase):
         console = console_manager.console
 
         # Test the detection logic we use
-        has_emoji_support = (
-            hasattr(console, 'options') and
-            console.options.encoding == 'utf-8'
-        )
+        has_emoji_support = hasattr(console, "options") and console.options.encoding == "utf-8"
 
         # Should return boolean result
         self.assertIsInstance(has_emoji_support, bool)
@@ -128,6 +130,7 @@ class TestRichConsolePatterns(unittest.TestCase):
         # Message should be properly formatted string
         self.assertIsInstance(test_message, str)
         self.assertIn("Test", test_message)
+
 
 class TestRichTestingFramework(unittest.TestCase, RichTestCase):
     """Demonstrate proper Rich testing without excessive mocking."""
@@ -173,5 +176,6 @@ class TestRichTestingFramework(unittest.TestCase, RichTestCase):
         # Verify input was mocked appropriately
         mock_input.assert_called()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

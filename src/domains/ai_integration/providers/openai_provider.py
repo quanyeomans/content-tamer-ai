@@ -7,7 +7,7 @@ Extracted from ai_providers.py for better maintainability and domain separation.
 from typing import Optional
 
 # Import from shared infrastructure (correct layer)
-from ....shared.infrastructure.filename_config import (
+from shared.infrastructure.filename_config import (
     get_secure_filename_prompt_template,
     get_token_limit_for_provider,
     validate_generated_filename,
@@ -52,28 +52,36 @@ class OpenAIProvider(AIProvider):
     def validate_api_key(self) -> bool:
         """Validate OpenAI API key."""
         try:
-            # Make a minimal API call to test the key
+            # Make a minimal API call to test the key using compatible parameters
             client = self.client.with_options(timeout=10)
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Use cheapest model for validation
-                messages=[{"role": "user", "content": "Hi"}],
-                max_tokens=1,
-            )
+            
+            # Use validation parameters compatible with all models
+            validation_payload = {
+                "model": "gpt-3.5-turbo",  # Use cheapest model for validation
+                "messages": [{"role": "user", "content": "Hi"}],
+                "max_completion_tokens": 1,
+            }
+            
+            client.chat.completions.create(**validation_payload)
             return True
         except Exception as e:
-            self.logger.warning(f"OpenAI API key validation failed: {e}")
+            self.logger.warning("OpenAI API key validation failed: %s", e)
             return False
 
     def _build_content_parts(self, content: str, image_b64: Optional[str] = None) -> list:
         """Build content parts for API request with security sanitization."""
+
         # Simple content sanitization (domain-local implementation)
         def sanitize_content_for_ai(content):
             """Basic content sanitization for AI processing."""
             # Remove potential prompt injection attempts
-            if any(pattern in content.lower() for pattern in ['ignore previous', 'forget all', 'system:', 'assistant:']):
+            if any(
+                pattern in content.lower()
+                for pattern in ["ignore previous", "forget all", "system:", "assistant:"]
+            ):
                 return "[Content contains potentially unsafe patterns - using safe fallback]"
             return content
-        
+
         class SecurityError(Exception):
             pass
 
@@ -84,7 +92,7 @@ class OpenAIProvider(AIProvider):
                 sanitized_content = sanitize_content_for_ai(content)
 
                 # Use sanitized content with centralized prompt template
-                secure_prompt = get_secure_filename_prompt_template("openai")
+                secure_prompt = get_secure_filename_prompt_template()
                 parts.append(
                     {
                         "type": "text",
@@ -116,13 +124,26 @@ class OpenAIProvider(AIProvider):
             {"role": "user", "content": parts},
         ]
 
+        # GPT-5 compatible parameters only
         payload = {
             "model": self.model,
             "messages": messages,
-            "max_tokens": get_token_limit_for_provider("openai"),
-            "temperature": 0.1,
-            "top_p": 0.9,
+            "max_completion_tokens": get_token_limit_for_provider(),
         }
+        
+        # Only add parameters supported by the specific model
+        if self.model.startswith("gpt-4") or self.model.startswith("gpt-3"):
+            # Legacy models support temperature and top_p
+            payload.update({
+                "temperature": 0.1,
+                "top_p": 0.9,
+            })
+        elif self.model.startswith("gpt-5"):
+            # GPT-5 models: use default temperature (1), add reasoning_effort if available
+            payload.update({
+                "reasoning_effort": "medium",  # GPT-5 specific parameter
+            })
+        # For other models, use minimal parameter set
 
         return payload
 
@@ -141,7 +162,7 @@ class OpenAIProvider(AIProvider):
             response = self.client.chat.completions.create(**retry_payload)
             return response.choices[0].message.content.strip()
         except Exception as e:
-            self.logger.error(f"Retry without image also failed: {e}")
+            self.logger.error("Retry without image also failed: %s", e)
             raise
 
     def _try_fallback_model(self, payload: dict, image_b64: Optional[str]) -> str:
@@ -157,7 +178,7 @@ class OpenAIProvider(AIProvider):
             response = self.client.chat.completions.create(**fallback_payload)
             return response.choices[0].message.content.strip()
         except Exception as e:
-            self.logger.warning(f"Fallback model {fallback_model} also failed: {e}")
+            self.logger.warning("Fallback model %s also failed: %s", fallback_model, e)
             return ""
 
     def generate_filename(self, content: str, original_filename: str = "") -> str:
@@ -186,7 +207,7 @@ class OpenAIProvider(AIProvider):
                     raw_filename = self._handle_image_error(payload, parts)
                 elif HAVE_OPENAI and APIError is not None and isinstance(e, APIError):
                     # Handle other OpenAI API errors
-                    raise RuntimeError(f"OpenAI API error: {e}")
+                    raise RuntimeError(f"OpenAI API error: {e}") from e
                 else:
                     raise
 

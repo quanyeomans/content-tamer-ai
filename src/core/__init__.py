@@ -14,8 +14,8 @@ from .application_container import (
     create_application_container,
     create_test_container,
     get_global_container,
-    set_global_container,
     reset_global_container,
+    set_global_container,
 )
 
 __all__ = [

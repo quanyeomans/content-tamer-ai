@@ -10,42 +10,52 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
 from shared.infrastructure.dependency_manager import DependencyManager
 
+
 class TestDependencyManager(unittest.TestCase):
     """Test dependency management functionality."""
-    
+
     def setUp(self):
         """Set up test dependency manager."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.manager = DependencyManager(config_dir=self.temp_dir)
-    
-    @patch('subprocess.run')
+        # tmp_path will be injected by pytest fixture
+        pass
+
+    @pytest.mark.usefixtures("tmp_path")
+    @patch("subprocess.run")
     def test_version_extraction_unexpected_format(self, mock_run):
         """Test handling of unexpected version output format."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "unexpected format without version info"
-        mock_run.return_value = mock_result
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            manager = DependencyManager(config_dir=tmp_dir)
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = "unexpected format without version info"
+            mock_run.return_value = mock_result
 
-        version = self.manager._get_version("ollama", "/usr/bin/ollama")
+            version = manager._get_version("ollama", "/usr/bin/ollama")
 
-        # Should handle gracefully and extract what it can
-        self.assertIsNone(version)
-        
+            # Should handle gracefully and extract what it can
+            self.assertIsNone(version)
+
     def test_dependency_detection_basic(self):
         """Test basic dependency detection functionality."""
-        # Should not raise exceptions
-        dependencies = self.manager.refresh_all_dependencies()
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            manager = DependencyManager(config_dir=tmp_dir)
+            # Should not raise exceptions
+            dependencies = manager.refresh_all_dependencies()
         self.assertIsInstance(dependencies, dict)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

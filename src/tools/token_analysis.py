@@ -16,6 +16,7 @@ try:
 except ImportError:
     # Fallback encoding for token analysis
     import tiktoken
+
     try:
         ENCODING = tiktoken.get_encoding("cl100k_base")
     except Exception:
@@ -23,6 +24,7 @@ except ImportError:
         class FallbackEncoding:
             def encode(self, text):
                 return text.split()
+
         ENCODING = FallbackEncoding()
 
 

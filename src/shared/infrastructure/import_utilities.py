@@ -61,9 +61,7 @@ def import_display_components():
     Returns:
         Tuple of (DisplayManager, DisplayOptions)
     """
-    modules = safe_import_with_fallback(
-        ["utils.display_manager", "utils.error_handling"]
-    )
+    modules = safe_import_with_fallback(["utils.display_manager", "utils.error_handling"])
 
     display_manager = modules["utils.display_manager"]
     error_handling = modules["utils.error_handling"]
@@ -82,9 +80,7 @@ def import_core_components():
     Returns:
         Tuple of (AIProviderFactory, ContentProcessorFactory, FileOrganizer)
     """
-    modules = safe_import_with_fallback(
-        ["ai_providers", "content_processors", "file_organizer"]
-    )
+    modules = safe_import_with_fallback(["ai_providers", "content_processors", "file_organizer"])
 
     return (
         modules["ai_providers"].AIProviderFactory,

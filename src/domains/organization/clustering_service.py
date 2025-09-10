@@ -5,10 +5,7 @@ Document classification and clustering using progressive enhancement architectur
 Implements the balanced approach from PRD_04 with rule-based foundation + selective ML.
 """
 
-import json
 import logging
-import os
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
@@ -89,13 +86,15 @@ class ClusteringConfig:
 class ClusteringService:
     """Main document clustering service with progressive enhancement."""
 
-    def __init__(self, config: Optional[ClusteringConfig] = None):
+    def __init__(self, config: Optional[ClusteringConfig] = None, spacy_model=None):
         """Initialize clustering service.
 
         Args:
             config: Clustering configuration (uses defaults if None)
+            spacy_model: Pre-loaded spaCy model to use (for performance optimization)
         """
         self.config = config or ClusteringConfig()
+        self.spacy_model = spacy_model
         self.logger = logging.getLogger(__name__)
 
         # Initialize classifiers
@@ -113,7 +112,7 @@ class ClusteringService:
         try:
             # Rule-based classifier (always available)
             if EnhancedRuleBasedClassifier:
-                self.rule_classifier = EnhancedRuleBasedClassifier()
+                self.rule_classifier = EnhancedRuleBasedClassifier(spacy_model=self.spacy_model)
                 self.have_rule_classifier = True
             else:
                 self.rule_classifier = None
@@ -139,7 +138,7 @@ class ClusteringService:
                 self.logger.warning("Uncertainty detector not available")
 
         except Exception as e:
-            self.logger.error(f"Classifier initialization failed: {e}")
+            self.logger.error("Classifier initialization failed: %s", e)
             # Set all to None for graceful degradation
             self.rule_classifier = None
             self.ml_refiner = None
@@ -179,7 +178,7 @@ class ClusteringService:
                     self._update_stats(ml_result.method, ml_result.confidence_level)
                     return ml_result
                 except Exception as e:
-                    self.logger.warning(f"ML enhancement failed, using rule-based result: {e}")
+                    self.logger.warning("ML enhancement failed, using rule-based result: %s", e)
 
             # Step 3: Return rule-based result with uncertainty noted
             rule_result.metadata["ml_enhancement_skipped"] = True
@@ -191,11 +190,14 @@ class ClusteringService:
             return rule_result
 
         except Exception as e:
-            self.logger.error(f"Document classification failed: {e}")
+            self.logger.error("Document classification failed: %s", e)
             return self._create_fallback_result(document, str(e))
 
     def _classify_with_rules(
-        self, content: str, filename: str, metadata: Dict[str, Any]
+        self,
+        content: str,
+        filename: str,
+        metadata: Dict[str, Any],  # pylint: disable=unused-argument
     ) -> ClassificationResult:
         """Classify document using rule-based approach."""
         if not self.have_rule_classifier:
@@ -207,14 +209,16 @@ class ClusteringService:
             # Use rule classifier
             if self.rule_classifier is None:
                 raise RuntimeError("Rule classifier is not available")
-            category, confidence = self.rule_classifier.get_classification_confidence(content, filename)
+            category, confidence = self.rule_classifier.get_classification_confidence(
+                content, filename
+            )
             result = {
                 "category": category,
                 "confidence": confidence,
                 "reasoning": "Rule-based classification",
                 "alternatives": [],
                 "patterns_matched": [],
-                "processing_time": 0
+                "processing_time": 0,
             }
 
             return ClassificationResult(
@@ -230,7 +234,7 @@ class ClusteringService:
             )
 
         except Exception as e:
-            self.logger.error(f"Rule-based classification failed: {e}")
+            self.logger.error("Rule-based classification failed: %s", e)
             return self._create_fallback_result(
                 {"content": content, "filename": filename}, f"Rule classification error: {e}"
             )
@@ -252,18 +256,25 @@ class ClusteringService:
                 raise RuntimeError("ML refiner is not available")
             # Create document list for ML refinement
             uncertain_docs = [document]
-            all_classified_docs = [{
-                "filename": document.get("filename", ""),
-                "content_preview": document.get("content", "")[:500],
-                "category": rule_result.category,
-                "confidence": rule_result.confidence
-            }]
-            ml_results = self.ml_refiner.refine_uncertain_classifications(uncertain_docs, all_classified_docs)
-            ml_result = ml_results.get(document.get("filename", ""), {
-                "category": rule_result.category,
-                "confidence": rule_result.confidence,
-                "reasoning": "ML enhancement unavailable"
-            })
+            all_classified_docs = [
+                {
+                    "filename": document.get("filename", ""),
+                    "content_preview": document.get("content", "")[:500],
+                    "category": rule_result.category,
+                    "confidence": rule_result.confidence,
+                }
+            ]
+            ml_results = self.ml_refiner.refine_uncertain_classifications(
+                uncertain_docs, all_classified_docs
+            )
+            ml_result = ml_results.get(
+                document.get("filename", ""),
+                {
+                    "category": rule_result.category,
+                    "confidence": rule_result.confidence,
+                    "reasoning": "ML enhancement unavailable",
+                },
+            )
 
             # Combine rule and ML results
             combined_confidence = (rule_result.confidence + ml_result.get("confidence", 0)) / 2
@@ -285,7 +296,7 @@ class ClusteringService:
             )
 
         except Exception as e:
-            self.logger.warning(f"ML enhancement failed: {e}")
+            self.logger.warning("ML enhancement failed: %s", e)
             # Return rule result with ML failure noted
             rule_result.metadata["ml_enhancement_failed"] = str(e)
             return rule_result
@@ -304,11 +315,12 @@ class ClusteringService:
         results = {}
         uncertain_documents = []
 
-        self.logger.info(f"Starting batch classification of {len(documents)} documents")
+        self.logger.info("Starting batch classification of %d documents", len(documents))
 
         # Step 1: Classify all documents with rules
         for i, doc in enumerate(documents):
-            doc_id = doc.get("id", f"doc_{i}")
+            # Use the document path as ID if available, otherwise fall back to doc_i
+            doc_id = doc.get("id", doc.get("path", f"doc_{i}"))
 
             try:
                 result = self.classify_document(doc)
@@ -319,7 +331,7 @@ class ClusteringService:
                     uncertain_documents.append((doc_id, doc, result))
 
             except Exception as e:
-                self.logger.error(f"Classification failed for {doc_id}: {e}")
+                self.logger.error("Classification failed for %s: %s", doc_id, e)
                 results[doc_id] = self._create_fallback_result(doc, str(e))
 
         # Step 2: Batch ML processing for uncertain documents (if threshold met)
@@ -327,7 +339,7 @@ class ClusteringService:
 
             try:
                 self.logger.info(
-                    f"Applying ML enhancement to {len(uncertain_documents)} uncertain documents"
+                    "Applying ML enhancement to %d uncertain documents", len(uncertain_documents)
                 )
                 enhanced_results = self._batch_ml_enhancement(uncertain_documents)
 
@@ -337,7 +349,7 @@ class ClusteringService:
                         results[doc_id] = enhanced_result
 
             except Exception as e:
-                self.logger.warning(f"Batch ML enhancement failed: {e}")
+                self.logger.warning("Batch ML enhancement failed: %s", e)
 
         # Log batch summary
         self._log_batch_summary(results)
@@ -360,7 +372,7 @@ class ClusteringService:
                 enhanced_results.update(batch_results)
 
             except Exception as e:
-                self.logger.warning(f"ML enhancement failed for {uncertainty_type} group: {e}")
+                self.logger.warning("ML enhancement failed for %s group: %s", uncertainty_type, e)
                 # Keep original rule-based results for this group
                 for doc_id, _, rule_result in docs:
                     enhanced_results[doc_id] = rule_result
@@ -443,8 +455,15 @@ class ClusteringService:
             if self.ml_refiner is None:
                 raise RuntimeError("ML refiner is not available")
             # Use the refine_uncertain_classifications method instead
-            all_docs = [{"filename": doc["filename"], "content_preview": doc["content"][:500], 
-                        "category": doc["rule_category"], "confidence": 0.5} for doc in ml_documents]
+            all_docs = [
+                {
+                    "filename": doc["filename"],
+                    "content_preview": doc["content"][:500],
+                    "category": doc["rule_category"],
+                    "confidence": 0.5,
+                }
+                for doc in ml_documents
+            ]
             ml_results = self.ml_refiner.refine_uncertain_classifications(ml_documents, all_docs)
 
             # Convert ML results to ClassificationResult objects
@@ -467,7 +486,7 @@ class ClusteringService:
                 )
 
         except Exception as e:
-            self.logger.error(f"ML semantic disambiguation failed: {e}")
+            self.logger.error("ML semantic disambiguation failed: %s", e)
             # Return original rule results
             for doc_id, _, rule_result in docs:
                 rule_result.metadata["ml_disambiguation_failed"] = str(e)
@@ -483,7 +502,7 @@ class ClusteringService:
 
         # For now, apply rule-based with enhanced confidence
         # This would be where content quality enhancement ML would be applied
-        for doc_id, doc, rule_result in docs:
+        for doc_id, _doc, rule_result in docs:
             # Enhance confidence slightly for content quality issues
             enhanced_confidence = min(0.6, rule_result.confidence + 0.1)
 
@@ -535,11 +554,13 @@ class ClusteringService:
 
         return results
 
-    def _discover_category_from_content(self, content: str, filename: str) -> str:
+    def _discover_category_from_content(
+        self, content: str, filename: str
+    ) -> str:  # pylint: disable=unused-argument
         """Discover category from content analysis."""
         # Simple content-based category discovery
         content_lower = content.lower()
-        filename_lower = filename.lower()
+        # Note: filename analysis not yet implemented but could be added here
 
         # Business document patterns
         if any(word in content_lower for word in ["invoice", "bill", "payment", "amount"]):
@@ -597,14 +618,14 @@ class ClusteringService:
 
         method_counts = {}
         for result in results.values():
-            method = result.method.value
+            method = result.method.value if result.method else "unknown"
             method_counts[method] = method_counts.get(method, 0) + 1
 
-        self.logger.info(f"Batch classification complete: {total} documents")
+        self.logger.info("Batch classification complete: %d documents", total)
         self.logger.info(
-            f"Confidence distribution: {high_confidence} high, {medium_confidence} medium"
+            "Confidence distribution: %d high, %d medium", high_confidence, medium_confidence
         )
-        self.logger.info(f"Method usage: {method_counts}")
+        self.logger.info("Method usage: %s", method_counts)
 
     def get_clustering_statistics(self) -> Dict[str, Any]:
         """Get clustering service statistics."""

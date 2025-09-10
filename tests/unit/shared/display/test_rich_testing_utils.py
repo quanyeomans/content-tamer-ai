@@ -4,20 +4,21 @@ Tests for Rich testing utilities.
 Validates that our Rich testing patterns work correctly.
 """
 
-import unittest
-import sys
 import os
+import sys
+import unittest
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
 from tests.utils.rich_test_utils import (
+    RichTestCase,
+    capture_console_output,
     create_test_console,
     create_test_container,
-    capture_console_output,
-    RichTestCase,
     reset_console_manager,
 )
+
 
 class TestRichTestingUtilities(unittest.TestCase, RichTestCase):
     """Test the Rich testing utilities themselves."""
@@ -37,7 +38,7 @@ class TestRichTestingUtilities(unittest.TestCase, RichTestCase):
         console = create_test_console()
 
         # Should have StringIO file for capture
-        self.assertTrue(hasattr(console.file, 'getvalue'))
+        self.assertTrue(hasattr(console.file, "getvalue"))
 
         # Should be configured for testing (check actual available attributes)
         self.assertEqual(console.width, 80)
@@ -61,18 +62,18 @@ class TestRichTestingUtilities(unittest.TestCase, RichTestCase):
         container = create_test_container()
 
         # Should have console property
-        self.assertTrue(hasattr(container, 'console'))
+        self.assertTrue(hasattr(container, "console"))
 
         # Console should be test-friendly
-        self.assertTrue(hasattr(container.console.file, 'getvalue'))
+        self.assertTrue(hasattr(container.console.file, "getvalue"))
 
     def test_rich_test_case_setup(self):
         """Test that RichTestCase setUp works correctly."""
         # These should be available from setUp
-        self.assertTrue(hasattr(self, 'test_console'))
-        self.assertTrue(hasattr(self, 'test_container'))
-        self.assertTrue(hasattr(self, 'display_manager'))
-        self.assertTrue(hasattr(self, 'display_options'))
+        self.assertTrue(hasattr(self, "test_console"))
+        self.assertTrue(hasattr(self, "test_container"))
+        self.assertTrue(hasattr(self, "display_manager"))
+        self.assertTrue(hasattr(self, "display_options"))
 
     def test_console_output_assertions(self):
         """Test console output assertion methods."""
@@ -107,7 +108,7 @@ class TestRichTestingUtilities(unittest.TestCase, RichTestCase):
         self.assertGreaterEqual(len(lines), 3)  # Should have at least our 3 lines
 
         # Check that our messages are in the lines
-        all_text = ' '.join(lines)
+        all_text = " ".join(lines)
         self.assertIn("Line 1", all_text)
         self.assertIn("Line 2", all_text)
         self.assertIn("Line 3", all_text)
@@ -119,7 +120,8 @@ class TestRichTestingUtilities(unittest.TestCase, RichTestCase):
 
         # Should be able to create new container after reset
         new_container = create_test_container()
-        self.assertTrue(hasattr(new_container, 'console'))
+        self.assertTrue(hasattr(new_container, "console"))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

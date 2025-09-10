@@ -4,15 +4,16 @@ Tests for Provider Service
 Tests unified AI provider management and factory functionality.
 """
 
-import unittest
 import os
-from unittest.mock import patch, Mock, MagicMock
+import unittest
+from unittest.mock import MagicMock, Mock, patch
 
 from src.domains.ai_integration.provider_service import (
-    ProviderService,
+    ProviderCapabilities,
     ProviderConfiguration,
-    ProviderCapabilities
+    ProviderService,
 )
+
 
 class TestProviderConfiguration(unittest.TestCase):
     """Test provider configuration constants."""
@@ -46,10 +47,11 @@ class TestProviderConfiguration(unittest.TestCase):
             default_model = defaults[provider]
             self.assertIn(default_model, ProviderConfiguration.AI_PROVIDERS[provider])
 
+
 class TestProviderCapabilities(unittest.TestCase):
     """Test provider capability detection."""
 
-    @patch('src.domains.ai_integration.provider_service.get_dependency_manager')
+    @patch("src.domains.ai_integration.provider_service.get_dependency_manager")
     def test_detect_available_providers(self, mock_get_dep_manager):
         """Test provider availability detection."""
         # Mock dependency manager
@@ -57,7 +59,7 @@ class TestProviderCapabilities(unittest.TestCase):
         mock_dep_manager.find_dependency.return_value = "/usr/bin/ollama"
         mock_get_dep_manager.return_value = mock_dep_manager
 
-        with patch('builtins.__import__') as mock_import:
+        with patch("builtins.__import__") as mock_import:
             # Mock successful imports for all providers
             mock_import.return_value = Mock()
 
@@ -76,13 +78,17 @@ class TestProviderCapabilities(unittest.TestCase):
         valid = ProviderCapabilities.validate_provider_model_combination("openai", "gpt-4o")
         self.assertTrue(valid)
 
-        valid = ProviderCapabilities.validate_provider_model_combination("claude", "claude-3.5-sonnet")
+        valid = ProviderCapabilities.validate_provider_model_combination(
+            "claude", "claude-3.5-sonnet"
+        )
         self.assertTrue(valid)
 
     def test_validate_provider_model_combination_invalid(self):
         """Test validation rejects invalid combinations."""
         # Test invalid provider
-        valid = ProviderCapabilities.validate_provider_model_combination("invalid_provider", "model")
+        valid = ProviderCapabilities.validate_provider_model_combination(
+            "invalid_provider", "model"
+        )
         self.assertFalse(valid)
 
         # Test invalid model for valid provider
@@ -106,6 +112,7 @@ class TestProviderCapabilities(unittest.TestCase):
         unknown_req = ProviderCapabilities.get_provider_requirements("unknown")
         self.assertEqual(unknown_req, {})
 
+
 class TestProviderService(unittest.TestCase):
     """Test provider service functionality."""
 
@@ -113,15 +120,10 @@ class TestProviderService(unittest.TestCase):
         """Set up provider service."""
         self.service = ProviderService()
 
-    @patch.object(ProviderCapabilities, 'detect_available_providers')
+    @patch.object(ProviderCapabilities, "detect_available_providers")
     def test_get_available_providers(self, mock_detect):
         """Test getting available providers."""
-        mock_detect.return_value = {
-            "openai": True,
-            "claude": True,
-            "gemini": False,
-            "local": False
-        }
+        mock_detect.return_value = {"openai": True, "claude": True, "gemini": False, "local": False}
 
         # Clear cache to force re-detection
         self.service._capabilities_cache = None
@@ -156,7 +158,7 @@ class TestProviderService(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.service.get_default_model("invalid_provider")
 
-    @patch.object(ProviderCapabilities, 'detect_available_providers')
+    @patch.object(ProviderCapabilities, "detect_available_providers")
     def test_create_provider_unavailable(self, mock_detect):
         """Test creating provider when not available."""
         mock_detect.return_value = {"openai": False}
@@ -228,5 +230,6 @@ class TestProviderService(unittest.TestCase):
         self.assertIn("cached_instances", stats)
         self.assertIn("provider_status", stats)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

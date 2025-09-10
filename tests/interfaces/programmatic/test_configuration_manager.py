@@ -5,18 +5,19 @@ Tests the headless configuration management without UI dependencies.
 Validates configuration loading, merging, and validation.
 """
 
-import unittest
-from unittest.mock import patch
-import tempfile
 import json
 import os
+import tempfile
+import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from src.interfaces.programmatic.cli_arguments import ParsedArguments
 from src.interfaces.programmatic.configuration_manager import (
     ConfigurationManager,
-    ProcessingConfiguration
+    ProcessingConfiguration,
 )
-from src.interfaces.programmatic.cli_arguments import ParsedArguments
+
 
 class TestConfigurationManager(unittest.TestCase):
     """Test headless configuration management."""
@@ -59,7 +60,7 @@ class TestConfigurationManager(unittest.TestCase):
             provider="claude",
             model="claude-3.5-sonnet",
             organization_enabled=True,
-            ml_level=3
+            ml_level=3,
         )
 
         # Save configuration
@@ -77,12 +78,15 @@ class TestConfigurationManager(unittest.TestCase):
         self.assertTrue(loaded_config.organization_enabled)
         self.assertEqual(loaded_config.ml_level, 3)
 
-    @patch.dict(os.environ, {
-        'CONTENT_TAMER_PROVIDER': 'gemini',
-        'CONTENT_TAMER_ML_LEVEL': '1',
-        'CONTENT_TAMER_QUIET': 'true',
-        'GEMINI_API_KEY': 'test-gemini-key'
-    })
+    @patch.dict(
+        os.environ,
+        {
+            "CONTENT_TAMER_PROVIDER": "gemini",
+            "CONTENT_TAMER_ML_LEVEL": "1",
+            "CONTENT_TAMER_QUIET": "true",
+            "GEMINI_API_KEY": "test-gemini-key",
+        },
+    )
     def test_environment_variable_loading(self):
         """Test configuration loading from environment variables."""
         config = self.manager.load_configuration()
@@ -100,21 +104,17 @@ class TestConfigurationManager(unittest.TestCase):
             output_dir="/test",
             provider="openai",
             ml_level=2,
-            organization_enabled=True
+            organization_enabled=True,
         )
         self.manager.save_configuration(file_config)
 
         # Set environment variables
-        with patch.dict(os.environ, {
-            'CONTENT_TAMER_PROVIDER': 'claude',
-            'CONTENT_TAMER_ML_LEVEL': '3'
-        }):
+        with patch.dict(
+            os.environ, {"CONTENT_TAMER_PROVIDER": "claude", "CONTENT_TAMER_ML_LEVEL": "3"}
+        ):
             # Create CLI arguments
             cli_args = ParsedArguments(
-                input_dir="/test",
-                output_dir="/test",
-                provider="gemini",
-                model="gemini-2.0-flash"
+                input_dir="/test", output_dir="/test", provider="gemini", model="gemini-2.0-flash"
             )
 
             # Load with all sources
@@ -132,14 +132,10 @@ class TestConfigurationManager(unittest.TestCase):
 
     def test_configuration_validation_success(self):
         """Test validation passes for valid configuration."""
-        with tempfile.TemporaryDirectory() as temp_input, \
-             tempfile.TemporaryDirectory() as temp_output:
+        with tempfile.TemporaryDirectory() as temp_input, tempfile.TemporaryDirectory() as temp_output:
 
             config = ProcessingConfiguration(
-                input_dir=temp_input,
-                output_dir=temp_output,
-                provider="openai",
-                api_key="test-key"
+                input_dir=temp_input, output_dir=temp_output, provider="openai", api_key="test-key"
             )
 
             errors = self.manager.validate_configuration(config)
@@ -152,7 +148,7 @@ class TestConfigurationManager(unittest.TestCase):
             output_dir="/readonly/output",
             provider="",
             api_key=None,
-            ml_level=5  # Invalid
+            ml_level=5,  # Invalid
         )
 
         errors = self.manager.validate_configuration(config)
@@ -169,15 +165,11 @@ class TestConfigurationManager(unittest.TestCase):
     @patch.dict(os.environ, {}, clear=True)  # Clear environment
     def test_api_key_validation(self):
         """Test API key validation for different providers."""
-        with tempfile.TemporaryDirectory() as temp_input, \
-             tempfile.TemporaryDirectory() as temp_output:
+        with tempfile.TemporaryDirectory() as temp_input, tempfile.TemporaryDirectory() as temp_output:
 
             # Test without API key or environment variable
             config = ProcessingConfiguration(
-                input_dir=temp_input,
-                output_dir=temp_output,
-                provider="openai",
-                api_key=None
+                input_dir=temp_input, output_dir=temp_output, provider="openai", api_key=None
             )
 
             errors = self.manager.validate_configuration(config)
@@ -188,17 +180,13 @@ class TestConfigurationManager(unittest.TestCase):
             errors = self.manager.validate_configuration(config)
             self.assertFalse(any("API key required" in error for error in errors))
 
-    @patch.dict(os.environ, {'OPENAI_API_KEY': 'env-api-key'})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "env-api-key"})
     def test_api_key_from_environment(self):
         """Test API key loading from environment variable."""
-        with tempfile.TemporaryDirectory() as temp_input, \
-             tempfile.TemporaryDirectory() as temp_output:
+        with tempfile.TemporaryDirectory() as temp_input, tempfile.TemporaryDirectory() as temp_output:
 
             config = ProcessingConfiguration(
-                input_dir=temp_input,
-                output_dir=temp_output,
-                provider="openai",
-                api_key=None
+                input_dir=temp_input, output_dir=temp_output, provider="openai", api_key=None
             )
 
             # Should pass validation with environment API key
@@ -208,9 +196,7 @@ class TestConfigurationManager(unittest.TestCase):
     def test_export_configuration_json(self):
         """Test configuration export to JSON."""
         config = ProcessingConfiguration(
-            input_dir="/test/input",
-            output_dir="/test/output",
-            provider="claude"
+            input_dir="/test/input", output_dir="/test/output", provider="claude"
         )
 
         json_export = self.manager.export_configuration(config, "json")
@@ -222,11 +208,7 @@ class TestConfigurationManager(unittest.TestCase):
 
     def test_export_configuration_env(self):
         """Test configuration export to environment variable format."""
-        config = ProcessingConfiguration(
-            input_dir="/test/input",
-            provider="openai",
-            ml_level=2
-        )
+        config = ProcessingConfiguration(input_dir="/test/input", provider="openai", ml_level=2)
 
         env_export = self.manager.export_configuration(config, "env")
 
@@ -250,7 +232,7 @@ class TestConfigurationManager(unittest.TestCase):
             "output_dir": "/test/output",
             "provider": "claude",
             "organization_enabled": True,
-            "ml_level": 3
+            "ml_level": 3,
         }
 
         config = self.manager.load_from_dict(config_dict)
@@ -262,10 +244,7 @@ class TestConfigurationManager(unittest.TestCase):
 
     def test_load_from_invalid_dict(self):
         """Test loading from invalid dictionary raises error."""
-        invalid_dict = {
-            "invalid_field": "value",
-            "ml_level": "not_an_int"  # Wrong type
-        }
+        invalid_dict = {"invalid_field": "value", "ml_level": "not_an_int"}  # Wrong type
 
         with self.assertRaises(ValueError):
             self.manager.load_from_dict(invalid_dict)
@@ -278,7 +257,7 @@ class TestConfigurationManager(unittest.TestCase):
             provider="openai",
             model="gpt-4o",
             organization_enabled=True,
-            quiet_mode=True
+            quiet_mode=True,
         )
 
         summary = self.manager.get_configuration_summary(config)
@@ -298,7 +277,7 @@ class TestConfigurationManager(unittest.TestCase):
             output_dir="/test",
             provider="openai",
             ml_level=2,
-            organization_enabled=False
+            organization_enabled=False,
         )
 
         # CLI arguments
@@ -308,10 +287,12 @@ class TestConfigurationManager(unittest.TestCase):
             provider="claude",  # Should override
             model="claude-3.5-sonnet",  # Should be added
             organize=True,  # Should enable organization
-            ml_level=3  # Should override
+            ml_level=3,  # Should override
         )
 
-        merged_config = self.manager._merge_command_line_arguments(config, cli_args)  # pylint: disable=protected-access
+        merged_config = self.manager._merge_command_line_arguments(
+            config, cli_args
+        )  # pylint: disable=protected-access
 
         self.assertEqual(merged_config.provider, "claude")
         self.assertEqual(merged_config.model, "claude-3.5-sonnet")
@@ -324,20 +305,20 @@ class TestConfigurationManager(unittest.TestCase):
 
         cli_args = ParsedArguments(quiet_mode=True, verbose_mode=True)
 
-        merged_config = self.manager._merge_command_line_arguments(config, cli_args)  # pylint: disable=protected-access
+        merged_config = self.manager._merge_command_line_arguments(
+            config, cli_args
+        )  # pylint: disable=protected-access
 
         self.assertTrue(merged_config.quiet_mode)
         self.assertFalse(merged_config.verbose_mode)
+
 
 class TestProcessingConfiguration(unittest.TestCase):
     """Test ProcessingConfiguration dataclass."""
 
     def test_default_values(self):
         """Test default configuration values."""
-        config = ProcessingConfiguration(
-            input_dir="/test/input",
-            output_dir="/test/output"
-        )
+        config = ProcessingConfiguration(input_dir="/test/input", output_dir="/test/output")
 
         self.assertEqual(config.provider, "openai")
         self.assertEqual(config.ocr_language, "eng")
@@ -365,7 +346,7 @@ class TestProcessingConfiguration(unittest.TestCase):
             quiet_mode=True,
             verbose_mode=False,
             feature_flags={"test": True},
-            version="2.0"
+            version="2.0",
         )
 
         self.assertEqual(config.input_dir, "/test/input")
@@ -383,5 +364,6 @@ class TestProcessingConfiguration(unittest.TestCase):
         self.assertEqual(config.feature_flags["test"], True)
         self.assertEqual(config.version, "2.0")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

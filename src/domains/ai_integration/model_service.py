@@ -10,13 +10,14 @@ import platform
 import subprocess
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import psutil
 
 # Optional imports
 try:
     import wmi  # type: ignore
+
     HAVE_WMI = True
 except ImportError:
     wmi = None  # type: ignore
@@ -35,7 +36,7 @@ class ModelStatus(Enum):
 
 
 @dataclass
-class ModelInfo:
+class ModelInfo:  # pylint: disable=too-many-instance-attributes
     """Information about a model."""
 
     name: str
@@ -66,7 +67,7 @@ class HardwareTier:
 
 
 @dataclass
-class SystemCapabilities:
+class SystemCapabilities:  # pylint: disable=too-many-instance-attributes
     """System hardware capabilities."""
 
     total_ram_gb: float
@@ -140,7 +141,9 @@ class ModelService:
             elif platform.system() == "Darwin":  # macOS
                 result = subprocess.run(
                     ["sysctl", "-n", "machdep.cpu.brand_string"],
-                    capture_output=True, text=True, check=False
+                    capture_output=True,
+                    text=True,
+                    check=False,
                 )
                 return result.stdout.strip()
             else:  # Linux
@@ -159,7 +162,8 @@ class ModelService:
             # Try NVIDIA GPU detection
             result = subprocess.run(
                 ["nvidia-smi", "--query-gpu=memory.total,name", "--format=csv,noheader,nounits"],
-                capture_output=True, check=False,
+                capture_output=True,
+                check=False,
                 text=True,
                 timeout=5,
             )
@@ -181,7 +185,12 @@ class ModelService:
                 # Use shell=False for security - pipe operations done in Python
                 try:
                     lspci_result = subprocess.run(
-                        ["lspci"], capture_output=True, text=True, shell=False, timeout=5, check=False
+                        ["lspci"],
+                        capture_output=True,
+                        text=True,
+                        shell=False,
+                        timeout=5,
+                        check=False,
                     )
                     if lspci_result.returncode == 0:
                         # Filter for AMD in Python instead of shell

@@ -5,14 +5,13 @@ Main orchestrating service for all content-related operations.
 Coordinates extraction, enhancement, and metadata analysis.
 """
 
-from typing import Dict, List, Optional, Any, Tuple
 import logging
 import os
-from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from .extraction_service import ExtractionService, ExtractedContent, ContentQuality
-from .enhancement_service import EnhancementService, EnhancementResult
-from .metadata_service import MetadataService, DocumentMetadata
+from .enhancement_service import EnhancementService
+from .extraction_service import ContentQuality, ExtractedContent, ExtractionService
+from .metadata_service import MetadataService
 
 
 class ContentService:
@@ -69,24 +68,24 @@ class ContentService:
                 "metadata": metadata,
                 "ai_ready_content": ai_content,
                 "success": extracted.quality != ContentQuality.FAILED,
-                "ready_for_ai": bool(ai_content and len(ai_content.strip()) > 10)
+                "ready_for_ai": bool(ai_content and len(ai_content.strip()) > 10),
             }
 
         except Exception as e:
-            self.logger.error(f"Complete document processing failed for {file_path}: {e}")
+            self.logger.error("Complete document processing failed for %s: %s", file_path, e)
             return {
                 "file_path": file_path,
                 "extraction": ExtractedContent(
                     text=f"Processing error: {e}",
                     quality=ContentQuality.FAILED,
-                    error_message=str(e)
+                    error_message=str(e),
                 ),
                 "enhancement": None,
                 "metadata": None,
                 "ai_ready_content": "",
                 "success": False,
                 "ready_for_ai": False,
-                "error": str(e)
+                "error": str(e),
             }
 
     def batch_process_documents(self, file_paths: List[str]) -> Dict[str, Dict[str, Any]]:
@@ -100,25 +99,21 @@ class ContentService:
         """
         results = {}
 
-        self.logger.info(f"Starting batch processing of {len(file_paths)} documents")
+        self.logger.info("Starting batch processing of %d documents", len(file_paths))
 
         for i, file_path in enumerate(file_paths):
             try:
-                self.logger.debug(f"Processing {i+1}/{len(file_paths)}: {file_path}")
+                self.logger.debug("Processing %d/%d: %s", i + 1, len(file_paths), file_path)
                 result = self.process_document_complete(file_path)
                 results[file_path] = result
 
             except Exception as e:
-                self.logger.error(f"Batch processing failed for {file_path}: {e}")
-                results[file_path] = {
-                    "file_path": file_path,
-                    "success": False,
-                    "error": str(e)
-                }
+                self.logger.error("Batch processing failed for %s: %s", file_path, e)
+                results[file_path] = {"file_path": file_path, "success": False, "error": str(e)}
 
         # Log batch summary
         successful = sum(1 for result in results.values() if result.get("success", False))
-        self.logger.info(f"Batch processing complete: {successful}/{len(file_paths)} successful")
+        self.logger.info("Batch processing complete: %d/%d successful", successful, len(file_paths))
 
         return results
 
@@ -138,12 +133,11 @@ class ContentService:
                 text_content = result["ai_ready_content"]
                 image_data = result["extraction"].image_data if result["extraction"] else None
                 return text_content, image_data
-            else:
-                error_msg = result.get("error", "Processing failed")
-                return f"Error: {error_msg}", None
+            error_msg = result.get("error", "Processing failed")
+            return f"Error: {error_msg}", None
 
         except Exception as e:
-            self.logger.error(f"AI content preparation failed for {file_path}: {e}")
+            self.logger.error("AI content preparation failed for %s: %s", file_path, e)
             return f"Error: {e}", None
 
     def validate_file_for_processing(self, file_path: str) -> Tuple[bool, Optional[str]]:
@@ -187,7 +181,7 @@ class ContentService:
             "metadata": self.metadata_service.get_service_statistics(),
             "supported_file_types": self.extraction_service.get_supported_file_types(),
             "ocr_language": self.ocr_lang,
-            "max_content_length": self.max_content_length
+            "max_content_length": self.max_content_length,
         }
 
     def get_processing_summary(self, results: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
@@ -223,8 +217,10 @@ class ContentService:
             "total_files": total_files,
             "successful_files": successful_files,
             "failed_files": failed_files,
-            "success_rate": f"{(successful_files / total_files * 100):.1f}%" if total_files > 0 else "0%",
+            "success_rate": (
+                f"{(successful_files / total_files * 100):.1f}%" if total_files > 0 else "0%"
+            ),
             "quality_distribution": quality_counts,
             "extraction_methods": extraction_methods,
-            "file_types": file_types
+            "file_types": file_types,
         }

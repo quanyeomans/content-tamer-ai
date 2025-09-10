@@ -7,10 +7,12 @@ business cycle insights.
 """
 
 import calendar
-import logging
+
+# logging imported but not used - keeping for future enhancements
+import logging  # pylint: disable=unused-import
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -56,9 +58,7 @@ class AdvancedTemporalAnalyzer:
         date_patterns = self._analyze_date_patterns(temporal_data)
         seasonal_insights = self._analyze_seasonal_patterns(temporal_data)
         fiscal_analysis = self._detect_fiscal_patterns(temporal_data)
-        workflow_patterns = self._analyze_workflow_patterns(
-            temporal_data, classified_documents
-        )
+        workflow_patterns = self._analyze_workflow_patterns(temporal_data, classified_documents)
 
         # Generate organization recommendations
         organization_strategy = self._generate_organization_strategy(
@@ -86,9 +86,7 @@ class AdvancedTemporalAnalyzer:
             ),
         }
 
-    def _extract_temporal_data(
-        self, documents: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _extract_temporal_data(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Extract and normalize temporal data from documents."""
         temporal_data = []
 
@@ -123,17 +121,13 @@ class AdvancedTemporalAnalyzer:
                     "confidence": doc.get("confidence", 0.0),
                     "dates": normalized_dates,
                     "fiscal_hints": metadata.get("fiscal_year_hints", {}),
-                    "classification_method": doc.get(
-                        "classification_method", "rule_based"
-                    ),
+                    "classification_method": doc.get("classification_method", "rule_based"),
                 }
             )
 
         return temporal_data
 
-    def _analyze_date_patterns(
-        self, temporal_data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _analyze_date_patterns(self, temporal_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze date distribution patterns."""
         all_dates = []
         yearly_distribution = defaultdict(int)
@@ -176,9 +170,7 @@ class AdvancedTemporalAnalyzer:
             ),
         }
 
-    def _analyze_seasonal_patterns(
-        self, temporal_data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _analyze_seasonal_patterns(self, temporal_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze seasonal and cyclical patterns in document creation."""
         seasonal_analysis = {}
 
@@ -189,7 +181,7 @@ class AdvancedTemporalAnalyzer:
             category = doc["category"]
             for date_info in doc["dates"]:
                 quarter = date_info["quarter"]
-                month = date_info["month"]
+                _month = date_info["month"]  # Used in future seasonal analysis
                 category_seasons[category][quarter] += 1
 
         # Analyze seasonal patterns for each category
@@ -204,14 +196,10 @@ class AdvancedTemporalAnalyzer:
         return {
             "category_seasonal_patterns": seasonal_analysis,
             "overall_seasonal_trends": overall_seasonal,
-            "seasonal_recommendations": self._generate_seasonal_recommendations(
-                seasonal_analysis
-            ),
+            "seasonal_recommendations": self._generate_seasonal_recommendations(seasonal_analysis),
         }
 
-    def _detect_fiscal_patterns(
-        self, temporal_data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _detect_fiscal_patterns(self, temporal_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Detect and analyze fiscal year patterns."""
         fiscal_hints = []
         document_months = []
@@ -244,9 +232,7 @@ class AdvancedTemporalAnalyzer:
         return {
             "detected_fiscal_type": detected_fiscal_type,
             "fiscal_info": fiscal_info,
-            "confidence": self._calculate_fiscal_confidence(
-                fiscal_hints, document_months
-            ),
+            "confidence": self._calculate_fiscal_confidence(fiscal_hints, document_months),
             "fiscal_structure": fiscal_structure,
             "fiscal_recommendations": self._generate_fiscal_recommendations(
                 detected_fiscal_type, fiscal_structure
@@ -259,7 +245,7 @@ class AdvancedTemporalAnalyzer:
         classified_documents: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """Analyze document workflow and business process patterns."""
-        workflow_sequences = []
+        _workflow_sequences = []  # Used in future workflow analysis
         category_timing = defaultdict(list)
 
         # Group documents by category and analyze timing patterns
@@ -282,9 +268,7 @@ class AdvancedTemporalAnalyzer:
         workflow_insights = {}
         for category, timing_data in category_timing.items():
             if len(timing_data) >= 2:  # Need multiple documents for pattern analysis
-                workflow_insights[category] = self._analyze_category_workflow(
-                    timing_data
-                )
+                workflow_insights[category] = self._analyze_category_workflow(timing_data)
 
         # Detect business process cycles
         process_cycles = self._detect_process_cycles(category_timing)
@@ -292,9 +276,7 @@ class AdvancedTemporalAnalyzer:
         return {
             "category_workflows": workflow_insights,
             "process_cycles": process_cycles,
-            "workflow_recommendations": self._generate_workflow_recommendations(
-                workflow_insights
-            ),
+            "workflow_recommendations": self._generate_workflow_recommendations(workflow_insights),
         }
 
     def _generate_organization_strategy(
@@ -336,9 +318,7 @@ class AdvancedTemporalAnalyzer:
         # Consider seasonal patterns
         seasonal_categories = seasonal_insights.get("category_seasonal_patterns", {})
         if len(seasonal_categories) > 2:
-            strategy["special_considerations"].append(
-                "Strong seasonal patterns detected"
-            )
+            strategy["special_considerations"].append("Strong seasonal patterns detected")
 
         # Consider workflow patterns
         workflow_categories = workflow_patterns.get("category_workflows", {})
@@ -371,9 +351,7 @@ class AdvancedTemporalAnalyzer:
         # Pattern detection confidence
         pattern_strength = self._calculate_pattern_strength(temporal_data)
 
-        overall_confidence = (
-            date_coverage * 0.4 + avg_date_quality * 0.3 + pattern_strength * 0.3
-        )
+        overall_confidence = date_coverage * 0.4 + avg_date_quality * 0.3 + pattern_strength * 0.3
 
         return {
             "overall_confidence": float(overall_confidence),
@@ -400,9 +378,7 @@ class AdvancedTemporalAnalyzer:
                     "Long time span detected - consider year-based primary organization"
                 )
             elif span_years < 1:
-                recommendations.append(
-                    "Recent documents - consider month/quarter organization"
-                )
+                recommendations.append("Recent documents - consider month/quarter organization")
 
         # Seasonal recommendations
         seasonal_patterns = seasonal_insights.get("category_seasonal_patterns", {})
@@ -445,9 +421,7 @@ class AdvancedTemporalAnalyzer:
             "workflow_patterns": {},
             "organization_strategy": {"primary_structure": "category_only"},
             "confidence_metrics": {"overall_confidence": 0.0},
-            "recommendations": [
-                "No temporal data available - use category-based organization"
-            ],
+            "recommendations": ["No temporal data available - use category-based organization"],
         }
 
     def _get_quarter(self, month: int) -> str:
@@ -470,10 +444,7 @@ class AdvancedTemporalAnalyzer:
         sorted_dates = sorted(dates)
 
         # Calculate gaps between dates
-        gaps = [
-            (sorted_dates[i + 1] - sorted_dates[i]).days
-            for i in range(len(sorted_dates) - 1)
-        ]
+        gaps = [(sorted_dates[i + 1] - sorted_dates[i]).days for i in range(len(sorted_dates) - 1)]
 
         if not gaps:
             return {"pattern_type": "single_point"}
@@ -496,9 +467,7 @@ class AdvancedTemporalAnalyzer:
             "total_span_days": (sorted_dates[-1] - sorted_dates[0]).days,
         }
 
-    def _identify_peak_periods(
-        self, monthly_dist: Dict, quarterly_dist: Dict
-    ) -> Dict[str, Any]:
+    def _identify_peak_periods(self, monthly_dist: Dict, quarterly_dist: Dict) -> Dict[str, Any]:
         """Identify peak periods in document creation."""
         peaks = {}
 
@@ -519,9 +488,7 @@ class AdvancedTemporalAnalyzer:
 
         return peaks
 
-    def _detect_seasonal_pattern(
-        self, quarterly_data: Dict[str, int]
-    ) -> Dict[str, Any]:
+    def _detect_seasonal_pattern(self, quarterly_data: Dict[str, int]) -> Dict[str, Any]:
         """Detect seasonal patterns in quarterly document distribution."""
         if len(quarterly_data) < 2:
             return {"pattern_detected": False}
@@ -559,9 +526,7 @@ class AdvancedTemporalAnalyzer:
         }
         return seasonal_types.get(peak_quarter, "unknown")
 
-    def _calculate_overall_seasonal_trends(
-        self, category_seasons: Dict
-    ) -> Dict[str, Any]:
+    def _calculate_overall_seasonal_trends(self, category_seasons: Dict) -> Dict[str, Any]:
         """Calculate overall seasonal trends across all categories."""
         overall_quarters = defaultdict(int)
 
@@ -605,10 +570,7 @@ class AdvancedTemporalAnalyzer:
 
         strong_seasonal_categories = []
         for category, pattern in seasonal_analysis.items():
-            if (
-                pattern.get("pattern_detected")
-                and pattern.get("pattern_strength", 0) > 0.6
-            ):
+            if pattern.get("pattern_detected") and pattern.get("pattern_strength", 0) > 0.6:
                 strong_seasonal_categories.append(category)
 
         if len(strong_seasonal_categories) >= 2:
@@ -651,9 +613,7 @@ class AdvancedTemporalAnalyzer:
 
         return max(scores.keys(), key=lambda k: scores[k])
 
-    def _calculate_fiscal_confidence(
-        self, fiscal_hints: List, document_months: List[int]
-    ) -> float:
+    def _calculate_fiscal_confidence(self, fiscal_hints: List, document_months: List[int]) -> float:
         """Calculate confidence in fiscal year detection."""
         if not fiscal_hints and not document_months:
             return 0.0
@@ -667,20 +627,14 @@ class AdvancedTemporalAnalyzer:
 
         # Pattern confidence based on month distribution
         if document_months:
-            month_variety = (
-                len(set(document_months)) / 12.0
-            )  # How many different months
-            pattern_confidence = min(
-                1.0, month_variety * 2
-            )  # More months = higher confidence
+            month_variety = len(set(document_months)) / 12.0  # How many different months
+            pattern_confidence = min(1.0, month_variety * 2)  # More months = higher confidence
         else:
             pattern_confidence = 0
 
         return hint_confidence * 0.7 + pattern_confidence * 0.3
 
-    def _generate_fiscal_structure(
-        self, temporal_data: List, fiscal_info: Dict
-    ) -> Dict[str, Any]:
+    def _generate_fiscal_structure(self, temporal_data: List, fiscal_info: Dict) -> Dict[str, Any]:
         """Generate fiscal year-based organization structure."""
         fiscal_start_month = fiscal_info["start_month"]
         fiscal_years = defaultdict(list)
@@ -701,9 +655,7 @@ class AdvancedTemporalAnalyzer:
                         "filename": doc["filename"],
                         "category": doc["category"],
                         "month": actual_month,
-                        "quarter": self._get_fiscal_quarter(
-                            actual_month, fiscal_start_month
-                        ),
+                        "quarter": self._get_fiscal_quarter(actual_month, fiscal_start_month),
                     }
                 )
 
@@ -730,9 +682,7 @@ class AdvancedTemporalAnalyzer:
         """Recommend fiscal year organization structure."""
         total_fiscal_years = len(fiscal_years)
         avg_docs_per_year = (
-            np.mean([len(docs) for docs in fiscal_years.values()])
-            if fiscal_years
-            else 0
+            np.mean([len(docs) for docs in fiscal_years.values()]) if fiscal_years else 0
         )
 
         if total_fiscal_years > 3 and avg_docs_per_year > 20:
@@ -758,17 +708,11 @@ class AdvancedTemporalAnalyzer:
         recommendations = []
 
         if fiscal_type and fiscal_type != "calendar":
-            recommendations.append(
-                f"Organize by {fiscal_type} fiscal year for business alignment"
-            )
+            recommendations.append(f"Organize by {fiscal_type} fiscal year for business alignment")
 
-        structure_type = fiscal_structure.get("structure_recommendation", {}).get(
-            "structure_type"
-        )
+        structure_type = fiscal_structure.get("structure_recommendation", {}).get("structure_type")
         if structure_type == "fiscal_year_quarter":
-            recommendations.append(
-                "Use fiscal year/quarter hierarchy for detailed organization"
-            )
+            recommendations.append("Use fiscal year/quarter hierarchy for detailed organization")
         elif structure_type == "fiscal_year_only":
             recommendations.append("Organize by fiscal year with category subdivision")
 
@@ -826,9 +770,7 @@ class AdvancedTemporalAnalyzer:
 
         return {
             "detected_cycles": process_cycles,
-            "cycle_recommendations": self._generate_cycle_recommendations(
-                process_cycles
-            ),
+            "cycle_recommendations": self._generate_cycle_recommendations(process_cycles),
         }
 
     def _analyze_process_cycle(self, timing_data: List[Dict]) -> Dict[str, Any]:
@@ -841,8 +783,7 @@ class AdvancedTemporalAnalyzer:
             # Look for regular intervals
             sorted_months = sorted(month_counts.keys())
             intervals = [
-                sorted_months[i + 1] - sorted_months[i]
-                for i in range(len(sorted_months) - 1)
+                sorted_months[i + 1] - sorted_months[i] for i in range(len(sorted_months) - 1)
             ]
 
             if intervals and len(set(intervals)) <= 2:  # Consistent intervals
@@ -853,9 +794,7 @@ class AdvancedTemporalAnalyzer:
                         if len(set(intervals)) == 1
                         else "variable_cycle"
                     ),
-                    "peak_months": [
-                        month for month, count in month_counts.most_common(2)
-                    ],
+                    "peak_months": [month for month, count in month_counts.most_common(2)],
                 }
 
         return {"cycle_detected": False}
@@ -888,10 +827,7 @@ class AdvancedTemporalAnalyzer:
 
         regular_workflows = []
         for category, workflow in workflow_insights.items():
-            if (
-                workflow.get("workflow_detected")
-                and workflow.get("interval_consistency", 0) > 0.7
-            ):
+            if workflow.get("workflow_detected") and workflow.get("interval_consistency", 0) > 0.7:
                 regular_workflows.append((category, workflow["workflow_type"]))
 
         if len(regular_workflows) > 1:

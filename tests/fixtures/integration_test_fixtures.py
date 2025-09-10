@@ -6,14 +6,14 @@ for high-quality integration testing across components.
 """
 
 import os
-import tempfile
 import shutil
-from typing import List, Dict
+import tempfile
+from typing import Dict, List
 
 
 class PerformanceTestFixtures:
     """Performance testing baselines and utilities."""
-    
+
     @staticmethod
     def get_performance_baselines() -> Dict[str, float]:
         """Define performance baselines for regression testing."""
@@ -31,16 +31,21 @@ class PerformanceTestFixtures:
         for i in range(file_count):
             # Create files of varying sizes
             content_size = min(1000 + (i * 50), 10000)  # 1KB to 10KB range
-            content = f"Large test document {i}\n" + ("Sample content line.\n" * (content_size // 20))
+            content = f"Large test document {i}\n" + (
+                "Sample content line.\n" * (content_size // 20)
+            )
 
-            stress_files.append({
-                "filename": f"stress_test_{i:04d}.txt",
-                "content": content.encode(),
-                "expected_content": content[:100] + "...",  # Truncated for testing
-                "file_type": "txt"
-            })
+            stress_files.append(
+                {
+                    "filename": f"stress_test_{i:04d}.txt",
+                    "content": content.encode(),
+                    "expected_content": content[:100] + "...",  # Truncated for testing
+                    "file_type": "txt",
+                }
+            )
 
         return stress_files
+
 
 class FailureScenarioFixtures:
     """Fixtures for testing failure propagation across components."""
@@ -66,9 +71,10 @@ class FailureScenarioFixtures:
     def create_intermittent_failure_scenario():
         """Create scenario with intermittent failures (50% success rate)."""
         return {
-            'ai_mock': {"success_rate": 0.5, "scenario": "ai_intermittent"},
-            'content_mock': {"extraction_success_rate": 0.5, "scenario": "content_intermittent"}
+            "ai_mock": {"success_rate": 0.5, "scenario": "ai_intermittent"},
+            "content_mock": {"extraction_success_rate": 0.5, "scenario": "content_intermittent"},
         }
+
 
 # Convenience factory instance
 performance_fixtures = PerformanceTestFixtures()

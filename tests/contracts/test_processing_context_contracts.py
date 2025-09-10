@@ -16,10 +16,15 @@ import unittest
 import pytest
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"
+    )
+)
 
 from shared.display.rich_display_manager import RichDisplayOptions
 from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestProcessingContextStateContracts(unittest.TestCase, RichTestCase):
     """Contracts for processing context state management."""
@@ -47,8 +52,9 @@ class TestProcessingContextStateContracts(unittest.TestCase, RichTestCase):
             final_succeeded = ctx.display.progress.stats.succeeded
 
             self.assertEqual(
-                final_succeeded, initial_succeeded + 1,
-                f"complete_file must increment succeeded count: {initial_succeeded} -> {final_succeeded}"
+                final_succeeded,
+                initial_succeeded + 1,
+                f"complete_file must increment succeeded count: {initial_succeeded} -> {final_succeeded}",
             )
 
     @pytest.mark.contract
@@ -61,21 +67,24 @@ class TestProcessingContextStateContracts(unittest.TestCase, RichTestCase):
         with manager.processing_context(expected_total, "Contract Test") as ctx:
             # Total must be set correctly at start
             self.assertEqual(
-                ctx.display.progress.stats.total, expected_total,
-                "Expected total {expected_total}, got {ctx.display.progress.stats.total}"
+                ctx.display.progress.stats.total,
+                expected_total,
+                "Expected total {expected_total}, got {ctx.display.progress.stats.total}",
             )
 
             # Total must remain stable during operations
             ctx.start_file("file1.pd")
             self.assertEqual(
-                ctx.display.progress.stats.total, expected_total,
-                "Total changed during start_file operation"
+                ctx.display.progress.stats.total,
+                expected_total,
+                "Total changed during start_file operation",
             )
 
             ctx.complete_file("file1.pd", "result1.pd")
             self.assertEqual(
-                ctx.display.progress.stats.total, expected_total,
-                "Total changed during complete_file operation"
+                ctx.display.progress.stats.total,
+                expected_total,
+                "Total changed during complete_file operation",
             )
 
     @pytest.mark.contract
@@ -93,8 +102,9 @@ class TestProcessingContextStateContracts(unittest.TestCase, RichTestCase):
             final_failed = ctx.display.progress.stats.failed
 
             self.assertEqual(
-                final_failed, initial_failed + 1,
-                "fail_file must increment failed count: {initial_failed} -> {final_failed}"
+                final_failed,
+                initial_failed + 1,
+                "fail_file must increment failed count: {initial_failed} -> {final_failed}",
             )
 
     @pytest.mark.contract
@@ -115,8 +125,9 @@ class TestProcessingContextStateContracts(unittest.TestCase, RichTestCase):
 
             # Contract: Total processed must not exceed declared total
             self.assertLessEqual(
-                processed_count, stats.total,
-                f"Processed count ({processed_count}) exceeds total ({stats.total})"
+                processed_count,
+                stats.total,
+                f"Processed count ({processed_count}) exceeds total ({stats.total})",
             )
 
             # Contract: Stats must be consistent
@@ -136,18 +147,19 @@ class TestProcessingContextStateContracts(unittest.TestCase, RichTestCase):
             ctx.complete_file("file1.pd", "result1.pd")
             ctx.fail_file("file2.pd", "Error")
             final_stats = {
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed,
-                'success_rate': ctx.display.progress.stats.success_rate
+                "total": ctx.display.progress.stats.total,
+                "succeeded": ctx.display.progress.stats.succeeded,
+                "failed": ctx.display.progress.stats.failed,
+                "success_rate": ctx.display.progress.stats.success_rate,
             }
 
         # Contract: Stats must be preserved after context exit
         self.assertIsNotNone(final_stats, "Failed to capture final stats")
-        self.assertEqual(final_stats['total'], 2, "Total files incorrect after exit")
-        self.assertEqual(final_stats['succeeded'], 1, "Succeeded count incorrect after exit")
-        self.assertEqual(final_stats['failed'], 1, "Failed count incorrect after exit")
-        self.assertEqual(final_stats['success_rate'], 50.0, "Success rate incorrect after exit")
+        self.assertEqual(final_stats["total"], 2, "Total files incorrect after exit")
+        self.assertEqual(final_stats["succeeded"], 1, "Succeeded count incorrect after exit")
+        self.assertEqual(final_stats["failed"], 1, "Failed count incorrect after exit")
+        self.assertEqual(final_stats["success_rate"], 50.0, "Success rate incorrect after exit")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -10,7 +10,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, TextIO
 
-from .cli_display import ColorFormatter, MessageLevel
+# MessageLevel imported but not used - keeping for future message formatting
+from .cli_display import ColorFormatter, MessageLevel  # pylint: disable=unused-import
 from .message_handler import (
     DisplayLocation,
     MessageConfig,
@@ -73,7 +74,9 @@ class ProcessingContext:
                 source_filename=filename, target_filename=new_filename, status="SUCCESS"
             )
 
-    def fail_file(self, filename: str, error_details: str = "") -> None:  # pylint: disable=unused-argument
+    def fail_file(
+        self, filename: str, error_details: str = ""  # pylint: disable=unused-argument
+    ) -> None:
         """Mark file as failed."""
         # Single source of truth: update progress stats and display
         self.display.progress.add_error()

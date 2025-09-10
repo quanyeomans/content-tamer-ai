@@ -4,19 +4,14 @@ Claude Provider Implementation
 Extracted from original ai_providers.py for domain architecture.
 """
 
-import os
-import sys
-from typing import Optional
-
-# Import the base provider interface
-from ..base_provider import AIProvider
-
 # Import centralized configuration
-from ....shared.infrastructure.filename_config import (
-    get_secure_filename_prompt_template,
+from shared.infrastructure.filename_config import (
     get_token_limit_for_provider,
     validate_generated_filename,
 )
+
+# Import the base provider interface
+from ..base_provider import AIProvider
 
 # Import Claude client with dependency check
 try:
@@ -30,7 +25,7 @@ except ImportError:
 
 def get_system_prompt(provider: str) -> str:
     """Get system prompt for provider - temporary function until refactored."""
-    from ....shared.infrastructure.filename_config import DEFAULT_SYSTEM_PROMPTS
+    from shared.infrastructure.filename_config import DEFAULT_SYSTEM_PROMPTS
 
     return DEFAULT_SYSTEM_PROMPTS.get(provider, DEFAULT_SYSTEM_PROMPTS["default"])
 
@@ -54,7 +49,7 @@ class ClaudeProvider(AIProvider):
             api_params = {
                 "model": self.model,
                 "system": get_system_prompt("claude"),
-                "max_tokens": get_token_limit_for_provider("claude"),
+                "max_tokens": get_token_limit_for_provider(),
                 "messages": [{"role": "user", "content": content or ""}],
             }
 
@@ -88,17 +83,15 @@ class ClaudeProvider(AIProvider):
         """Validate Claude API key format and functionality."""
         if not self.api_key:
             return False
-        
+
         # Check format
         if not self.api_key.startswith("sk-ant-"):
             return False
-        
+
         try:
             # Test API key with minimal request
             self.client.messages.create(
-                model=self.model,
-                max_tokens=1,
-                messages=[{"role": "user", "content": "test"}]
+                model=self.model, max_tokens=1, messages=[{"role": "user", "content": "test"}]
             )
             return True
         except Exception:

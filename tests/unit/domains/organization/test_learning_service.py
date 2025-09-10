@@ -6,26 +6,29 @@ Tests the learning service that handles state management and continuous
 improvement for document organization.
 """
 
-import unittest
+import json
 import os
 import sys
 import tempfile
-import json
+import unittest
 from unittest.mock import Mock, patch
 
 # Add src to path for imports - correct path for domain structure
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
+from datetime import datetime
+
+from domains.organization.clustering_service import ClassificationResult, ClusteringMethod
+from domains.organization.folder_service import FiscalYearType, FolderStructure, FolderStructureType
+
 # Import from organization domain
 from domains.organization.learning_service import (
+    LearningMetrics,
     LearningService,
-    StateManager,
     OrganizationSession,
-    LearningMetrics
+    StateManager,
 )
-from domains.organization.clustering_service import ClassificationResult, ClusteringMethod
-from domains.organization.folder_service import FolderStructure, FolderStructureType, FiscalYearType
-from datetime import datetime
+
 
 class TestStateManagerDefaults(unittest.TestCase):
     """Test StateManager default behavior and initialization."""
@@ -38,6 +41,7 @@ class TestStateManagerDefaults(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_state_manager_initialization(self):
@@ -63,7 +67,7 @@ class TestStateManagerDefaults(unittest.TestCase):
         test_preferences = {
             "structure_type": "time_first",
             "ml_threshold": 0.8,
-            "max_categories": 15
+            "max_categories": 15,
         }
 
         # Save preferences
@@ -83,7 +87,7 @@ class TestStateManagerDefaults(unittest.TestCase):
         test_patterns = {
             "rule_patterns": {"financial": ["invoice", "bill"]},
             "ml_patterns": {"legal": ["contract", "agreement"]},
-            "user_corrections": []
+            "user_corrections": [],
         }
 
         # Save patterns
@@ -96,6 +100,7 @@ class TestStateManagerDefaults(unittest.TestCase):
         self.assertEqual(loaded_patterns["rule_patterns"], test_patterns["rule_patterns"])
         self.assertEqual(loaded_patterns["ml_patterns"], test_patterns["ml_patterns"])
         self.assertIn("last_updated", loaded_patterns)
+
 
 class TestOrganizationSessionData(unittest.TestCase):
     """Test OrganizationSession data class."""
@@ -110,7 +115,7 @@ class TestOrganizationSessionData(unittest.TestCase):
             structure_type="category_first",
             categories_created=["financial", "legal"],
             quality_score=0.78,
-            metadata={"test": "data"}
+            metadata={"test": "data"},
         )
 
         self.assertEqual(session.session_id, "test_session_123")
@@ -130,11 +135,12 @@ class TestOrganizationSessionData(unittest.TestCase):
             structure_type="time_first",
             categories_created=[],
             quality_score=0.8,
-            metadata=None  # Should be initialized to empty dict
+            metadata=None,  # Should be initialized to empty dict
         )
 
         self.assertIsInstance(session.metadata, dict)
         self.assertEqual(len(session.metadata), 0)
+
 
 class TestLearningMetrics(unittest.TestCase):
     """Test LearningMetrics data class."""
@@ -147,7 +153,7 @@ class TestLearningMetrics(unittest.TestCase):
             improvement_trend=0.05,
             user_corrections=3,
             successful_patterns={"rule_based": 120, "ml_enhanced": 45},
-            failed_patterns={"fallback": 8}
+            failed_patterns={"fallback": 8},
         )
 
         self.assertEqual(metrics.total_sessions, 15)
@@ -165,11 +171,12 @@ class TestLearningMetrics(unittest.TestCase):
             improvement_trend=0.0,
             user_corrections=0,
             successful_patterns=None,  # Should be initialized to empty dict
-            failed_patterns=None       # Should be initialized to empty dict
+            failed_patterns=None,  # Should be initialized to empty dict
         )
 
         self.assertIsInstance(metrics.successful_patterns, dict)
         self.assertIsInstance(metrics.failed_patterns, dict)
+
 
 class TestLearningServiceDefaults(unittest.TestCase):
     """Test LearningService default behavior."""
@@ -182,6 +189,7 @@ class TestLearningServiceDefaults(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_learning_service_initialization(self):
@@ -211,6 +219,7 @@ class TestLearningServiceDefaults(unittest.TestCase):
         for key in expected_keys:
             self.assertIn(key, patterns)
 
+
 class TestSessionLearning(unittest.TestCase):
     """Test learning from organization sessions."""
 
@@ -222,6 +231,7 @@ class TestSessionLearning(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_learn_from_session_success(self):
@@ -234,7 +244,7 @@ class TestSessionLearning(unittest.TestCase):
                 method=ClusteringMethod.RULE_BASED,
                 reasoning="High confidence rule match",
                 alternative_categories=[],
-                metadata={"rule_patterns_matched": ["invoice", "payment"]}
+                metadata={"rule_patterns_matched": ["invoice", "payment"]},
             ),
             "doc2": ClassificationResult(
                 category="legal",
@@ -242,8 +252,8 @@ class TestSessionLearning(unittest.TestCase):
                 method=ClusteringMethod.ML_ENHANCED,
                 reasoning="ML enhanced classification",
                 alternative_categories=[("business", 0.3)],
-                metadata={}
-            )
+                metadata={},
+            ),
         }
 
         folder_structure = FolderStructure(
@@ -252,13 +262,13 @@ class TestSessionLearning(unittest.TestCase):
             time_granularity="year",
             base_path=self.temp_dir,
             categories=["financial", "legal"],
-            metadata={}
+            metadata={},
         )
 
         quality_metrics = {
             "overall_quality": 85.0,
             "success_rate": 1.0,
-            "method_distribution": {"rule_based": 1, "ml_enhanced": 1}
+            "method_distribution": {"rule_based": 1, "ml_enhanced": 1},
         }
 
         # Learn from session
@@ -279,7 +289,7 @@ class TestSessionLearning(unittest.TestCase):
             time_granularity="year",
             base_path=self.temp_dir,
             categories=[],
-            metadata={}
+            metadata={},
         )
         quality_metrics = {"overall_quality": 0.0, "success_rate": 0.0}
 
@@ -289,6 +299,7 @@ class TestSessionLearning(unittest.TestCase):
 
         self.assertIsInstance(learning_results, dict)
         # Should handle empty session gracefully
+
 
 class TestUserCorrections(unittest.TestCase):
     """Test user correction learning."""
@@ -301,6 +312,7 @@ class TestUserCorrections(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_record_user_correction(self):
@@ -309,7 +321,7 @@ class TestUserCorrections(unittest.TestCase):
             file_name="invoice_2024.pd",
             from_category="legal",
             to_category="financial",
-            session_id="test_session"
+            session_id="test_session",
         )
 
         self.assertTrue(success)
@@ -320,9 +332,7 @@ class TestUserCorrections(unittest.TestCase):
 
         # Record correction
         self.learning_service.record_user_correction(
-            file_name="contract_invoice.pd",
-            from_category="legal",
-            to_category="financial"
+            file_name="contract_invoice.pd", from_category="legal", to_category="financial"
         )
 
         # Patterns should be updated
@@ -334,14 +344,13 @@ class TestUserCorrections(unittest.TestCase):
         corrections = [
             ("invoice1.pd", "legal", "financial"),
             ("bill2.pd", "personal", "financial"),
-            ("contract3.pd", "financial", "legal")
+            ("contract3.pd", "financial", "legal"),
         ]
 
         for filename, from_cat, to_cat in corrections:
-            success = self.learning_service.record_user_correction(
-                filename, from_cat, to_cat
-            )
+            success = self.learning_service.record_user_correction(filename, from_cat, to_cat)
             self.assertTrue(success)
+
 
 class TestLearningMetricsCalculation(unittest.TestCase):
     """Test learning metrics calculation."""
@@ -354,6 +363,7 @@ class TestLearningMetricsCalculation(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_get_learning_metrics(self):
@@ -373,8 +383,12 @@ class TestLearningMetricsCalculation(unittest.TestCase):
         # Create and record a session
         session_results = {
             "doc1": ClassificationResult(
-                category="test", confidence=0.8, method=ClusteringMethod.RULE_BASED,
-                reasoning="test", alternative_categories=[], metadata={}
+                category="test",
+                confidence=0.8,
+                method=ClusteringMethod.RULE_BASED,
+                reasoning="test",
+                alternative_categories=[],
+                metadata={},
             )
         }
 
@@ -384,19 +398,18 @@ class TestLearningMetricsCalculation(unittest.TestCase):
             time_granularity="year",
             base_path=self.temp_dir,
             categories=["test"],
-            metadata={}
+            metadata={},
         )
 
         quality_metrics = {"overall_quality": 80.0, "success_rate": 1.0}
 
         # Record session
-        self.learning_service.learn_from_session(
-            session_results, folder_structure, quality_metrics
-        )
+        self.learning_service.learn_from_session(session_results, folder_structure, quality_metrics)
 
         # Get updated metrics
         metrics = self.learning_service.get_learning_metrics()
         self.assertGreaterEqual(metrics.total_sessions, 1)
+
 
 class TestReorganizationRecommendations(unittest.TestCase):
     """Test reorganization recommendations."""
@@ -409,13 +422,13 @@ class TestReorganizationRecommendations(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_should_reorganize_with_improvement(self):
         """Test reorganization recommendation with significant improvement."""
         recommendation = self.learning_service.should_reorganize_existing(
-            current_quality=0.6,
-            proposed_quality=0.8
+            current_quality=0.6, proposed_quality=0.8
         )
 
         self.assertIsInstance(recommendation, dict)
@@ -427,8 +440,7 @@ class TestReorganizationRecommendations(unittest.TestCase):
     def test_should_not_reorganize_minimal_improvement(self):
         """Test no reorganization with minimal improvement."""
         recommendation = self.learning_service.should_reorganize_existing(
-            current_quality=0.7,
-            proposed_quality=0.72
+            current_quality=0.7, proposed_quality=0.72
         )
 
         self.assertFalse(recommendation["should_reorganize"])  # <15% improvement
@@ -436,13 +448,13 @@ class TestReorganizationRecommendations(unittest.TestCase):
     def test_reorganization_with_zero_current_quality(self):
         """Test reorganization recommendation with zero current quality."""
         recommendation = self.learning_service.should_reorganize_existing(
-            current_quality=0.0,
-            proposed_quality=0.6
+            current_quality=0.0, proposed_quality=0.6
         )
 
         # Should handle zero division gracefully
         self.assertIsInstance(recommendation, dict)
         self.assertIn("should_reorganize", recommendation)
+
 
 class TestServiceStatistics(unittest.TestCase):
     """Test learning service statistics."""
@@ -455,6 +467,7 @@ class TestServiceStatistics(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_get_service_statistics(self):
@@ -475,6 +488,7 @@ class TestServiceStatistics(unittest.TestCase):
         self.assertTrue(stats["patterns_loaded"])
         self.assertIsInstance(stats["learning_metrics"], dict)
         self.assertIsInstance(stats["current_preferences"], dict)
+
 
 if __name__ == "__main__":
     unittest.main()

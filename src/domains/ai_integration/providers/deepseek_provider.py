@@ -4,15 +4,13 @@ Deepseek Provider Implementation
 Extracted for domain architecture.
 """
 
-from typing import Optional
-from ..base_provider import AIProvider
-
 # Import from shared infrastructure (correct layer)
-from ....shared.infrastructure.filename_config import (
+from shared.infrastructure.filename_config import (
     get_secure_filename_prompt_template,
     get_token_limit_for_provider,
     validate_generated_filename,
 )
+from ..base_provider import AIProvider
 
 try:
     from openai import OpenAI
@@ -55,7 +53,7 @@ class DeepseekProvider(AIProvider):
     def generate_filename(self, content: str, original_filename: str = "") -> str:
         """Generate intelligent filename using Deepseek API."""
         try:
-            prompt = get_secure_filename_prompt_template("deepseek")
+            prompt = get_secure_filename_prompt_template()
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -63,7 +61,7 @@ class DeepseekProvider(AIProvider):
                     {"role": "system", "content": get_system_prompt("deepseek")},
                     {"role": "user", "content": f"{prompt}\n\nContent:\n{content}"},
                 ],
-                max_tokens=get_token_limit_for_provider("deepseek"),
+                max_tokens=get_token_limit_for_provider(),
                 temperature=0.1,
             )
 
@@ -74,5 +72,5 @@ class DeepseekProvider(AIProvider):
             return validate_generated_filename(raw_filename)
 
         except Exception as e:
-            self.logger.error(f"Deepseek filename generation failed: {e}")
+            self.logger.error("Deepseek filename generation failed: %s", e)
             raise RuntimeError(f"Deepseek error: {str(e)}") from e

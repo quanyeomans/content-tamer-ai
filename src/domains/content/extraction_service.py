@@ -266,6 +266,8 @@ class PDFContentProcessor(ContentProcessor):
                 if page_num == 0:
                     image_data = self._render_page_as_image(page)
 
+            # Get page count before closing document
+            page_count = len(doc) 
             doc.close()
 
             full_text = "\n".join(text_parts)
@@ -279,7 +281,7 @@ class PDFContentProcessor(ContentProcessor):
                 quality=quality,
                 extraction_method="pymupdf",
                 file_type="pdf",
-                metadata={"page_count": len(doc), "method": "fitz"}
+                metadata={"page_count": page_count, "method": "fitz"}
             )
 
         except Exception as e:

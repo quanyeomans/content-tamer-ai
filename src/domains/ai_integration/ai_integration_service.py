@@ -8,15 +8,15 @@ Provides clean interface for AI operations across the application.
 import logging
 import os
 import time
-from typing import Dict, Optional, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 # Import request types that are used at runtime
 from .request_service import RequestResult, RequestStatus
 
 if TYPE_CHECKING:
     # Type hints only - not runtime imports
-    from .provider_service import ProviderService, AIProvider
-    from .model_service import ModelService, ModelInfo, SystemCapabilities
+    from .model_service import ModelInfo, ModelService, SystemCapabilities
+    from .provider_service import AIProvider, ProviderService
     from .request_service import RequestService, RetryConfig
 
 
@@ -225,7 +225,7 @@ class AIIntegrationService:
                 # Get hardware tier through public interface
                 tier = None
                 for model in recommended_models:
-                    if hasattr(model, 'hardware_tier'):
+                    if hasattr(model, "hardware_tier"):
                         tier = model.hardware_tier
                         break
                 validation_result["system_compatibility"] = {
@@ -300,10 +300,7 @@ class AIIntegrationService:
 
         # Find best provider
         if not provider_scores:
-            return {
-                "error": "No providers scored",
-                "recommendation": "Check provider availability"
-            }
+            return {"error": "No providers scored", "recommendation": "Check provider availability"}
         best_provider = max(provider_scores, key=lambda x: provider_scores[x])
         best_model = self.provider_service.get_default_model(best_provider)
 

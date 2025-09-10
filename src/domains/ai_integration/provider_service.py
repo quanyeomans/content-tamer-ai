@@ -5,16 +5,11 @@ Unified AI provider management and factory service.
 Consolidates all AI provider logic into a clean domain service.
 """
 
-import json
-from typing import Dict, List, Optional, Any, Tuple
 import logging
+from typing import Any, Dict, List, Optional
 
 # Import from shared infrastructure (correct layer)
-from shared.infrastructure.filename_config import (
-    DEFAULT_SYSTEM_PROMPTS,
-    get_secure_filename_prompt_template,
-    get_token_limit_for_provider,
-)
+from shared.infrastructure.filename_config import DEFAULT_SYSTEM_PROMPTS
 
 # Import base provider interface
 from .base_provider import AIProvider
@@ -81,7 +76,7 @@ class ProviderCapabilities:
 
         # OpenAI
         try:
-            import openai
+            import openai  # pylint: disable=unused-import
 
             capabilities["openai"] = True
         except ImportError:
@@ -89,7 +84,7 @@ class ProviderCapabilities:
 
         # Claude
         try:
-            import anthropic
+            import anthropic  # pylint: disable=unused-import
 
             capabilities["claude"] = True
         except ImportError:
@@ -97,7 +92,7 @@ class ProviderCapabilities:
 
         # Gemini
         try:
-            import google.genai as genai
+            import google.genai as genai  # pylint: disable=unused-import
 
             capabilities["gemini"] = True
         except ImportError:
@@ -228,37 +223,40 @@ class ProviderService:
         requirements = ProviderCapabilities.get_provider_requirements(provider)
         if requirements.get("api_key_required", False) and not api_key:
             raise ValueError(f"API key required for provider '{provider}'")
-        
+
         try:
             if provider == "openai":
                 from .providers.openai_provider import OpenAIProvider
+
                 if api_key is None:
                     raise ValueError("API key required for OpenAI provider")
                 return OpenAIProvider(api_key, model)
-            elif provider == "claude":
+            if provider == "claude":
                 from .providers.claude_provider import ClaudeProvider
+
                 if api_key is None:
                     raise ValueError("API key required for Claude provider")
                 return ClaudeProvider(api_key, model)
-            elif provider == "gemini":
+            if provider == "gemini":
                 from .providers.gemini_provider import GeminiProvider
+
                 if api_key is None:
                     raise ValueError("API key required for Gemini provider")
                 return GeminiProvider(api_key, model)
-            elif provider == "deepseek":
+            if provider == "deepseek":
                 from .providers.deepseek_provider import DeepseekProvider
+
                 if api_key is None:
                     raise ValueError("API key required for Deepseek provider")
                 return DeepseekProvider(api_key, model)
-            elif provider == "local":
+            if provider == "local":
                 from .providers.local_llm_provider import LocalLLMProvider
 
                 return LocalLLMProvider(model)
-            else:
-                raise ValueError(f"Unsupported provider: {provider}")
+            raise ValueError(f"Unsupported provider: {provider}")
 
         except ImportError as e:
-            raise RuntimeError(f"Failed to import {provider} provider: {e}")
+            raise RuntimeError(f"Failed to import {provider} provider: {e}") from e
 
     def validate_api_key(self, provider: str, api_key: str) -> bool:
         """Validate API key for a provider."""
@@ -268,7 +266,7 @@ class ProviderService:
             test_provider = self.create_provider(provider, model, api_key)
             return test_provider.validate_api_key()
         except Exception as e:
-            self.logger.warning(f"API key validation failed for {provider}: {e}")
+            self.logger.warning("API key validation failed for %s: %s", provider, e)
             return False
 
     def get_provider_info(self, provider: str) -> Dict[str, Any]:

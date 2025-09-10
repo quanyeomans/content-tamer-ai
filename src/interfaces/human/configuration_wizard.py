@@ -7,10 +7,10 @@ Extracted from utils.expert_mode for clean interface separation.
 """
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
+from typing import Optional
 
-from ..programmatic.configuration_manager import ProcessingConfiguration, ConfigurationManager
+from ..programmatic.configuration_manager import ConfigurationManager, ProcessingConfiguration
 from .rich_console_manager import RichConsoleManager
 
 
@@ -41,11 +41,18 @@ class ExpertConfigurationWizard:
         try:
             self.console.show_section_header(
                 "Expert Configuration Wizard",
-                "Configure each setting with full control over all options"
+                "Configure each setting with full control over all options",
             )
 
-            # Start with default configuration
+            # Start with configuration including environment variables
             config = self.config_manager.load_configuration()
+            
+            # If environment variable API key was found, show it to user
+            if config.api_key and config.provider != "local":
+                env_var = f"{config.provider.upper()}_API_KEY"
+                self.console.show_status(
+                    f"Using API key from environment variable {env_var}", "success"
+                )
 
             # Run configuration steps
             config = self._configure_file_paths(config)
@@ -56,10 +63,16 @@ class ExpertConfigurationWizard:
 
             # Show final summary and confirm
             if self._confirm_configuration(config):
+                self.console.console.print()  # Add spacing before save prompt
                 # Save configuration if user wants
                 if self.console.prompt_confirm("Save this configuration for future use?"):
                     if self.config_manager.save_configuration(config):
                         self.console.show_status("Configuration saved successfully", "success")
+                        if config.api_key:
+                            self.console.show_status(
+                                "Note: API key not saved to file for security. Use environment variable or re-enter.", 
+                                "info"
+                            )
                     else:
                         self.console.show_status("Failed to save configuration", "warning")
 
@@ -77,8 +90,7 @@ class ExpertConfigurationWizard:
     def _configure_file_paths(self, config: ProcessingConfiguration) -> ProcessingConfiguration:
         """Configure input and output directories."""
         self.console.show_section_header(
-            "📂 File Paths",
-            "Configure where documents are read from and organized to"
+            "📂 File Paths", "Configure where documents are read from and organized to"
         )
 
         # Input Directory
@@ -86,7 +98,7 @@ class ExpertConfigurationWizard:
             "Input directory (where your documents are located)",
             current_value=config.input_dir,
             must_exist=True,
-            must_be_readable=True
+            must_be_readable=True,
         )
 
         # Output Directory
@@ -94,13 +106,12 @@ class ExpertConfigurationWizard:
             "Output directory (where organized documents will be saved)",
             current_value=config.output_dir,
             must_exist=False,
-            must_be_writable=True
+            must_be_writable=True,
         )
 
         # Unprocessed Directory (optional)
         use_custom_unprocessed = self.console.prompt_confirm(
-            "Use custom directory for unprocessed files?",
-            default=False
+            "Use custom directory for unprocessed files?", default=False
         )
 
         if use_custom_unprocessed:
@@ -108,7 +119,7 @@ class ExpertConfigurationWizard:
                 "Unprocessed files directory",
                 current_value=config.unprocessed_dir,
                 must_exist=False,
-                must_be_writable=True
+                must_be_writable=True,
             )
 
         return config
@@ -116,71 +127,69 @@ class ExpertConfigurationWizard:
     def _configure_ai_provider(self, config: ProcessingConfiguration) -> ProcessingConfiguration:
         """Configure AI provider and model."""
         self.console.show_section_header(
-            "🤖 AI Provider",
-            "Choose your AI service for intelligent document analysis"
+            "🤖 AI Provider", "Choose your AI service for intelligent document analysis"
         )
 
         # Show available providers
         provider_table = {
-            "openai": "OpenAI (GPT-4o, GPT-4o-mini)",
+            "openai": "OpenAI (GPT-5, GPT-4o)",
             "claude": "Anthropic Claude (Sonnet, Haiku)",
             "gemini": "Google Gemini (2.0 Flash, 1.5 Pro)",
             "deepseek": "Deepseek (Chat)",
-            "local": "Local LLM (Ollama - offline processing)"
+            "local": "Local LLM (Ollama - offline processing)",
         }
 
-        self.console.show_configuration_table(
-            provider_table,
-            "Available AI Providers"
-        )
+        self.console.show_configuration_table(provider_table, "Available AI Providers")
 
         # Select provider
         config.provider = self.console.prompt_choice(
-            "Choose AI provider",
-            choices=self.providers,
-            default=config.provider
+            "Choose AI provider", choices=self.providers, default=config.provider
         )
 
         # Configure model for selected provider
         config.model = self._prompt_model_selection(config.provider, config.model)
 
-        # Configure API key (if not local)
+        # Configure API key (if not local)  
         if config.provider != "local":
+            self.console.console.print()  # Add spacing before API key section
             config.api_key = self._prompt_api_key_configuration(config.provider, config.api_key)
 
         return config
 
-    def _configure_processing_options(self, config: ProcessingConfiguration) -> ProcessingConfiguration:
+    def _configure_processing_options(
+        self, config: ProcessingConfiguration
+    ) -> ProcessingConfiguration:
         """Configure processing-related options."""
         self.console.show_section_header(
-            "⚙️ Processing Options",
-            "Configure how documents are processed and analyzed"
+            "⚙️ Processing Options", "Configure how documents are processed and analyzed"
         )
 
         # OCR Language
-        self.console.show_configuration_table(
-            self.common_languages,
-            "Common OCR Languages"
-        )
+        self.console.show_configuration_table(self.common_languages, "Common OCR Languages")
 
         config.ocr_language = self.console.prompt_text(
-            "OCR language code (e.g., 'eng' or 'eng+fra')",
-            default=config.ocr_language
+            "OCR language code (e.g., 'eng' or 'eng+fra')", default=config.ocr_language
         )
 
-        # Reset progress
+        # Processing Control section
+        self.console.console.print()  # Add spacing
+        self.console.show_section_header(
+            "🔄 Processing Control", "Configure processing behavior and resume options"
+        )
+        
         config.reset_progress = self.console.prompt_confirm(
-            "Reset processing progress (ignore previous runs)?",
-            default=config.reset_progress
+            "Reset processing progress (ignore previous runs)?", default=config.reset_progress
         )
 
         return config
 
-    def _configure_organization_options(self, config: ProcessingConfiguration) -> ProcessingConfiguration:
+    def _configure_organization_options(
+        self, config: ProcessingConfiguration
+    ) -> ProcessingConfiguration:
         """Configure document organization options."""
         self.console.show_section_header(
             "🗂️ Document Organization",
-            "Configure intelligent document categorization and folder organization"
+            "Configure intelligent document categorization and folder organization",
         )
 
         # Organization enabled
@@ -193,57 +202,57 @@ Document organization uses AI to automatically:
 
 Choose your organization approach:
 """
-        self.console.show_info_panel(
-            "Organization Overview",
-            organization_info,
-            style="info"
-        )
+        self.console.show_info_panel("Organization Overview", organization_info, style="info")
 
         org_choice = self.console.prompt_choice(
             "Enable document organization?",
-            choices=["yes", "no"],
-            default="yes" if config.organization_enabled else "no"
+            choices=["y", "n"],
+            default="y" if config.organization_enabled else "n",
         )
-        config.organization_enabled = (org_choice == "yes")
+        config.organization_enabled = org_choice == "y"
 
         # ML Level (if organization enabled)
         if config.organization_enabled:
+            self.console.console.print()  # Add spacing before ML levels
             ml_info = {
                 "Level 1": "Enhanced rule-based classification (fastest, 80% accuracy)",
                 "Level 2": "Selective ML refinement for uncertain cases (balanced, 90% accuracy)",
-                "Level 3": "Advanced temporal intelligence with business insights (comprehensive, 95% accuracy)"
+                "Level 3": "Advanced temporal intelligence with business insights (comprehensive, 95% accuracy)",
             }
 
-            self.console.show_configuration_table(
-                ml_info,
-                "ML Enhancement Levels"
-            )
+            self.console.show_configuration_table(ml_info, "ML Enhancement Levels")
 
             level_choice = self.console.prompt_choice(
-                "Choose ML enhancement level",
-                choices=["1", "2", "3"],
-                default=str(config.ml_level)
+                "Choose ML enhancement level", choices=["1", "2", "3"], default=str(config.ml_level)
             )
             config.ml_level = int(level_choice)
 
         return config
 
-    def _configure_display_options(self, config: ProcessingConfiguration) -> ProcessingConfiguration:
+    def _configure_display_options(
+        self, config: ProcessingConfiguration
+    ) -> ProcessingConfiguration:
         """Configure display and output options."""
         self.console.show_section_header(
-            "🎨 Display Options",
-            "Configure how information is displayed during processing"
+            "🎨 Display Options", "Configure how information is displayed during processing"
         )
 
-        # Display mode
+        # Display mode with explanations
+        self.console.console.print("[dim]Normal: Standard output | Verbose: Detailed processing info | Quiet: Minimal output[/dim]")
         display_mode = self.console.prompt_choice(
             "Choose display mode",
-            choices=["normal", "verbose", "quiet"],
-            default="verbose" if config.verbose_mode else ("quiet" if config.quiet_mode else "normal")
+            choices=["n", "v", "q"],
+            default=(
+                "v" if config.verbose_mode else ("q" if config.quiet_mode else "n")
+            ),
         )
+        
+        # Map single letter choices back to full modes
+        mode_mapping = {"n": "normal", "v": "verbose", "q": "quiet"}
+        display_mode = mode_mapping.get(display_mode, "normal")
 
-        config.quiet_mode = (display_mode == "quiet")
-        config.verbose_mode = (display_mode == "verbose")
+        config.quiet_mode = display_mode == "quiet"
+        config.verbose_mode = display_mode == "verbose"
 
         return config
 
@@ -253,14 +262,11 @@ Choose your organization approach:
         current_value: Optional[str] = None,
         must_exist: bool = True,
         must_be_readable: bool = False,
-        must_be_writable: bool = False
+        must_be_writable: bool = False,
     ) -> str:
         """Prompt for directory path with validation."""
         while True:
-            path_str = self.console.prompt_text(
-                f"{prompt}",
-                default=current_value
-            )
+            path_str = self.console.prompt_text(f"{prompt}", default=current_value)
 
             path = Path(path_str).expanduser().resolve()
 
@@ -290,40 +296,40 @@ Choose your organization approach:
 
             return str(path)
 
-    def _prompt_model_selection(self, provider: str, current_model: Optional[str] = None) -> Optional[str]:
+    def _prompt_model_selection(
+        self, provider: str, current_model: Optional[str] = None
+    ) -> Optional[str]:
         """Prompt for model selection based on provider."""
         model_suggestions = {
             "openai": {
-                "gpt-4o": "GPT-4o - Latest flagship model (best quality)",
+                "gpt-5": "GPT-5 - Latest flagship model (best quality)",
+                "gpt-4o": "GPT-4o - High-capability model with vision",
                 "gpt-4o-mini": "GPT-4o-mini - Faster and more affordable",
-                "gpt-4-turbo": "GPT-4 Turbo - Previous generation flagship"
+                "gpt-4-turbo": "GPT-4 Turbo - Previous generation flagship",
             },
             "claude": {
                 "claude-3.5-sonnet": "Claude 3.5 Sonnet - Best balance of speed and capability",
                 "claude-3.5-haiku": "Claude 3.5 Haiku - Fast and efficient",
-                "claude-3-opus": "Claude 3 Opus - Highest capability"
+                "claude-3-opus": "Claude 3 Opus - Highest capability",
             },
             "gemini": {
                 "gemini-2.0-flash": "Gemini 2.0 Flash - Latest multimodal model",
                 "gemini-1.5-pro": "Gemini 1.5 Pro - High-capability model",
-                "gemini-1.5-flash": "Gemini 1.5 Flash - Fast processing"
+                "gemini-1.5-flash": "Gemini 1.5 Flash - Fast processing",
             },
-            "deepseek": {
-                "deepseek-chat": "Deepseek Chat - General purpose model"
-            },
+            "deepseek": {"deepseek-chat": "Deepseek Chat - General purpose model"},
             "local": {
                 "llama3.2-3b": "Llama 3.2 3B - Lightweight local model",
                 "gemma2:2b": "Gemma 2 2B - Very efficient local model",
                 "mistral-7b": "Mistral 7B - Balanced local model",
-                "llama3.1-8b": "Llama 3.1 8B - High-capability local model"
-            }
+                "llama3.1-8b": "Llama 3.1 8B - High-capability local model",
+            },
         }
 
         suggestions = model_suggestions.get(provider, {})
         if suggestions:
             self.console.show_configuration_table(
-                suggestions,
-                f"Available {provider.capitalize()} Models"
+                suggestions, f"Available {provider.capitalize()} Models"
             )
 
             default_model = current_model or list(suggestions.keys())[0]
@@ -331,34 +337,33 @@ Choose your organization approach:
             model = self.console.prompt_choice(
                 f"Choose {provider} model",
                 choices=list(suggestions.keys()) + ["custom"],
-                default=default_model if default_model in suggestions else "custom"
+                default=default_model if default_model in suggestions else "custom",
             )
 
             if model == "custom":
-                model = self.console.prompt_text(
-                    f"Enter custom model name for {provider}"
-                )
+                model = self.console.prompt_text(f"Enter custom model name for {provider}")
 
             return model
         else:
             return self.console.prompt_text(
-                f"Enter model name for {provider}",
-                default=current_model
+                f"Enter model name for {provider}", default=current_model
             )
 
-    def _prompt_api_key_configuration(self, provider: str, current_key: Optional[str] = None) -> Optional[str]:
+    def _prompt_api_key_configuration(
+        self, provider: str, current_key: Optional[str] = None
+    ) -> Optional[str]:
         """Prompt for API key configuration."""
         env_var = f"{provider.upper()}_API_KEY"
         env_key = os.getenv(env_var)
 
+        # If environment variable exists, use it and don't prompt
         if env_key:
-            self.console.show_status(f"Using API key from environment variable {env_var}", "success")
+            # Don't show this message here - it was already shown in run_configuration_wizard
             return env_key
 
         if current_key:
             use_existing = self.console.prompt_confirm(
-                f"Use existing saved API key for {provider}?",
-                default=True
+                f"Use existing saved API key for {provider}?", default=True
             )
             if use_existing:
                 return current_key
@@ -378,29 +383,31 @@ You can:
 3. Skip and provide later with --api-key argument
         """
 
-        self.console.show_info_panel(
-            f"{provider.capitalize()} API Key",
-            api_info,
-            style="info"
-        )
+        self.console.show_info_panel(f"{provider.capitalize()} API Key", api_info, style="info")
 
-        api_key = self.console.prompt_text(
-            f"Enter your {provider.capitalize()} API key (or press Enter to skip)"
+        # Use password prompt to hide API key input for security
+        from rich.prompt import Prompt
+        api_key = Prompt.ask(
+            f"Enter your {provider.capitalize()} API key (or press Enter to skip)",
+            password=True,
+            default="",
+            console=self.console.console
         )
+        
+        # Show masked confirmation so user can verify they entered something
+        if api_key:
+            masked_key = api_key[:8] + "*" * (len(api_key) - 12) + api_key[-4:] if len(api_key) > 12 else "*" * len(api_key)
+            self.console.show_status(f"API key entered: {masked_key}", "success")
 
         return api_key if api_key else None
 
     def _confirm_configuration(self, config: ProcessingConfiguration) -> bool:
         """Show configuration summary and confirm."""
         self.console.show_section_header(
-            "📋 Configuration Summary",
-            "Review your configuration before proceeding"
+            "📋 Configuration Summary", "Review your configuration before proceeding"
         )
 
         summary = self.config_manager.get_configuration_summary(config)
         self.console.show_configuration_table(summary, "Expert Configuration")
 
-        return self.console.prompt_confirm(
-            "Proceed with this configuration?",
-            default=True
-        )
+        return self.console.prompt_confirm("Proceed with this configuration?", default=True)

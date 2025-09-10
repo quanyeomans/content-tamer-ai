@@ -5,11 +5,11 @@ Security-focused path validation and sanitization.
 Prevents directory traversal and validates cross-platform paths.
 """
 
+import logging
 import os
 import re
 from pathlib import Path
-from typing import Tuple, List, Optional
-import logging
+from typing import Optional, Tuple
 
 
 class PathValidator:
@@ -21,37 +21,39 @@ class PathValidator:
 
         # Security patterns to detect
         self.suspicious_patterns = [
-            r'\.\.[\\/]',           # Directory traversal
-            r'[\\/]\.\.[\\\/]',     # Directory traversal variations
-            r'^\.\.[\\/]',          # Leading directory traversal
-            r'[\\/]\.\.[\\/]\.\.', # Multiple directory traversal
-            r'%2e%2e',             # URL encoded directory traversal
-            r'%252e%252e',         # Double URL encoded
-            r'\x00',               # Null byte injection
-            r'%00',                # URL encoded null byte
+            r"\.\.[\\/]",  # Directory traversal
+            r"[\\/]\.\.[\\\/]",  # Directory traversal variations
+            r"^\.\.[\\/]",  # Leading directory traversal
+            r"[\\/]\.\.[\\/]\.\.",  # Multiple directory traversal
+            r"%2e%2e",  # URL encoded directory traversal
+            r"%252e%252e",  # Double URL encoded
+            r"\x00",  # Null byte injection
+            r"%00",  # URL encoded null byte
         ]
 
         # Platform-specific forbidden paths
-        if os.name == 'nt':  # Windows
+        if os.name == "nt":  # Windows
             self.forbidden_paths = [
-                r'^[A-Za-z]:\\Windows\\',
-                r'^[A-Za-z]:\\Program Files\\',
-                r'^[A-Za-z]:\\Users\\[^\\]+\\AppData\\',
-                r'\\System32\\',
-                r'\\SysWOW64\\',
+                r"^[A-Za-z]:\\Windows\\",
+                r"^[A-Za-z]:\\Program Files\\",
+                r"^[A-Za-z]:\\Users\\[^\\]+\\AppData\\",
+                r"\\System32\\",
+                r"\\SysWOW64\\",
             ]
         else:  # Unix-like
             self.forbidden_paths = [
-                r'^/etc/',
-                r'^/proc/',
-                r'^/sys/',
-                r'^/dev/',
-                r'^/root/',
-                r'^/usr/bin/',
-                r'^/usr/sbin/',
+                r"^/etc/",
+                r"^/proc/",
+                r"^/sys/",
+                r"^/dev/",
+                r"^/root/",
+                r"^/usr/bin/",
+                r"^/usr/sbin/",
             ]
 
-    def validate_file_path(self, file_path: str, base_directory: Optional[str] = None) -> Tuple[bool, str]:
+    def validate_file_path(
+        self, file_path: str, base_directory: Optional[str] = None
+    ) -> Tuple[bool, str]:
         """Validate file path for security and accessibility.
 
         Args:
@@ -109,16 +111,35 @@ class PathValidator:
 
         # Remove or replace problematic characters
         # Windows forbidden characters: < > : " | ? * \ /
-        sanitized = re.sub(r'[<>:"|?*\\/]', '_', filename)
+        sanitized = re.sub(r'[<>:"|?*\\/]', "_", filename)
 
         # Remove control characters
-        sanitized = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', sanitized)
+        sanitized = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", sanitized)
 
         # Handle Windows reserved names
         reserved_names = [
-            'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4',
-            'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2',
-            'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9",
         ]
 
         name_without_ext = os.path.splitext(sanitized)[0].upper()
@@ -139,7 +160,7 @@ class PathValidator:
 
     def _contains_suspicious_patterns(self, path: str) -> bool:
         """Check for suspicious patterns in path."""
-        path_str = str(path).replace('\\', '/')  # Normalize separators
+        path_str = str(path).replace("\\", "/")  # Normalize separators
 
         for pattern in self.suspicious_patterns:
             if re.search(pattern, path_str, re.IGNORECASE):
@@ -157,7 +178,9 @@ class PathValidator:
 
         return False
 
-    def validate_directory_path(self, dir_path: str, must_exist: bool = False, must_be_writable: bool = False) -> Tuple[bool, str]:
+    def validate_directory_path(
+        self, dir_path: str, must_exist: bool = False, must_be_writable: bool = False
+    ) -> Tuple[bool, str]:
         """Validate directory path with specific requirements.
 
         Args:

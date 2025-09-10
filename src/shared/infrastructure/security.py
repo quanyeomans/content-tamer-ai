@@ -272,9 +272,7 @@ class PathValidator:
                     continue
 
             if not path_is_safe:
-                raise SecurityError(
-                    f"Path '{file_path}' is outside allowed directories"
-                )
+                raise SecurityError(f"Path '{file_path}' is outside allowed directories")
 
             return abs_path
 
@@ -331,9 +329,7 @@ class ContentValidator:
             return ""
 
         # Basic length check
-        if (
-            len(content) > MAX_CONTENT_LENGTH * 2
-        ):  # Allow some overhead before truncation
+        if len(content) > MAX_CONTENT_LENGTH * 2:  # Allow some overhead before truncation
             content = content[: MAX_CONTENT_LENGTH * 2]
 
         # Check for embedded scripts or commands
@@ -346,9 +342,7 @@ class ContentValidator:
             r"exec\s*\(",
         ]
 
-        combined_pattern = re.compile(
-            "|".join(script_patterns), re.IGNORECASE | re.DOTALL
-        )
+        combined_pattern = re.compile("|".join(script_patterns), re.IGNORECASE | re.DOTALL)
         if combined_pattern.search(content):
             raise SecurityError(
                 f"File '{source_file}' contains potentially malicious embedded scripts"
@@ -389,9 +383,7 @@ class ThreatLevel(Enum):
 class PDFThreatAnalysis:
     """Results from PDF threat analysis."""
 
-    def __init__(
-        self, threat_level: ThreatLevel, indicators: Dict[str, Any], summary: str
-    ):
+    def __init__(self, threat_level: ThreatLevel, indicators: Dict[str, Any], summary: str):
         self.threat_level = threat_level
         self.indicators = indicators
         self.summary = summary
@@ -458,9 +450,7 @@ class PDFAnalyzer:
 
         # Run PDFiD analysis
         try:
-            xmldoc = PDFiD(
-                file_path, allNames=False, extraData=False, disarm=False, force=False
-            )
+            xmldoc = PDFiD(file_path, allNames=False, extraData=False, disarm=False, force=False)
 
             # Extract key indicators
             indicators = self._extract_indicators(xmldoc)
@@ -572,9 +562,7 @@ class PDFAnalyzer:
             return ThreatLevel.LOW
         return ThreatLevel.SAFE
 
-    def _generate_summary(
-        self, threat_level: ThreatLevel, indicators: Dict[str, Any]
-    ) -> str:
+    def _generate_summary(self, threat_level: ThreatLevel, indicators: Dict[str, Any]) -> str:
         """Generate human-readable summary of threats detected."""
         if threat_level == ThreatLevel.SAFE:
             return "PDF appears safe - no suspicious indicators detected"
@@ -590,9 +578,7 @@ class PDFAnalyzer:
         if indicators.get("open_action", 0) > 0:
             threats.append(f"Auto-open actions ({indicators['open_action']} instances)")
         if indicators.get("uri_references", 0) > 0:
-            threats.append(
-                f"External URI references ({indicators['uri_references']} instances)"
-            )
+            threats.append(f"External URI references ({indicators['uri_references']} instances)")
         if indicators.get("submit_form", 0) > 0:
             threats.append(f"Form submissions ({indicators['submit_form']} instances)")
 
@@ -685,15 +671,11 @@ class SecureLogger(logging.Logger):
         """Override addHandler to ensure secure formatting."""
         # Always apply our secure formatter
         hdlr.setFormatter(
-            SecureLoggingFormatter(
-                fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            SecureLoggingFormatter(fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         )
         super().addHandler(hdlr)
 
-    def _log(
-        self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1
-    ):
+    def _log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1):
         """
         Override _log to sanitize messages before logging.
         This is the single point where all log messages pass through.
@@ -753,9 +735,7 @@ def secure_log_debug(logger_instance: logging.Logger, message: str, *args, **kwa
     logger_instance.debug(sanitized_message, *args, **kwargs)
 
 
-def setup_secure_log_rotation(
-    log_file_path: str, max_size_mb: int = 10, backup_count: int = 3
-):
+def setup_secure_log_rotation(log_file_path: str, max_size_mb: int = 10, backup_count: int = 3):
     """
     Set up secure log rotation with automatic sanitization.
 
@@ -781,9 +761,7 @@ def setup_secure_log_rotation(
 
     # Apply secure formatter that sanitizes all log messages
     handler.setFormatter(
-        SecureLoggingFormatter(
-            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        SecureLoggingFormatter(fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     )
 
     return handler

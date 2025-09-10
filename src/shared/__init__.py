@@ -10,17 +10,18 @@ Categories:
 - Infrastructure: Configuration, dependency management, feature flags
 """
 
-from .file_operations import SafeFileManager
 from .display import UnifiedDisplayManager
+from .file_operations import SafeFileManager
 
 # Infrastructure services to be implemented as needed
 try:
     from .infrastructure import DependencyManager
+
     INFRASTRUCTURE_AVAILABLE = True
 except ImportError:
     INFRASTRUCTURE_AVAILABLE = False
 
 if INFRASTRUCTURE_AVAILABLE:
-    __all__ = ['SafeFileManager', 'UnifiedDisplayManager', 'DependencyManager']
+    __all__ = ["SafeFileManager", "UnifiedDisplayManager", "DependencyManager"]
 else:
-    __all__ = ['SafeFileManager', 'UnifiedDisplayManager']
+    __all__ = ["SafeFileManager", "UnifiedDisplayManager"]

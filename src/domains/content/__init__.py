@@ -10,9 +10,9 @@ Services:
 - MetadataService: Document metadata extraction and analysis
 """
 
-from .extraction_service import ExtractionService
-from .enhancement_service import EnhancementService
-from .metadata_service import MetadataService
 from .content_service import ContentService
+from .enhancement_service import EnhancementService
+from .extraction_service import ExtractionService
+from .metadata_service import MetadataService
 
-__all__ = ['ExtractionService', 'EnhancementService', 'MetadataService', 'ContentService']
+__all__ = ["ExtractionService", "EnhancementService", "MetadataService", "ContentService"]

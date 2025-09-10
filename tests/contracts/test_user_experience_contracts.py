@@ -13,16 +13,21 @@ CONTRACT AGREEMENTS TESTED:
 
 import os
 import sys
-import unittest
 import time
+import unittest
 
 import pytest
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"
+    )
+)
 
 from shared.display.rich_display_manager import RichDisplayOptions
 from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
     """Contracts ensuring user experience remains consistent and high-quality."""
@@ -44,37 +49,41 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
         with manager.processing_context(3, "User Experience Test") as ctx:
             # Contract: Users must see progress at each stage
             initial_stats = {
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed,
-                'success_rate': ctx.display.progress.stats.success_rate
+                "total": ctx.display.progress.stats.total,
+                "succeeded": ctx.display.progress.stats.succeeded,
+                "failed": ctx.display.progress.stats.failed,
+                "success_rate": ctx.display.progress.stats.success_rate,
             }
 
             # Simulate user-observable processing steps
             ctx.start_file("user_document.pd")
             mid_processing_stats = {
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed,
-                'success_rate': ctx.display.progress.stats.success_rate
+                "total": ctx.display.progress.stats.total,
+                "succeeded": ctx.display.progress.stats.succeeded,
+                "failed": ctx.display.progress.stats.failed,
+                "success_rate": ctx.display.progress.stats.success_rate,
             }
 
             ctx.complete_file("user_document.pd", "ai_organized_user_document.pd")
             final_stats = {
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed,
-                'success_rate': ctx.display.progress.stats.success_rate
+                "total": ctx.display.progress.stats.total,
+                "succeeded": ctx.display.progress.stats.succeeded,
+                "failed": ctx.display.progress.stats.failed,
+                "success_rate": ctx.display.progress.stats.success_rate,
             }
 
             # Contract: Progress must be meaningful at each stage
-            self.assertEqual(initial_stats['total'], 3, "User can't see total work to be done")
-            self.assertEqual(mid_processing_stats['total'], 3, "Total work changes confusingly during processing")
-            self.assertEqual(final_stats['succeeded'], 1, "User can't see progress being made")
+            self.assertEqual(initial_stats["total"], 3, "User can't see total work to be done")
+            self.assertEqual(
+                mid_processing_stats["total"], 3, "Total work changes confusingly during processing"
+            )
+            self.assertEqual(final_stats["succeeded"], 1, "User can't see progress being made")
 
             # Contract: Success rate must be calculable and meaningful
-            if final_stats['succeeded'] > 0:
-                self.assertGreater(final_stats['success_rate'], 0, "Success rate not meaningful to user")
+            if final_stats["succeeded"] > 0:
+                self.assertGreater(
+                    final_stats["success_rate"], 0, "Success rate not meaningful to user"
+                )
 
     @pytest.mark.contract
     @pytest.mark.regression
@@ -91,7 +100,9 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
             stats = ctx.display.progress.stats
             self.assertEqual(stats.succeeded, 2, "Success count not clear to user")
             self.assertEqual(stats.failed, 0, "Failed count misleading for successful operation")
-            self.assertEqual(stats.success_rate, 100.0, "Success rate doesn't clearly show 100% success")
+            self.assertEqual(
+                stats.success_rate, 100.0, "Success rate doesn't clearly show 100% success"
+            )
 
         # Test clear failure indication
         with manager.processing_context(2, "Failure Clarity Test") as ctx:
@@ -102,7 +113,9 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
             stats = ctx.display.progress.stats
             self.assertEqual(stats.succeeded, 0, "Success count misleading for failed operation")
             self.assertEqual(stats.failed, 2, "Failure count not clear to user")
-            self.assertEqual(stats.success_rate, 0.0, "Success rate doesn't clearly show 0% success")
+            self.assertEqual(
+                stats.success_rate, 0.0, "Success rate doesn't clearly show 0% success"
+            )
 
     @pytest.mark.contract
     @pytest.mark.regression
@@ -126,8 +139,9 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
 
             # Contract: Success rate must be meaningful for mixed results
             expected_rate = (3 / 4) * 100  # 75%
-            self.assertEqual(stats.success_rate, expected_rate,
-                           "Success rate not meaningful for mixed results")
+            self.assertEqual(
+                stats.success_rate, expected_rate, "Success rate not meaningful for mixed results"
+            )
 
     @pytest.mark.contract
     @pytest.mark.regression
@@ -138,10 +152,12 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
         meaningful_filenames = [
             ("contract_draft.pd", "ai_organized_legal_contract_draft_2024.pd"),
             ("meeting_notes.pd", "ai_organized_project_meeting_notes_q4.pd"),
-            ("financial_report.pd", "ai_organized_quarterly_financial_report_2024.pd")
+            ("financial_report.pd", "ai_organized_quarterly_financial_report_2024.pd"),
         ]
 
-        with manager.processing_context(len(meaningful_filenames), "Filename Visibility Test") as ctx:
+        with manager.processing_context(
+            len(meaningful_filenames), "Filename Visibility Test"
+        ) as ctx:
             for source, target in meaningful_filenames:
                 ctx.complete_file(source, target)
 
@@ -149,14 +165,20 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
             processed_files = ctx.display.progress.stats._processed_files
             successful_files = [f for f in processed_files if f.get("status") == "success"]
 
-            self.assertEqual(len(successful_files), len(meaningful_filenames),
-                           "Not all processed files visible to user")
+            self.assertEqual(
+                len(successful_files),
+                len(meaningful_filenames),
+                "Not all processed files visible to user",
+            )
 
             # Contract: Each target filename must be accessible to user
             recorded_targets = [f.get("target", "") for f in successful_files]
             for _, expected_target in meaningful_filenames:
-                self.assertIn(expected_target, recorded_targets,
-                             "Target filename '{expected_target}' not visible to user")
+                self.assertIn(
+                    expected_target,
+                    recorded_targets,
+                    "Target filename '{expected_target}' not visible to user",
+                )
 
     @pytest.mark.contract
     @pytest.mark.regression
@@ -184,8 +206,9 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
 
             # Contract: Timestamp must be reasonable for user feedback
             self.assertIsNotNone(file_timestamp, "No timestamp available for user feedback")
-            self.assertTrue(start_time <= file_timestamp <= end_time,
-                          "Timestamp not accurate for user feedback")
+            self.assertTrue(
+                start_time <= file_timestamp <= end_time, "Timestamp not accurate for user feedback"
+            )
 
     @pytest.mark.contract
     @pytest.mark.regression
@@ -207,12 +230,16 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
             failed_file = failed_files[0]
 
             # Contract: Failed file source must be identifiable
-            self.assertEqual(failed_file.get("source"), "problematic_file.pd",
-                           "User can't identify which file failed")
+            self.assertEqual(
+                failed_file.get("source"),
+                "problematic_file.pd",
+                "User can't identify which file failed",
+            )
 
             # Contract: Error timestamp must be available for context
-            self.assertIsNotNone(failed_file.get("timestamp"),
-                               "No error timing information available to user")
+            self.assertIsNotNone(
+                failed_file.get("timestamp"), "No error timing information available to user"
+            )
 
     @pytest.mark.contract
     @pytest.mark.regression
@@ -223,26 +250,26 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
         # Test completion stats format that users expect
         completion_scenarios = [
             {
-                'total_files': 1,
-                'successful': 1,
-                'errors': 0,
-                'warnings': 0,
-                'expected_user_perception': 'complete_success'
+                "total_files": 1,
+                "successful": 1,
+                "errors": 0,
+                "warnings": 0,
+                "expected_user_perception": "complete_success",
             },
             {
-                'total_files': 3,
-                'successful': 2,
-                'errors': 1,
-                'warnings': 0,
-                'expected_user_perception': 'partial_success'
+                "total_files": 3,
+                "successful": 2,
+                "errors": 1,
+                "warnings": 0,
+                "expected_user_perception": "partial_success",
             },
             {
-                'total_files': 2,
-                'successful': 0,
-                'errors': 2,
-                'warnings': 0,
-                'expected_user_perception': 'complete_failure'
-            }
+                "total_files": 2,
+                "successful": 0,
+                "errors": 2,
+                "warnings": 0,
+                "expected_user_perception": "complete_failure",
+            },
         ]
 
         for scenario in completion_scenarios:
@@ -255,25 +282,36 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
                 self.fail("Completion stats not processable by user for scenario {scenario}: {e}")
 
             # Contract: Stats format must make sense to users
-            if scenario['expected_user_perception'] == 'complete_success':
-                self.assertEqual(scenario['successful'], scenario['total_files'],
-                               "Complete success not clear to user")
-                self.assertEqual(scenario['errors'], 0,
-                               "Success scenario shows errors to user")
+            if scenario["expected_user_perception"] == "complete_success":
+                self.assertEqual(
+                    scenario["successful"],
+                    scenario["total_files"],
+                    "Complete success not clear to user",
+                )
+                self.assertEqual(scenario["errors"], 0, "Success scenario shows errors to user")
 
-            elif scenario['expected_user_perception'] == 'complete_failure':
-                self.assertEqual(scenario['successful'], 0,
-                               "Complete failure shows successes to user")
-                self.assertEqual(scenario['errors'], scenario['total_files'],
-                               "Failure count doesn't match total for user")
+            elif scenario["expected_user_perception"] == "complete_failure":
+                self.assertEqual(
+                    scenario["successful"], 0, "Complete failure shows successes to user"
+                )
+                self.assertEqual(
+                    scenario["errors"],
+                    scenario["total_files"],
+                    "Failure count doesn't match total for user",
+                )
 
-            elif scenario['expected_user_perception'] == 'partial_success':
-                self.assertGreater(scenario['successful'], 0,
-                                 "Partial success doesn't show any success to user")
-                self.assertGreater(scenario['errors'], 0,
-                                 "Partial success doesn't show any errors to user")
-                self.assertEqual(scenario['successful'] + scenario['errors'], scenario['total_files'],
-                                "Partial success totals don't add up for user")
+            elif scenario["expected_user_perception"] == "partial_success":
+                self.assertGreater(
+                    scenario["successful"], 0, "Partial success doesn't show any success to user"
+                )
+                self.assertGreater(
+                    scenario["errors"], 0, "Partial success doesn't show any errors to user"
+                )
+                self.assertEqual(
+                    scenario["successful"] + scenario["errors"],
+                    scenario["total_files"],
+                    "Partial success totals don't add up for user",
+                )
 
     @pytest.mark.contract
     @pytest.mark.regression
@@ -286,38 +324,52 @@ class TestUserExperienceContracts(unittest.TestCase, RichTestCase):
             progress_snapshots = []
 
             # Initial state
-            progress_snapshots.append({
-                'stage': 'initial',
-                'total': ctx.display.progress.stats.total,
-                'succeeded': ctx.display.progress.stats.succeeded,
-                'failed': ctx.display.progress.stats.failed
-            })
+            progress_snapshots.append(
+                {
+                    "stage": "initial",
+                    "total": ctx.display.progress.stats.total,
+                    "succeeded": ctx.display.progress.stats.succeeded,
+                    "failed": ctx.display.progress.stats.failed,
+                }
+            )
 
             # Process files and track consistency
             for i in range(3):
                 ctx.complete_file("file_{i}.pdf", "result_{i}.pdf")
-                progress_snapshots.append({
-                    'stage': f'after_success_{i}',
-                    'total': ctx.display.progress.stats.total,
-                    'succeeded': ctx.display.progress.stats.succeeded,
-                    'failed': ctx.display.progress.stats.failed
-                })
+                progress_snapshots.append(
+                    {
+                        "stage": f"after_success_{i}",
+                        "total": ctx.display.progress.stats.total,
+                        "succeeded": ctx.display.progress.stats.succeeded,
+                        "failed": ctx.display.progress.stats.failed,
+                    }
+                )
 
             # Contract: Total must never change during processing (user expectation)
-            initial_total = progress_snapshots[0]['total']
+            initial_total = progress_snapshots[0]["total"]
             for snapshot in progress_snapshots[1:]:
-                self.assertEqual(snapshot['total'], initial_total,
-                               "Total changed during processing at {snapshot['stage']} - confusing to user")
+                self.assertEqual(
+                    snapshot["total"],
+                    initial_total,
+                    "Total changed during processing at {snapshot['stage']} - confusing to user",
+                )
 
             # Contract: Progress must only increase (user expectation)
             for i in range(1, len(progress_snapshots)):
                 current = progress_snapshots[i]
-                previous = progress_snapshots[i-1]
+                previous = progress_snapshots[i - 1]
 
-                self.assertGreaterEqual(current['succeeded'], previous['succeeded'],
-                                      "Success count decreased at {current['stage']} - confusing to user")
-                self.assertGreaterEqual(current['failed'], previous['failed'],
-                                      "Failed count decreased at {current['stage']} - confusing to user")
+                self.assertGreaterEqual(
+                    current["succeeded"],
+                    previous["succeeded"],
+                    "Success count decreased at {current['stage']} - confusing to user",
+                )
+                self.assertGreaterEqual(
+                    current["failed"],
+                    previous["failed"],
+                    "Failed count decreased at {current['stage']} - confusing to user",
+                )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

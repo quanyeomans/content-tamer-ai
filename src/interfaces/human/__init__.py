@@ -11,4 +11,4 @@ Provides all human-facing interfaces including:
 from .interactive_cli import InteractiveCLI
 from .rich_console_manager import RichConsoleManager
 
-__all__ = ['InteractiveCLI', 'RichConsoleManager']
+__all__ = ["InteractiveCLI", "RichConsoleManager"]

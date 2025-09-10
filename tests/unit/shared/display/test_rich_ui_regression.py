@@ -11,14 +11,16 @@ import sys
 import time
 import unittest
 from unittest.mock import patch
+
 from rich.console import Console
 
 # Add src to path for imports
-sys.path.insert(0, 'src')
+sys.path.insert(0, "src")
 
-from shared.display.rich_progress_display import RichProgressDisplay
 from shared.display.rich_display_manager import RichDisplayManager, RichDisplayOptions
+from shared.display.rich_progress_display import RichProgressDisplay
 from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestRichUIRegression(unittest.TestCase, RichTestCase):
     """Regression tests for Rich UI behavioral issues."""
@@ -49,11 +51,11 @@ class TestRichUIRegression(unittest.TestCase, RichTestCase):
         output = self.get_console_output()
 
         # Should contain proper border elements
-        self.assertIn('─', output, "Should contain horizontal border characters")
+        self.assertIn("─", output, "Should contain horizontal border characters")
 
         # Should not have standalone small rectangles (fragmented borders)
-        lines = output.split('\n')
-        border_lines = [line for line in lines if '─' in line or '│' in line]
+        lines = output.split("\n")
+        border_lines = [line for line in lines if "─" in line or "│" in line]
 
         # If borders are working correctly, we should have structured border lines
         self.assertGreater(len(border_lines), 0, "Should have border elements")
@@ -73,8 +75,9 @@ class TestRichUIRegression(unittest.TestCase, RichTestCase):
             progress_display.complete_file(filename, target)
 
         # Verify that completed files are tracked
-        self.assertEqual(len(progress_display._completed_files), 3,
-                        "Should track all completed files")
+        self.assertEqual(
+            len(progress_display._completed_files), 3, "Should track all completed files"
+        )
 
         # Verify completed files contain expected data
         completed = progress_display._completed_files
@@ -174,13 +177,15 @@ class TestRichUIRegression(unittest.TestCase, RichTestCase):
             progress_display.complete_file(filename, target)
 
         # Check that we track all but display only last 5
-        self.assertEqual(len(progress_display._completed_files), 8,
-                        "Should track all 8 completed files")
+        self.assertEqual(
+            len(progress_display._completed_files), 8, "Should track all 8 completed files"
+        )
 
         # The display method should only show last 5
         # This is tested in _create_full_display() via [-5:] slice
 
         progress_display.finish()
+
 
 class TestRichUIIntegration(unittest.TestCase, RichTestCase):
     """Integration tests for Rich UI components working together."""
@@ -232,5 +237,6 @@ class TestRichUIIntegration(unittest.TestCase, RichTestCase):
         self.assertIn("2", output)  # Success count
         self.assertIn("1", output)  # Failure count
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

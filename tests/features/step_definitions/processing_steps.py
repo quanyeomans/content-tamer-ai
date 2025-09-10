@@ -20,6 +20,7 @@ sys.path.append(
 
 from tests.bdd_fixtures.file_helpers import create_test_context
 
+
 @pytest.fixture
 def bdd_context():
     """Fixture to provide BDD test context."""
@@ -27,22 +28,27 @@ def bdd_context():
     yield context
     context.cleanup_directories()
 
+
 # Scenario imports
 @scenario("../document_processing.feature", "User processes documents successfully")
 def test_user_processes_documents_successfully():
     pass
 
+
 @scenario("../document_processing.feature", "User encounters temporary file locks")
 def test_user_encounters_temporary_file_locks():
     pass
+
 
 @scenario("../document_processing.feature", "User processes mixed file types successfully")
 def test_user_processes_mixed_file_types_successfully():
     pass
 
+
 @scenario("../document_processing.feature", "User understands which files failed and why")
 def test_user_understands_which_files_failed_and_why():
     pass
+
 
 # Step definitions using minimal mocking pattern
 @given("I have a clean working directory")
@@ -50,10 +56,12 @@ def clean_working_directory(bdd_context):
     """Set up clean test directories - no mocking needed."""
     bdd_context.setup_directories()
 
+
 @given("the AI service is available")
 def ai_service_available(bdd_context):
     """Mock AI service availability - only external dependency we mock."""
     bdd_context.ai_service_available = True
+
 
 @given(parsers.parse("I have {num:d} PDF files in the input directory"))
 def create_pdf_files(bdd_context, num):
@@ -64,6 +72,7 @@ def create_pdf_files(bdd_context, num):
         # Set AI mock response for this file
         bdd_context.set_ai_mock_response(filename, "ai_generated_doc_{i+1}")
 
+
 @given(parsers.parse("I have {num:d} PNG file in the input directory"))
 def create_png_file(bdd_context, num):
     """Create real PNG file for testing."""
@@ -71,6 +80,7 @@ def create_png_file(bdd_context, num):
         filename = "test_image_{i+1}.png"
         bdd_context.create_png_file(filename)
         bdd_context.set_ai_mock_response(filename, "ai_generated_image_{i+1}")
+
 
 @given(parsers.parse("I have {num:d} TXT file in the input directory"))
 def create_txt_file(bdd_context, num):
@@ -80,6 +90,7 @@ def create_txt_file(bdd_context, num):
         bdd_context.create_txt_file(filename, "Text content {i+1}")
         bdd_context.set_ai_mock_response(filename, "ai_generated_text_{i+1}")
 
+
 @given(parsers.parse("I have {num:d} valid PDF files in the input directory"))
 def create_valid_pdf_files(bdd_context, num):
     """Create valid PDF files that will process successfully."""
@@ -88,12 +99,14 @@ def create_valid_pdf_files(bdd_context, num):
         bdd_context.create_pdf_file(filename, "Valid PDF content {i+1}")
         bdd_context.set_ai_mock_response(filename, "ai_generated_valid_{i+1}")
 
+
 @given(parsers.parse("I have {num:d} corrupted file in the input directory"))
 def create_corrupted_file(bdd_context, num):
     """Create corrupted file that will fail processing."""
     for i in range(num):
         filename = "corrupted_file_{i+1}.pdf"
         bdd_context.create_corrupted_file(filename)
+
 
 @given("one file is temporarily locked by antivirus")
 def lock_file_temporarily(bdd_context):
@@ -103,6 +116,7 @@ def lock_file_temporarily(bdd_context):
     bdd_context.locked_file = (
         bdd_context.test_files[1] if len(bdd_context.test_files) > 1 else bdd_context.test_files[0]
     )
+
 
 @when("I run the document processing")
 def run_document_processing(bdd_context):
@@ -141,7 +155,9 @@ def run_document_processing(bdd_context):
                         call_count = 0
                         original_files = list(bdd_context.test_files)
 
-                        def mock_processing_with_retry(*args, **kwargs):  # pylint: disable=unused-argument
+                        def mock_processing_with_retry(
+                            *args, **kwargs
+                        ):  # pylint: disable=unused-argument
                             nonlocal call_count
                             call_count += 1
                             input_path = args[0]
@@ -169,6 +185,7 @@ def run_document_processing(bdd_context):
                     bdd_context.processing_result = False
                     bdd_context.processing_error = str(e)
 
+
 @then(parsers.parse("I should see {num:d} files processed successfully"))
 def verify_successful_files_count(bdd_context, num):
     """Verify user sees correct number of successful files."""
@@ -181,6 +198,7 @@ def verify_successful_files_count(bdd_context, num):
         len(processed_files) == num
     ), "Expected {num} processed files, found {len(processed_files)}: {processed_files}"
 
+
 @then("the progress display should show 100% completion")
 def verify_progress_completion(bdd_context):
     """Verify user sees 100% completion in progress display."""
@@ -189,6 +207,7 @@ def verify_progress_completion(bdd_context):
     assert (
         "100%" in display_text or "completed" in display_text.lower()
     ), "Display should show completion status. Actual output: {display_text}"
+
 
 @then("all files should appear in the processed directory with AI-generated names")
 def verify_ai_generated_names(bdd_context):
@@ -205,6 +224,7 @@ def verify_ai_generated_names(bdd_context):
         len(processed_files) == original_count
     ), "All {original_count} files should be processed, found {len(processed_files)}"
 
+
 @then('I should see "Success" status for all files')
 def verify_success_status_display(bdd_context):
     """Verify user sees Success status in the display."""
@@ -216,6 +236,7 @@ def verify_success_status_display(bdd_context):
         success_count >= expected_count
     ), "Should see Success status for all {expected_count} files. Display: {display_text}"
 
+
 @then(parsers.parse("I should see {num:d} file processed immediately"))
 def verify_immediate_processing(bdd_context, num):  # pylint: disable=unused-argument
     """Verify some files are processed without retry."""
@@ -223,6 +244,7 @@ def verify_immediate_processing(bdd_context, num):  # pylint: disable=unused-arg
     # For BDD test, we verify the end result matches expectation
     processed_files = os.listdir(bdd_context.processed_dir)
     assert len(processed_files) >= num, f"At least {num} file should be processed"
+
 
 @then(parsers.parse("I should see {num:d} file should be retried and then succeed"))
 def verify_retry_success(bdd_context, num):
@@ -235,11 +257,13 @@ def verify_retry_success(bdd_context, num):
         len(processed_files) == total_files
     ), "All files including retried ones should succeed: {len(processed_files)}/{total_files}"
 
+
 @then(parsers.parse("the final statistics should show {num:d} successful files"))
 def verify_final_statistics(bdd_context, num):
     """Verify final statistics show correct success count."""
     processed_files = os.listdir(bdd_context.processed_dir)
     assert len(processed_files) == num, f"Statistics should show {num} successful files"
+
 
 @then("I should see recovery statistics for the locked file")
 def verify_recovery_statistics(bdd_context):
@@ -249,6 +273,7 @@ def verify_recovery_statistics(bdd_context):
     assert any(
         word in display_text.lower() for word in ["retry", "recovered", "attempt"]
     ), "Should show recovery information. Display: {display_text}"
+
 
 @then("all files should maintain their original extensions")
 def verify_extension_preservation(bdd_context):
@@ -264,12 +289,14 @@ def verify_extension_preservation(bdd_context):
         actual_extensions
     ), "Should preserve all extensions {expected_extensions}, found {actual_extensions}"
 
+
 @then("I should see appropriate processing messages for each file type")
 def verify_file_type_messages(bdd_context):
     """Verify user sees appropriate messages for different file types."""
     display_text = bdd_context.display_output.getvalue()
     # User should see evidence that different file types were handled
     assert len(display_text) > 0, "Should see processing messages for different file types"
+
 
 @then(parsers.parse("I should see {num:d} file failed with clear error message"))
 def verify_clear_error_message(bdd_context, num):
@@ -278,11 +305,13 @@ def verify_clear_error_message(bdd_context, num):
     error_indicators = display_text.lower().count("error") + display_text.lower().count("failed")
     assert error_indicators >= num, f"Should see error indication for {num} file(s)"
 
+
 @then("the failed file should appear in the unprocessed directory")
 def verify_failed_file_location(bdd_context):
     """Verify failed files are moved to unprocessed directory."""
     unprocessed_files = os.listdir(bdd_context.unprocessed_dir)
     assert len(unprocessed_files) > 0, "Failed files should appear in unprocessed directory"
+
 
 @then(
     parsers.parse(

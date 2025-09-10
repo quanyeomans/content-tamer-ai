@@ -73,9 +73,12 @@ def get_filename_prompt_template() -> str:
     )
 
 
-def get_secure_filename_prompt_template() -> str:
+def get_secure_filename_prompt_template(provider: str = "default") -> str:
     """
     Generate secure filename generation prompt for sanitized content.
+
+    Args:
+        provider: AI provider name (for potential provider-specific templates)
 
     Used when content has been sanitized for security reasons.
     """
@@ -95,6 +98,8 @@ DEFAULT_SYSTEM_PROMPTS = {
     "gemini": get_filename_prompt_template(),
     "claude": get_filename_prompt_template(),
     "deepseek": get_filename_prompt_template(),
+    "local": get_filename_prompt_template(),
+    "default": get_filename_prompt_template(),
 }
 
 # =============================================================================
@@ -136,7 +141,7 @@ def validate_generated_filename(filename: str) -> str:
     if len(sanitized) > MAX_FILENAME_LENGTH:
         # Find last word boundary before limit
         truncate_pos = MAX_FILENAME_LENGTH
-        while truncate_pos > MIN_FILENAME_LENGTH and sanitized[truncate_pos - 1] not in ['_', '-']:
+        while truncate_pos > MIN_FILENAME_LENGTH and sanitized[truncate_pos - 1] not in ["_", "-"]:
             truncate_pos -= 1
 
         # If we couldn't find a good boundary, use hard truncation
@@ -153,9 +158,12 @@ def validate_generated_filename(filename: str) -> str:
     return sanitized or "document"
 
 
-def get_token_limit_for_provider() -> int:
+def get_token_limit_for_provider(provider: str = "default") -> int:
     """
     Get appropriate token limit for specific AI provider.
+
+    Args:
+        provider: AI provider name
 
     Returns:
         Optimal token count for filename generation

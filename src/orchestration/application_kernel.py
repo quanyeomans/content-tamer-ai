@@ -5,22 +5,23 @@ Main application coordination component that orchestrates all domain services
 to implement complete user workflows following the persona-driven architecture.
 """
 
-from typing import Dict, List, Optional, Any, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from ..interfaces.base_interfaces import ProcessingResult
     from ..interfaces.programmatic.configuration_manager import ProcessingConfiguration
-import logging
-import time
+
 import datetime
-import shutil
+import logging
 import os
+import shutil
+import time
 from dataclasses import dataclass
 
 # Import domain services
 try:
-    from domains.content.content_service import ContentService
     from domains.ai_integration.ai_integration_service import AIIntegrationService
+    from domains.content.content_service import ContentService
     from domains.organization.organization_service import OrganizationService
 except ImportError:
     # Graceful degradation if domain services not available
@@ -108,6 +109,14 @@ class ApplicationKernel:
         if OrganizationService is not None:
             return self.container.create_organization_service(target_folder)
         return None
+
+    def process_documents(self, config: "ProcessingConfiguration") -> "ProcessingResult":
+        """Execute document processing workflow (public interface)."""
+        return self.execute_processing(config)
+    
+    def validate_processing_config(self, config: "ProcessingConfiguration") -> List[str]:
+        """Validate processing configuration (public interface)."""
+        return self._validate_processing_config(config)
 
     def execute_processing(self, config: "ProcessingConfiguration") -> "ProcessingResult":
         """Execute complete document processing workflow.
@@ -205,7 +214,7 @@ class ApplicationKernel:
         documents = []
 
         try:
-            for root, dirs, files in os.walk(input_dir):
+            for root, _dirs, files in os.walk(input_dir):
                 for file in files:
                     file_path = os.path.join(root, file)
                     file_ext = os.path.splitext(file)[1].lower()
@@ -235,10 +244,7 @@ class ApplicationKernel:
             self.logger.info("Phase 1: Content extraction and enhancement...")
 
             if self.content_service:
-                content_results = self.content_service.batch_process_documents(
-                    documents,
-                    {doc: None for doc in documents},  # Empty content map for fresh extraction
-                )
+                content_results = self.content_service.batch_process_documents(documents)
             else:
                 # Fallback to legacy content processing
                 content_results = self._legacy_content_processing(documents, config)
@@ -355,48 +361,45 @@ class ApplicationKernel:
             )
 
     def _legacy_content_processing(
-        self, documents: List[str], config: "ProcessingConfiguration"
+        self,
+        documents: List[str],
+        config: "ProcessingConfiguration",  # pylint: disable=unused-argument
     ) -> Dict[str, Dict[str, Any]]:
         """Fallback to legacy content processing when domain service not available."""
         self.logger.warning("Using legacy content processing - domain service not available")
 
-        results = {}
-        for file_path in documents:
-            try:
-                # Import legacy content processing with fallback
-                try:
-                    from ..shared.file_operations.content_processor_factory import (
-                        ContentProcessorFactory,
-                    )
-                except ImportError:
-                    try:
-                        from content_processors import ContentProcessorFactory
-                    except ImportError:
-                        # If content processors not available, return empty results
-                        return {
-                            doc: {
-                                "ready_for_ai": False,
-                                "error": "Content processors not available",
-                            }
-                            for doc in documents
-                        }
+        # Import domain content extraction service with fallback
+        try:
+            from ..domains.content.extraction_service import ExtractionService
 
-                processor = ContentProcessorFactory.get_processor(file_path)
-                if processor:
-                    text, image_b64 = processor.extract_content(file_path)
+            extraction_service = ExtractionService()
+            results = {}
 
-                    results[file_path] = {
-                        "ai_ready_content": text,
-                        "ready_for_ai": bool(text and not text.startswith("Error:")),
-                        "metadata": {"legacy_processing": True},
+            # Use the new domain service
+            for document in documents:
+                extracted = extraction_service.extract_from_file(document)
+                if extracted.quality.value != "failed" and extracted.text:
+                    results[document] = {
+                        "ai_ready_content": extracted.text,
+                        "ready_for_ai": True,
+                        "metadata": {"domain_extraction": True, "quality": extracted.quality.value},
                     }
                 else:
-                    results[file_path] = {"ready_for_ai": False, "error": "No processor available"}
+                    results[document] = {
+                        "ready_for_ai": False,
+                        "error": extracted.error_message or "Extraction failed",
+                    }
+            return results
 
-            except Exception as e:
-                results[file_path] = {"ready_for_ai": False, "error": str(e)}
-
-        return results
+        except ImportError:
+            # If domain service not available, return empty results
+            return {
+                doc: {
+                    "ready_for_ai": False,
+                    "error": "Content extraction service not available",
+                }
+                for doc in documents
+            }
 
     def _legacy_filename_generation(
         self, file_path: str, content_result: Dict[str, Any], config: "ProcessingConfiguration"

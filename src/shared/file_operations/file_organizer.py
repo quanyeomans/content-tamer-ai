@@ -16,25 +16,29 @@ import re
 import shutil
 import time
 import unicodedata
-from typing import Any, Dict, List, Optional, Set, TextIO, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Set, TextIO, Union
 
 if TYPE_CHECKING:
-    from .safe_file_manager import SafeFileManager
     import fcntl
     import msvcrt
+
+    from .safe_file_manager import SafeFileManager
 
 # Cross-platform file locking imports - runtime
 if platform.system() == "Windows":
     import msvcrt
+
     fcntl = None  # Type safety for Windows
 else:
     import fcntl
+
     msvcrt = None  # Type safety for non-Windows
 
 
 # Import unified file manager to replace legacy implementation
 try:
-    from .safe_file_manager import SafeFileManager, FileLockManager
+    from .safe_file_manager import FileLockManager, SafeFileManager
+
     _UNIFIED_FILE_MANAGER_AVAILABLE = True
 except ImportError:
     # Create dummy classes to avoid unbound variable issues
@@ -52,7 +56,11 @@ class FileManager:
 
     def __init__(self):
         """Initialize file manager with unified backend if available."""
-        if _UNIFIED_FILE_MANAGER_AVAILABLE and SafeFileManager is not None and FileLockManager is not None:
+        if (
+            _UNIFIED_FILE_MANAGER_AVAILABLE
+            and SafeFileManager is not None
+            and FileLockManager is not None
+        ):
             self._unified_manager = SafeFileManager()
             self._lock_manager = FileLockManager()
         else:
@@ -111,9 +119,7 @@ class FileManager:
             except OSError as e:
                 # Raise the current error, or the last error if current is None
                 raise (
-                    e
-                    if e is not None
-                    else (last_err or OSError("Unknown file operation error"))
+                    e if e is not None else (last_err or OSError("Unknown file operation error"))
                 )
 
     @staticmethod
@@ -128,9 +134,7 @@ class ProgressTracker:
     """Progress tracking for resumable batch processing."""
 
     @staticmethod
-    def load_progress(
-        progress_file: str, input_dir: str, reset_progress: bool = False
-    ) -> Set[str]:
+    def load_progress(progress_file: str, input_dir: str, reset_progress: bool = False) -> Set[str]:
         """Load processed files list with optional reset."""
         if reset_progress and os.path.exists(progress_file):
             try:
@@ -201,9 +205,7 @@ class FilenameHandler:
         return cleaned_filename[:160]  # Limit length for filesystem compatibility
 
     @staticmethod
-    def handle_duplicate_filename(
-        filename: str, folder: str, extension: str = ".pdf"
-    ) -> str:
+    def handle_duplicate_filename(filename: str, folder: str, extension: str = ".pdf") -> str:
         """Resolve filename collisions by appending numeric suffix."""
         base_filename = filename
         counter = 1
@@ -229,7 +231,7 @@ class FileOrganizer:
     def move_file_to_category(
         self,
         src_path: str,
-        filename: str,
+        filename: str,  # pylint: disable=unused-argument
         category_dir: str,
         new_name: str,
         file_extension: str = ".pdf",
@@ -269,7 +271,7 @@ class FileOrganizer:
 
     def organize_by_content_type(
         self, files: List[str], base_dir: str
-    ) -> Dict[str, List[str]]:
+    ) -> Dict[str, List[str]]:  # pylint: disable=unused-argument
         """Organize files by content type (placeholder for AI-powered categorization)."""
         # Future: AI analysis for document types (invoices, contracts, reports, etc.)
 
@@ -288,7 +290,7 @@ class FileOrganizer:
 
     def organize_by_date_pattern(
         self, files: List[str], base_dir: str
-    ) -> Dict[str, List[str]]:
+    ) -> Dict[str, List[str]]:  # pylint: disable=unused-argument
         """Organize files by temporal patterns (placeholder for date extraction)."""
         # Future: Extract dates from content/filenames for chronological organization
 
@@ -299,9 +301,7 @@ class FileOrganizer:
 
         return organization_map
 
-    def create_domain_folders(
-        self, base_dir: str, domains: List[str]
-    ) -> Dict[str, str]:
+    def create_domain_folders(self, base_dir: str, domains: List[str]) -> Dict[str, str]:
         """Create domain-specific folder structure."""
         domain_paths = {}
         for domain in domains:
@@ -310,7 +310,9 @@ class FileOrganizer:
             domain_paths[domain] = domain_path
         return domain_paths
 
-    def suggest_organization_structure(self, files: List[str]) -> Dict[str, Any]:
+    def suggest_organization_structure(
+        self, files: List[str]
+    ) -> Dict[str, Any]:  # pylint: disable=unused-argument
         """AI-powered organization suggestions (placeholder for content analysis)."""
         # Future: Analyze content patterns to suggest optimal folder structures
         return {
@@ -323,9 +325,7 @@ class FileOrganizer:
             "reasoning": "Based on file types and content analysis",
         }
 
-    def _handle_organization_error(
-        self, error: Exception, context: str = ""
-    ) -> Dict[str, Any]:
+    def _handle_organization_error(self, error: Exception, context: str = "") -> Dict[str, Any]:
         """Handle organization errors with unified messaging using error classification."""
         try:
             from ..shared.infrastructure.error_handling import ErrorClassifier
@@ -398,8 +398,8 @@ class FileOrganizer:
 
         try:
             # Use new domain organization service (unified architecture)
-            from domains.organization.organization_service import OrganizationService
             from domains.organization.clustering_service import ClusteringConfig
+            from domains.organization.organization_service import OrganizationService
 
             # Create clustering config based on ML level
             clustering_config = ClusteringConfig(
@@ -407,11 +407,11 @@ class FileOrganizer:
                 min_ml_documents=10 if ml_enhancement_level >= 2 else 999,  # Disable ML for level 1
                 enable_ensemble=ml_enhancement_level >= 3,
                 max_categories=20,
-                min_category_size=2
+                min_category_size=2,
             )
 
             engine = OrganizationService(target_folder, clustering_config)
-            engine_type = f"Domain Architecture (Level {ml_enhancement_level})"
+            engine_type = f"Enhanced (Level {ml_enhancement_level})" if ml_enhancement_level >= 2 else f"Domain Architecture (Level {ml_enhancement_level})"
 
             # Prepare document info for organization
             processed_docs = []
@@ -421,9 +421,7 @@ class FileOrganizer:
                     doc_info = {
                         "filename": os.path.basename(file_path),
                         "path": file_path,
-                        "content": self._extract_file_content_for_organization(
-                            file_path
-                        ),
+                        "content": self._extract_file_content_for_organization(file_path),
                     }
                     processed_docs.append(doc_info)
 
@@ -435,7 +433,7 @@ class FileOrganizer:
                 }
 
             # Run organization
-            organization_result = engine.organize_documents(processed_docs)  # type: ignore
+            organization_result = engine.organize_processed_documents(processed_docs, enable_learning=True, ml_enhancement_level=ml_enhancement_level)  # type: ignore
 
             if organization_result.get("success", False):
                 return {
@@ -456,9 +454,7 @@ class FileOrganizer:
 
         except ImportError as e:
             # Graceful degradation - organization components not available
-            return self._handle_organization_error(
-                e, "import phase - ML components unavailable"
-            )
+            return self._handle_organization_error(e, "import phase - ML components unavailable")
         except Exception as e:
             # Use unified error handling for all other exceptions
             return self._handle_organization_error(e, "organization execution")
@@ -471,7 +467,7 @@ class FileOrganizer:
         """
         try:
             # For text files, read content directly
-            if file_path.lower().endswith((".txt", ".md")):
+            if file_path.lower().endswith((".txt", ".md", ".pd")):
                 with open(file_path, "r", encoding="utf-8") as f:
                     return f.read()
 

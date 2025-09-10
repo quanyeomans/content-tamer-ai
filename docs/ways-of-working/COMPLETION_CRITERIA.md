@@ -67,16 +67,47 @@
 
 ### Automated Validation
 ```bash
-# Code quality
-black src/ tests/
-isort src/ tests/
-pylint src/ tests/
+# PHASE 1: Code Formatting (Run first)
+black src/ tests/ --line-length=100            # Consistent formatting  
+isort src/ tests/ --line-length=100            # Import ordering
 
-# Test execution  
-pytest tests/ -v --cov=src --cov-report=term-missing
+# PHASE 2: Comprehensive Linting (All must pass)
+pylint src/ --fail-under=9.5                   # Code quality ≥9.5/10
+pyright src/                                   # Type checking (0 errors)
+flake8 src/ --max-line-length=100             # Style compliance  
+bandit -r src/ --severity-level high          # Security (0 high/medium issues)
 
-# Security scan (if applicable)
-safety check requirements.txt
+# PHASE 3: Systematic Cleanup Validation (Perfect scores required)
+pylint src/ --disable=all --enable=W0611,W0612,W0613  # Unused warnings: 10.00/10
+pylint src/ --disable=all --enable=W1203              # Logging format: 10.00/10
+pylint src/ --disable=all --enable=E0401,E0611        # Import errors: 10.00/10
+
+# PHASE 4: Testing & Security
+pytest tests/ -v --cov=src --cov-report=term-missing  # Test execution
+safety check                                          # Dependency vulnerabilities
+```
+
+### Systematic Cleanup Checklist
+```bash
+# Common issues that must be eliminated:
+
+# W0611 (unused-import) - Remove or add pylint disable comment  
+grep -r "^import.*" src/ | verify all used
+
+# W0612 (unused-variable) - Use _ prefix or remove
+grep -r "= .*" src/ | verify all used or prefixed with _
+
+# W0613 (unused-argument) - Add pylint disable comment with reason
+grep -r "def.*(" src/ | verify all arguments used or disabled
+
+# W1203 (logging-fstring-interpolation) - Convert to lazy % formatting
+grep -r "logger.*f\"" src/ | convert to logger.info("message %s", var)
+
+# E0401, E0611 (import-error) - Fix import paths
+grep -r "from .* import" src/ | verify all imports resolve
+
+# R1705 (no-else-return) - Remove unnecessary else after return  
+grep -r "else:" src/ | verify no unnecessary else after return
 ```
 
 ### Manual Validation

@@ -5,15 +5,12 @@ API request handling, retry logic, and error management for AI providers.
 Consolidates request patterns and provides consistent error handling.
 """
 
-import time
-import json
 import asyncio
-from typing import Any, Dict, Optional, Callable, Union, List
+import logging
+import time
 from dataclasses import dataclass
 from enum import Enum
-import logging
-
-import requests
+from typing import Any, Callable, Dict, Optional
 
 
 class RequestStatus(Enum):
@@ -44,7 +41,7 @@ class RequestResult:
 
 
 @dataclass
-class RetryConfig:
+class RetryConfig:  # pylint: disable=too-many-instance-attributes
     """Configuration for request retry logic."""
 
     max_attempts: int = 3
@@ -108,7 +105,7 @@ class RequestService:
 
             try:
                 self.logger.debug(
-                    f"AI request attempt {attempt}/{config.max_attempts} for {request_id}"
+                    "AI request attempt %d/%d for %s", attempt, config.max_attempts, request_id
                 )
 
                 # Make the actual request with timeout
@@ -119,7 +116,7 @@ class RequestService:
                 result.content = content
                 result.total_time = time.time() - start_time
 
-                self.logger.info(f"AI request {request_id} succeeded on attempt {attempt}")
+                self.logger.info("AI request %s succeeded on attempt %d", request_id, attempt)
                 break
 
             except Exception as e:
@@ -128,19 +125,19 @@ class RequestService:
                 result.total_time = time.time() - start_time
 
                 self.logger.warning(
-                    f"AI request {request_id} attempt {attempt} failed: {error_msg}"
+                    "AI request %s attempt %d failed: %s", request_id, attempt, error_msg
                 )
 
                 # Determine if we should retry
                 if attempt >= config.max_attempts:
                     result.status = RequestStatus.FAILED
-                    self.logger.error(f"AI request {request_id} failed after {attempt} attempts")
+                    self.logger.error("AI request %s failed after %d attempts", request_id, attempt)
                     break
 
                 if not self._should_retry_error(e, config):
                     result.status = RequestStatus.FAILED
                     self.logger.error(
-                        f"AI request {request_id} failed with non-retryable error: {error_msg}"
+                        "AI request %s failed with non-retryable error: %s", request_id, error_msg
                     )
                     break
 
@@ -149,7 +146,7 @@ class RequestService:
                 delay = self._calculate_retry_delay(attempt, config)
 
                 self.logger.info(
-                    f"Retrying AI request {request_id} in {delay:.1f}s (attempt {attempt + 1})"
+                    "Retrying AI request %s in %.1fs (attempt %d)", request_id, delay, attempt + 1
                 )
                 time.sleep(delay)
 

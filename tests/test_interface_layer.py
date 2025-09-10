@@ -10,27 +10,37 @@ Comprehensive testing for all interface layer components:
 Uses RichTestCase framework for proper console isolation.
 """
 
-import unittest
-import tempfile
-import os
 import json
+import os
+import tempfile
+import unittest
 from unittest.mock import Mock, patch
 
-# Import test framework
-from tests.utils.rich_test_utils import RichTestCase
+from src.interfaces.base_interfaces import ProcessingResult
 
 # Import interfaces to test
 from src.interfaces.human.interactive_cli import InteractiveCLI
 from src.interfaces.human.rich_console_manager import RichConsoleManager
+from src.interfaces.interface_router import (
+    ContextDetector,
+    InterfaceRouter,
+    InterfaceType,
+    PersonaRouter,
+    auto_route,
+    detect_persona,
+    get_interface,
+)
 from src.interfaces.programmatic.library_interface import (
-    ContentTamerAPI, process_documents_simple, validate_setup, get_provider_info
+    ContentTamerAPI,
+    get_provider_info,
+    process_documents_simple,
+    validate_setup,
 )
 from src.interfaces.protocols.mcp_server import MCPServer, create_mcp_server
-from src.interfaces.interface_router import (
-    InterfaceRouter, ContextDetector, InterfaceType,
-    get_interface, auto_route, detect_persona, PersonaRouter
-)
-from src.interfaces.base_interfaces import ProcessingResult
+
+# Import test framework
+from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestHumanInterface(unittest.TestCase, RichTestCase):
     """Test human interface components."""
@@ -85,12 +95,7 @@ class TestHumanInterface(unittest.TestCase, RichTestCase):
         """Test configuration table formatting."""
         console_manager = RichConsoleManager()
 
-        config = {
-            "Provider": "openai",
-            "Enabled": True,
-            "API Key": None,
-            "Count": 42
-        }
+        config = {"Provider": "openai", "Enabled": True, "API Key": None, "Count": 42}
 
         console_manager.show_configuration_table(config, "Test Configuration")
 
@@ -144,7 +149,7 @@ class TestHumanInterface(unittest.TestCase, RichTestCase):
             output_directory="/test/output",
             errors=[],
             warnings=["Warning 1"],
-            metadata={"processing_time": "10 seconds"}
+            metadata={"processing_time": "10 seconds"},
         )
 
         cli.show_results(success_result)
@@ -165,7 +170,7 @@ class TestHumanInterface(unittest.TestCase, RichTestCase):
             output_directory="",
             errors=["Error 1", "Error 2"],
             warnings=[],
-            metadata={}
+            metadata={},
         )
 
         cli.show_results(failure_result)
@@ -173,6 +178,7 @@ class TestHumanInterface(unittest.TestCase, RichTestCase):
         output = self.get_console_output()
         self.assertIn("Processing Failed", output)
         self.assertIn("Error 1", output)
+
 
 class TestProgrammaticInterface(unittest.TestCase):
     """Test programmatic interface components."""
@@ -222,17 +228,13 @@ class TestProgrammaticInterface(unittest.TestCase):
         api = ContentTamerAPI()
 
         # Valid basic configuration
-        valid_config = {
-            "input_dir": ".",
-            "output_dir": "./output",
-            "provider": "openai"
-        }
+        valid_config = {"input_dir": ".", "output_dir": "./output", "provider": "openai"}
 
         errors = api.validate_configuration(valid_config)
         # Should have API key error but no structural errors
         self.assertIsInstance(errors, list)
 
-    @patch('src.interfaces.programmatic.library_interface.ContentTamerAPI')
+    @patch("src.interfaces.programmatic.library_interface.ContentTamerAPI")
     def test_simple_processing_function(self, mock_api_class):
         """Test simple processing convenience function."""
         mock_api = Mock()
@@ -245,14 +247,12 @@ class TestProgrammaticInterface(unittest.TestCase):
             output_directory="./output",
             errors=[],
             warnings=[],
-            metadata={}
+            metadata={},
         )
         mock_api.process_documents.return_value = mock_result
 
         result = process_documents_simple(
-            input_dir="./input",
-            output_dir="./output",
-            api_key="test-key"
+            input_dir="./input", output_dir="./output", api_key="test-key"
         )
 
         self.assertTrue(result.success)
@@ -284,6 +284,7 @@ class TestProgrammaticInterface(unittest.TestCase):
         self.assertIn("provider", openai_info)
         self.assertIn("models", openai_info)
         self.assertEqual(openai_info["provider"], "openai")
+
 
 class TestProtocolInterface(unittest.TestCase):
     """Test protocol interface components."""
@@ -329,28 +330,23 @@ class TestProtocolInterface(unittest.TestCase):
     async def test_mcp_request_handling(self):
         """Test MCP request handling."""
         # Test tools list request
-        tools_response = await self.server.handle_request({
-            "method": "tools/list",
-            "params": {}
-        })
+        tools_response = await self.server.handle_request({"method": "tools/list", "params": {}})
 
         self.assertIn("tools", tools_response)
         self.assertIsInstance(tools_response["tools"], list)
 
         # Test resources list request
-        resources_response = await self.server.handle_request({
-            "method": "resources/list",
-            "params": {}
-        })
+        resources_response = await self.server.handle_request(
+            {"method": "resources/list", "params": {}}
+        )
 
         self.assertIn("resources", resources_response)
         self.assertIsInstance(resources_response["resources"], list)
 
         # Test unknown method
-        error_response = await self.server.handle_request({
-            "method": "unknown/method",
-            "params": {}
-        })
+        error_response = await self.server.handle_request(
+            {"method": "unknown/method", "params": {}}
+        )
 
         self.assertIn("error", error_response)
         self.assertEqual(error_response["error"]["code"], -32601)
@@ -358,29 +354,24 @@ class TestProtocolInterface(unittest.TestCase):
     async def test_mcp_tool_execution(self):
         """Test MCP tool execution."""
         # Test validate_setup tool
-        response = await self.server.handle_request({
-            "method": "tools/call",
-            "params": {
-                "name": "validate_setup",
-                "arguments": {
-                    "input_dir": "./nonexistent",
-                    "output_dir": "./test_output"
-                }
+        response = await self.server.handle_request(
+            {
+                "method": "tools/call",
+                "params": {
+                    "name": "validate_setup",
+                    "arguments": {"input_dir": "./nonexistent", "output_dir": "./test_output"},
+                },
             }
-        })
+        )
 
         self.assertIn("content", response)
         content_text = response["content"][0]["text"]
         self.assertIn("validation failed", content_text.lower())
 
         # Test get_provider_info tool
-        provider_response = await self.server.handle_request({
-            "method": "tools/call",
-            "params": {
-                "name": "get_provider_info",
-                "arguments": {}
-            }
-        })
+        provider_response = await self.server.handle_request(
+            {"method": "tools/call", "params": {"name": "get_provider_info", "arguments": {}}}
+        )
 
         self.assertIn("content", provider_response)
         content_text = provider_response["content"][0]["text"]
@@ -390,28 +381,23 @@ class TestProtocolInterface(unittest.TestCase):
     async def test_mcp_resource_reading(self):
         """Test MCP resource reading."""
         # Test API documentation
-        docs_response = await self.server.handle_request({
-            "method": "resources/read",
-            "params": {
-                "uri": "content-tamer://docs/api"
-            }
-        })
+        docs_response = await self.server.handle_request(
+            {"method": "resources/read", "params": {"uri": "content-tamer://docs/api"}}
+        )
 
         self.assertIn("contents", docs_response)
         self.assertEqual(docs_response["contents"][0]["mimeType"], "text/markdown")
         self.assertIn("API Documentation", docs_response["contents"][0]["text"])
 
         # Test system status
-        status_response = await self.server.handle_request({
-            "method": "resources/read",
-            "params": {
-                "uri": "content-tamer://status/system"
-            }
-        })
+        status_response = await self.server.handle_request(
+            {"method": "resources/read", "params": {"uri": "content-tamer://status/system"}}
+        )
 
         self.assertIn("contents", status_response)
         status_data = json.loads(status_response["contents"][0]["text"])
         self.assertIn("supported_providers", status_data)
+
 
 class TestInterfaceRouting(unittest.TestCase):
     """Test interface routing and context detection."""
@@ -423,20 +409,20 @@ class TestInterfaceRouting(unittest.TestCase):
 
     def test_context_detection_human(self):
         """Test human interface context detection."""
-        with patch('sys.stdout.isatty', return_value=True):
-            with patch('sys.argv', ['content-tamer-ai']):
+        with patch("sys.stdout.isatty", return_value=True):
+            with patch("sys.argv", ["content-tamer-ai"]):
                 interface_type = self.detector.detect_interface_type()
                 self.assertEqual(interface_type, InterfaceType.HUMAN)
 
     def test_context_detection_programmatic(self):
         """Test programmatic interface context detection."""
-        with patch('sys.stdout.isatty', return_value=False):
+        with patch("sys.stdout.isatty", return_value=False):
             interface_type = self.detector.detect_interface_type()
             self.assertEqual(interface_type, InterfaceType.PROGRAMMATIC)
 
     def test_context_detection_mcp(self):
         """Test MCP interface context detection."""
-        with patch.dict(os.environ, {'MCP_SERVER_MODE': '1'}):
+        with patch.dict(os.environ, {"MCP_SERVER_MODE": "1"}):
             interface_type = self.detector.detect_interface_type()
             self.assertEqual(interface_type, InterfaceType.PROTOCOL)
 
@@ -477,15 +463,15 @@ class TestInterfaceRouting(unittest.TestCase):
     def test_persona_detection(self):
         """Test persona detection logic."""
         # Test different context scenarios
-        with patch('sys.stdout.isatty', return_value=True):
-            with patch('sys.argv', ['content-tamer-ai']):
+        with patch("sys.stdout.isatty", return_value=True):
+            with patch("sys.argv", ["content-tamer-ai"]):
                 persona = detect_persona()
-                self.assertIn(persona, ['developer', 'analyst'])
+                self.assertIn(persona, ["developer", "analyst"])
 
-        with patch.dict(os.environ, {'CI': 'true'}):
-            with patch('sys.stdout.isatty', return_value=False):
+        with patch.dict(os.environ, {"CI": "true"}):
+            with patch("sys.stdout.isatty", return_value=False):
                 persona = detect_persona()
-                self.assertEqual(persona, 'automation')
+                self.assertEqual(persona, "automation")
 
     def test_persona_router_configuration(self):
         """Test persona-based configuration."""
@@ -511,6 +497,7 @@ class TestInterfaceRouting(unittest.TestCase):
         info = get_routing_info()
         self.assertIn("detected_type", info)
 
+
 class TestInterfaceIntegration(unittest.TestCase):
     """Test integration between different interface components."""
 
@@ -527,7 +514,7 @@ class TestInterfaceIntegration(unittest.TestCase):
         console_manager = RichConsoleManager()
 
         # Test that emoji handler is initialized
-        self.assertTrue(hasattr(console_manager, '_emoji_handler'))
+        self.assertTrue(hasattr(console_manager, "_emoji_handler"))
 
         # Test emoji handler usage doesn't raise exceptions
         console_manager.show_status("Test with emoji", "success")
@@ -560,6 +547,7 @@ class TestInterfaceIntegration(unittest.TestCase):
         except Exception as e:
             self.fail("Programmatic interface error handling failed: {e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Run tests with proper test discovery
     unittest.main(verbosity=2)

@@ -4,18 +4,12 @@ Gemini Provider Implementation
 Extracted for domain architecture.
 """
 
-import os
-import sys
-from typing import Optional
-
-from ..base_provider import AIProvider
-
 # Import from shared infrastructure (correct layer)
-from ....shared.infrastructure.filename_config import (
+from shared.infrastructure.filename_config import (
     get_secure_filename_prompt_template,
-    get_token_limit_for_provider,
     validate_generated_filename,
 )
+from ..base_provider import AIProvider
 
 try:
     import google.genai as genai
@@ -59,7 +53,7 @@ class GeminiProvider(AIProvider):
     def generate_filename(self, content: str, original_filename: str = "") -> str:
         """Generate intelligent filename using Gemini API."""
         try:
-            prompt = get_secure_filename_prompt_template("gemini")
+            prompt = get_secure_filename_prompt_template()
             full_prompt = f"{prompt}\n\nDocument Content:\n{content}"
 
             response = self.client.generate_content(full_prompt)
@@ -68,5 +62,5 @@ class GeminiProvider(AIProvider):
             return validate_generated_filename(raw_filename)
 
         except Exception as e:
-            self.logger.error(f"Gemini filename generation failed: {e}")
+            self.logger.error("Gemini filename generation failed: %s", e)
             raise RuntimeError(f"Gemini error: {str(e)}") from e

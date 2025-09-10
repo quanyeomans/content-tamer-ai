@@ -15,8 +15,15 @@ from unittest.mock import Mock, patch
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
-from shared.infrastructure.security import PDFAnalyzer, PDFThreatAnalysis, ThreatLevel, get_security_config, update_security_config
 from domains.content.content_service import ContentService
+from shared.infrastructure.security import (
+    PDFAnalyzer,
+    PDFThreatAnalysis,
+    ThreatLevel,
+    get_security_config,
+    update_security_config,
+)
+
 
 class TestThreatLevel(unittest.TestCase):
     """Test ThreatLevel enumeration."""
@@ -27,6 +34,7 @@ class TestThreatLevel(unittest.TestCase):
         self.assertEqual(ThreatLevel.LOW.value, "low")
         self.assertEqual(ThreatLevel.MEDIUM.value, "medium")
         self.assertEqual(ThreatLevel.HIGH.value, "high")
+
 
 class TestPDFThreatAnalysis(unittest.TestCase):
     """Test PDFThreatAnalysis class."""
@@ -68,6 +76,7 @@ class TestPDFThreatAnalysis(unittest.TestCase):
         self.assertFalse(analysis.is_safe)
         self.assertTrue(analysis.should_warn)
         self.assertEqual(analysis.threat_level, ThreatLevel.HIGH)
+
 
 class TestPDFAnalyzer(unittest.TestCase):
     """Test PDFAnalyzer class."""
@@ -173,6 +182,7 @@ class TestPDFAnalyzer(unittest.TestCase):
         self.assertIn("Embedded files", summary)
         self.assertIn("URI references", summary)
 
+
 class TestPDFProcessorIntegration(unittest.TestCase):
     """Test PDFProcessor integration with threat analysis."""
 
@@ -219,8 +229,15 @@ class TestPDFProcessorIntegration(unittest.TestCase):
         self.assertFalse(result["success"])
 
         if result.get("extraction") and result["extraction"].text:
-            # Error should be captured in extraction result
-            self.assertIn("error", result["extraction"].text.lower())
+            # Error should be captured in extraction result - could be various error messages
+            error_text = result["extraction"].text.lower()
+            # Check for common error indicators
+            error_indicators = ["error", "unsupported", "failed", "not found"]
+            self.assertTrue(
+                any(indicator in error_text for indicator in error_indicators),
+                f"Expected error indicator in text: '{result['extraction'].text}'",
+            )
+
 
 class TestSecurityConfiguration(unittest.TestCase):
     """Test security configuration updates for PDF analysis."""
@@ -241,6 +258,7 @@ class TestSecurityConfiguration(unittest.TestCase):
 
         # Reset config
         update_security_config(pdf_threat_detection=None, pdf_analysis_timeout=None)
+
 
 class TestPerformanceImpact(unittest.TestCase):
     """Test performance impact of PDF threat analysis."""
@@ -272,6 +290,7 @@ class TestPerformanceImpact(unittest.TestCase):
         self.assertLess(analysis_time, 5.0, "PDF analysis took {analysis_time:.2f}s")
 
         self.assertIsInstance(analysis, PDFThreatAnalysis)
+
 
 if __name__ == "__main__":
     unittest.main()

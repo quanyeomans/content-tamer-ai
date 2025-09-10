@@ -40,9 +40,7 @@ class OrganizationFeatureFlags:
     require_confirmation_above: int = 50
 
     # Rollout control
-    rollout_percentage: float = (
-        100.0  # Percentage of users to show organization features
-    )
+    rollout_percentage: float = 100.0  # Percentage of users to show organization features
 
     def is_organization_available(self, file_count: int = 1) -> bool:
         """Check if organization features should be available for this context."""
@@ -91,9 +89,7 @@ class FeatureFlagManager:
 
     def __init__(self, config_dir: Optional[str] = None):
         """Initialize feature flag manager with optional config directory."""
-        self.config_dir = (
-            Path(config_dir) if config_dir else Path.cwd() / "data" / "config"
-        )
+        self.config_dir = Path(config_dir) if config_dir else Path.cwd() / "data" / "config"
         self.config_file = self.config_dir / "feature_flags.json"
         self._flags = None
 
@@ -113,9 +109,7 @@ class FeatureFlagManager:
                 flags = FeatureFlags.from_dict(config_data)
                 logger.debug(f"Loaded feature flags from {self.config_file}")
             except (json.JSONDecodeError, TypeError, ValueError) as e:
-                logger.warning(
-                    f"Error loading feature flags from {self.config_file}: {e}"
-                )
+                logger.warning(f"Error loading feature flags from {self.config_file}: {e}")
                 # Continue with defaults
 
         # Override with environment variables
@@ -179,9 +173,7 @@ class FeatureFlagManager:
         try:
             return int(value)
         except ValueError:
-            logger.warning(
-                f"Invalid integer value for {key}: {value}, using default {default}"
-            )
+            logger.warning(f"Invalid integer value for {key}: {value}, using default {default}")
             return default
 
     def _get_float_env(self, key: str, default: float) -> float:
@@ -192,9 +184,7 @@ class FeatureFlagManager:
         try:
             return float(value)
         except ValueError:
-            logger.warning(
-                f"Invalid float value for {key}: {value}, using default {default}"
-            )
+            logger.warning(f"Invalid float value for {key}: {value}, using default {default}")
             return default
 
     def save_flags(self, flags: FeatureFlags) -> bool:
@@ -219,9 +209,7 @@ class FeatureFlagManager:
         """Get organization-specific feature flags."""
         return self.load_flags().organization
 
-    def is_organization_enabled(
-        self, file_count: int = 1, force_check: bool = False
-    ) -> bool:
+    def is_organization_enabled(self, file_count: int = 1, force_check: bool = False) -> bool:
         """Check if organization features should be available."""
         if force_check:
             self._flags = None  # Force reload
@@ -232,9 +220,7 @@ class FeatureFlagManager:
     def should_show_guided_navigation(self, file_count: int = 1) -> bool:
         """Check if guided navigation should be shown."""
         org_flags = self.get_organization_flags()
-        return org_flags.enable_guided_navigation and org_flags.should_auto_enable(
-            file_count
-        )
+        return org_flags.enable_guided_navigation and org_flags.should_auto_enable(file_count)
 
     def get_available_ml_levels(self) -> List[int]:
         """Get list of available ML enhancement levels."""

@@ -209,4 +209,58 @@ class TestRichConsoleConfiguration(unittest.TestCase):
 3. **Keep input mocking** - @patch("builtins.input") still needed
 4. **Add encoding path testing** - validate both UTF-8 and ASCII behavior
 
-This approach provides **reliable Rich UI testing** while **validating actual user experience** in different terminal environments.
+## Research-Based Advanced Patterns
+
+### **Session-Scoped Resource Management**
+```python
+@pytest.fixture(scope="session")
+def shared_console():
+    """Shared Rich Console for performance optimization."""
+    return create_test_console()
+
+@pytest.fixture(scope="session")
+def ml_resources():
+    """Cached ML models and services for test performance."""
+    return {
+        "spacy_model": spacy.load("en_core_web_sm"),
+        "clustering_service": None  # Lazy loaded
+    }
+```
+
+### **ApplicationContainer State Isolation**
+```python
+@pytest.fixture(scope="function")
+def test_container():
+    """Fresh container with guaranteed state cleanup."""
+    container = TestApplicationContainer()
+    yield container
+    container.reset_state()
+
+@contextmanager
+def isolated_container_context(container, overrides):
+    """Context manager for service overrides with automatic revert."""
+    with container.override_services(overrides):
+        yield container
+```
+
+### **File System Testing Patterns**
+```python
+def test_file_processing_workflow(tmp_path):
+    """Use pytest tmp_path for race-condition-free file testing."""
+    test_file = tmp_path / "document.pdf"
+    test_file.write_text("content")
+    
+    result = process_file(str(test_file), str(tmp_path / "output"))
+    # Automatic cleanup by pytest
+```
+
+### **Performance-Optimized Testing**
+```python
+@pytest.mark.slow  # Mark expensive tests
+def test_ml_heavy_operation(ml_services):
+    """Test with cached ML services."""
+    # No model loading - uses session-cached services
+    result = ml_services["clustering"].classify_document(doc)
+```
+
+This approach provides **reliable Rich UI testing** with **research-based performance optimization** while **validating actual user experience** in different terminal environments.

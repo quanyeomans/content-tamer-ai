@@ -17,13 +17,18 @@ import unittest
 import pytest
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"
+    )
+)
 
 # Import from parent tests directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared.display.rich_display_manager import RichDisplayOptions
 from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestDataFlowContracts(unittest.TestCase, RichTestCase):
     """Contracts ensuring data flows correctly from processing to user display."""
@@ -51,8 +56,9 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
             final_succeeded = ctx.display.progress.stats.succeeded
 
             self.assertEqual(
-                final_succeeded, initial_succeeded + 1,
-                "File success did not flow to progress.stats.succeeded"
+                final_succeeded,
+                initial_succeeded + 1,
+                "File success did not flow to progress.stats.succeeded",
             )
 
     @pytest.mark.contract
@@ -70,8 +76,9 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
             final_failed = ctx.display.progress.stats.failed
 
             self.assertEqual(
-                final_failed, initial_failed + 1,
-                "File failure did not flow to progress.stats.failed"
+                final_failed,
+                initial_failed + 1,
+                "File failure did not flow to progress.stats.failed",
             )
 
     @pytest.mark.contract
@@ -92,8 +99,9 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
             expected_rate = (stats.succeeded / stats.total) * 100
 
             self.assertEqual(
-                stats.success_rate, expected_rate,
-                "Success rate {stats.success_rate}% doesn't match calculated {expected_rate}%"
+                stats.success_rate,
+                expected_rate,
+                "Success rate {stats.success_rate}% doesn't match calculated {expected_rate}%",
             )
 
     @pytest.mark.contract
@@ -116,8 +124,9 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
 
             for filename in processed_filenames:
                 self.assertIn(
-                    filename, source_files,
-                    "Processed file '{filename}' not found in processed files list"
+                    filename,
+                    source_files,
+                    "Processed file '{filename}' not found in processed files list",
                 )
 
     @pytest.mark.contract
@@ -136,14 +145,13 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
 
             self.assertTrue(
                 len(failed_files) > 0,
-                "Failed files not recorded in processed files for completion stats"
+                "Failed files not recorded in processed files for completion stats",
             )
 
             # Contract: Failed file information must be accessible
             failed_file = failed_files[0]
             self.assertEqual(
-                failed_file.get("source"), "failure.pd",
-                "Failed file source not properly recorded"
+                failed_file.get("source"), "failure.pd", "Failed file source not properly recorded"
             )
 
     @pytest.mark.contract
@@ -165,8 +173,9 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
 
             for target in target_filenames:
                 self.assertIn(
-                    target, recorded_targets,
-                    "Target filename '{target}' not preserved in data flow"
+                    target,
+                    recorded_targets,
+                    "Target filename '{target}' not preserved in data flow",
                 )
 
     @pytest.mark.contract
@@ -177,6 +186,7 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
 
         with manager.processing_context(1, "Data Flow Test") as ctx:
             import time
+
             start_time = time.time()
 
             ctx.complete_file("timestamped.pd", "result.pd")
@@ -186,21 +196,19 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
             # Contract: Processing timestamps must be recorded
             processed_files = ctx.display.progress.stats._processed_files
             self.assertTrue(
-                len(processed_files) > 0,
-                "No processed files recorded for timestamp verification"
+                len(processed_files) > 0, "No processed files recorded for timestamp verification"
             )
 
             processed_file = processed_files[0]
             recorded_timestamp = processed_file.get("timestamp")
 
             self.assertIsNotNone(
-                recorded_timestamp,
-                "Processing timestamp not recorded in data flow"
+                recorded_timestamp, "Processing timestamp not recorded in data flow"
             )
 
             self.assertTrue(
                 start_time <= recorded_timestamp <= end_time,
-                "Recorded timestamp {recorded_timestamp} outside processing window [{start_time}, {end_time}]"
+                "Recorded timestamp {recorded_timestamp} outside processing window [{start_time}, {end_time}]",
             )
 
     @pytest.mark.contract
@@ -216,7 +224,7 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
                 ("failure1.pd", "", "fail"),
                 ("success2.pd", "result2.pd", "complete"),
                 ("failure2.pd", "", "fail"),
-                ("success3.pd", "result3.pd", "complete")
+                ("success3.pd", "result3.pd", "complete"),
             ]
 
             for filename, target, operation in operations:
@@ -230,17 +238,20 @@ class TestDataFlowContracts(unittest.TestCase, RichTestCase):
                 total_processed = stats.succeeded + stats.failed
 
                 self.assertLessEqual(
-                    total_processed, stats.total,
-                    "Total processed ({total_processed}) exceeds declared total ({stats.total})"
+                    total_processed,
+                    stats.total,
+                    "Total processed ({total_processed}) exceeds declared total ({stats.total})",
                 )
 
                 # Contract: Success rate must be calculable at any point
                 if total_processed > 0:
                     expected_rate = (stats.succeeded / total_processed) * 100
                     self.assertIsInstance(
-                        stats.success_rate, (int, float),
-                        "Success rate is not numeric during processing"
+                        stats.success_rate,
+                        (int, float),
+                        "Success rate is not numeric during processing",
                     )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

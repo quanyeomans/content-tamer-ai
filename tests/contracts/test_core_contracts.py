@@ -22,10 +22,15 @@ import unittest
 import pytest
 
 # Add src directory to path
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"))
+sys.path.append(
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "src"
+    )
+)
 
 # Only import what we need to avoid I/O issues
 from shared.display.rich_progress_display import RichProgressStats
+
 
 class TestCoreContracts(unittest.TestCase):
     """Core contracts essential for preventing regressions."""
@@ -37,19 +42,17 @@ class TestCoreContracts(unittest.TestCase):
         stats = RichProgressStats()
 
         # Required attributes must exist
-        required_attributes = ['total', 'succeeded', 'failed', 'warnings', 'success_rate']
+        required_attributes = ["total", "succeeded", "failed", "warnings", "success_rate"]
 
         for attr in required_attributes:
             self.assertTrue(
-                hasattr(stats, attr),
-                "progress.stats missing required attribute: {attr}"
+                hasattr(stats, attr), "progress.stats missing required attribute: {attr}"
             )
 
             # Must be numeric types
             value = getattr(stats, attr)
             self.assertIsInstance(
-                value, (int, float),
-                "progress.stats.{attr} must be numeric, got {type(value)}"
+                value, (int, float), "progress.stats.{attr} must be numeric, got {type(value)}"
             )
 
     @pytest.mark.contract
@@ -61,9 +64,9 @@ class TestCoreContracts(unittest.TestCase):
         # Test scenarios
         test_cases = [
             (4, 4, 100.0),  # Perfect success
-            (4, 2, 50.0),   # Half success
-            (3, 1, 33.3),   # One third success
-            (1, 0, 0.0),    # No success
+            (4, 2, 50.0),  # Half success
+            (3, 1, 33.3),  # One third success
+            (1, 0, 0.0),  # No success
         ]
 
         for total, succeeded, expected_rate in test_cases:
@@ -75,8 +78,10 @@ class TestCoreContracts(unittest.TestCase):
             calculated_rate = stats.success_rate
 
             self.assertAlmostEqual(
-                calculated_rate, expected_rate, places=1,
-                msg="Success rate incorrect for {succeeded}/{total}: expected {expected_rate}%, got {calculated_rate}%"
+                calculated_rate,
+                expected_rate,
+                places=1,
+                msg="Success rate incorrect for {succeeded}/{total}: expected {expected_rate}%, got {calculated_rate}%",
             )
 
     @pytest.mark.contract
@@ -91,23 +96,18 @@ class TestCoreContracts(unittest.TestCase):
 
         # Contract: Success increment
         stats.succeeded += 1
-        self.assertEqual(
-            stats.succeeded, initial_succeeded + 1,
-            "Success counter increment failed"
-        )
+        self.assertEqual(stats.succeeded, initial_succeeded + 1, "Success counter increment failed")
 
         # Contract: Failure increment
         stats.failed += 1
-        self.assertEqual(
-            stats.failed, initial_failed + 1,
-            "Failure counter increment failed"
-        )
+        self.assertEqual(stats.failed, initial_failed + 1, "Failure counter increment failed")
 
         # Contract: Counters don't exceed total
         total_processed = stats.succeeded + stats.failed
         self.assertLessEqual(
-            total_processed, stats.total,
-            "Processed count {total_processed} exceeds total {stats.total}"
+            total_processed,
+            stats.total,
+            "Processed count {total_processed} exceeds total {stats.total}",
         )
 
     @pytest.mark.contract
@@ -125,12 +125,12 @@ class TestCoreContracts(unittest.TestCase):
         calculated_rate = stats.success_rate
 
         self.assertGreater(
-            calculated_rate, 0.0,
-            "Success rate showing 0.0% despite successful files (regression)"
+            calculated_rate, 0.0, "Success rate showing 0.0% despite successful files (regression)"
         )
         self.assertEqual(
-            calculated_rate, 100.0,
-            "Success rate calculation incorrect: expected 100.0%, got {calculated_rate}%"
+            calculated_rate,
+            100.0,
+            "Success rate calculation incorrect: expected 100.0%, got {calculated_rate}%",
         )
 
     @pytest.mark.contract
@@ -159,14 +159,12 @@ class TestCoreContracts(unittest.TestCase):
 
         # Contract: Processed files list must exist and be iterable
         self.assertTrue(
-            hasattr(stats, '_processed_files'),
-            "Processed files list missing from stats"
+            hasattr(stats, "_processed_files"), "Processed files list missing from stats"
         )
 
         processed_files = stats._processed_files
         self.assertIsInstance(
-            processed_files, list,
-            "Processed files must be a list, got {type(processed_files)}"
+            processed_files, list, "Processed files must be a list, got {type(processed_files)}"
         )
 
         # Contract: Can add file data without error
@@ -174,7 +172,7 @@ class TestCoreContracts(unittest.TestCase):
             "source": "test.pdf",
             "target": "organized_test.pdf",
             "status": "success",
-            "timestamp": 1234567890
+            "timestamp": 1234567890,
         }
 
         processed_files.append(test_file)
@@ -182,8 +180,8 @@ class TestCoreContracts(unittest.TestCase):
         # Contract: Added data is preserved exactly
         self.assertEqual(len(processed_files), 1, "File not added to processed files list")
         added_file = processed_files[0]
-        self.assertEqual(added_file["source"], "test.pd", "Source filename not preserved")
-        self.assertEqual(added_file["target"], "organized_test.pd", "Target filename not preserved")
+        self.assertEqual(added_file["source"], "test.pdf", "Source filename not preserved")
+        self.assertEqual(added_file["target"], "organized_test.pdf", "Target filename not preserved")
         self.assertEqual(added_file["status"], "success", "Status not preserved")
 
     @pytest.mark.contract
@@ -194,24 +192,23 @@ class TestCoreContracts(unittest.TestCase):
 
         # Contract: Stats format must be consistent for completion data
         completion_data = {
-            'total': stats.total,
-            'succeeded': stats.succeeded,
-            'failed': stats.failed,
-            'success_rate': stats.success_rate
+            "total": stats.total,
+            "succeeded": stats.succeeded,
+            "failed": stats.failed,
+            "success_rate": stats.success_rate,
         }
 
         # Contract: All completion data must be serializable (for display)
         for key, value in completion_data.items():
             self.assertIsInstance(
-                value, (int, float, str),
-                "Completion data '{key}' not serializable: {type(value)}"
+                value, (int, float, str), "Completion data '{key}' not serializable: {type(value)}"
             )
 
         # Contract: Data types must be consistent
-        self.assertIsInstance(completion_data['total'], (int, float))
-        self.assertIsInstance(completion_data['succeeded'], (int, float))
-        self.assertIsInstance(completion_data['failed'], (int, float))
-        self.assertIsInstance(completion_data['success_rate'], (int, float))
+        self.assertIsInstance(completion_data["total"], (int, float))
+        self.assertIsInstance(completion_data["succeeded"], (int, float))
+        self.assertIsInstance(completion_data["failed"], (int, float))
+        self.assertIsInstance(completion_data["success_rate"], (int, float))
 
     @pytest.mark.contract
     @pytest.mark.critical
@@ -227,7 +224,7 @@ class TestCoreContracts(unittest.TestCase):
             ("failure", 0, 1),
             ("success", 1, 0),
             ("failure", 0, 1),
-            ("success", 1, 0)
+            ("success", 1, 0),
         ]
 
         for operation, success_inc, fail_inc in batch_operations:
@@ -238,8 +235,9 @@ class TestCoreContracts(unittest.TestCase):
             total_processed = stats.succeeded + stats.failed
 
             self.assertLessEqual(
-                total_processed, stats.total,
-                "Batch processing: processed {total_processed} exceeds total {stats.total}"
+                total_processed,
+                stats.total,
+                "Batch processing: processed {total_processed} exceeds total {stats.total}",
             )
 
             # Contract: Success rate must be calculable at any point
@@ -248,8 +246,9 @@ class TestCoreContracts(unittest.TestCase):
                 actual_rate = stats.success_rate
 
                 self.assertIsInstance(
-                    actual_rate, (int, float),
-                    "Success rate not numeric during batch processing: {type(actual_rate)}"
+                    actual_rate,
+                    (int, float),
+                    "Success rate not numeric during batch processing: {type(actual_rate)}",
                 )
 
     @pytest.mark.contract
@@ -269,14 +268,19 @@ class TestCoreContracts(unittest.TestCase):
         actual_success_rate = stats.success_rate
 
         self.assertAlmostEqual(
-            actual_success_rate, expected_success_rate, places=1,
-            msg="Mixed results success rate incorrect: expected {expected_success_rate}%, got {actual_success_rate}%"
+            actual_success_rate,
+            expected_success_rate,
+            places=1,
+            msg="Mixed results success rate incorrect: expected {expected_success_rate}%, got {actual_success_rate}%",
         )
 
         # Contract: All counters must be reasonable
         total_processed = stats.succeeded + stats.failed
-        self.assertLessEqual(total_processed, stats.total, "Processed exceeds total in mixed results")
+        self.assertLessEqual(
+            total_processed, stats.total, "Processed exceeds total in mixed results"
+        )
         self.assertGreaterEqual(stats.warnings, 0, "Warnings count negative in mixed results")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

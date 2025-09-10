@@ -7,13 +7,14 @@ import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
 # Import from domain architecture
-from domains.ai_integration.model_service import ModelService, ModelStatus, ModelInfo, HardwareTier
+from domains.ai_integration.model_service import HardwareTier, ModelInfo, ModelService, ModelStatus
+
 
 class TestModelService(unittest.TestCase):
     """Test Model Service functionality in AI Integration Domain."""
@@ -277,10 +278,10 @@ class TestModelService(unittest.TestCase):
 
         # Test exact tier boundaries
         boundary_tests = [
-            (8.0, "minimal"),   # Boundary between minimal and standard
-            (16.0, "standard"), # Boundary between standard and performance
-            (32.0, "performance"), # Boundary between performance and workstation
-            (64.0, "workstation")  # Boundary between workstation and server
+            (8.0, "minimal"),  # Boundary between minimal and standard
+            (16.0, "standard"),  # Boundary between standard and performance
+            (32.0, "performance"),  # Boundary between performance and workstation
+            (64.0, "workstation"),  # Boundary between workstation and server
         ]
 
         for ram_gb, expected_tier in boundary_tests:
@@ -300,6 +301,7 @@ class TestModelService(unittest.TestCase):
         """Clean up test fixtures."""
         # No cleanup needed for domain service tests
         pass
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,7 +9,7 @@ to avoid circular import issues with provider_service.py
 
 Available modules:
 - openai_provider: OpenAIProvider class
-- claude_provider: ClaudeProvider class  
+- claude_provider: ClaudeProvider class
 - gemini_provider: GeminiProvider class
 - deepseek_provider: DeepseekProvider class
 - local_llm_provider: LocalLLMProvider class

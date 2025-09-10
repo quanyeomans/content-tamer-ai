@@ -7,7 +7,8 @@ Validates programmatic interface for automation use cases.
 
 import unittest
 
-from src.interfaces.programmatic.cli_arguments import PureCLIParser, ParsedArguments
+from src.interfaces.programmatic.cli_arguments import ParsedArguments, PureCLIParser
+
 
 class TestPureCLIParser(unittest.TestCase):
     """Test pure CLI argument parsing without UI coupling."""
@@ -28,10 +29,7 @@ class TestPureCLIParser(unittest.TestCase):
 
     def test_basic_file_arguments(self):
         """Test basic file path arguments."""
-        test_args = [
-            "--input", "/test/input",
-            "--renamed", "/test/output"
-        ]
+        test_args = ["--input", "/test/input", "--renamed", "/test/output"]
 
         args = self.parser.parse_args(test_args)
 
@@ -42,9 +40,12 @@ class TestPureCLIParser(unittest.TestCase):
     def test_ai_provider_arguments(self):
         """Test AI provider and model arguments."""
         test_args = [
-            "--provider", "claude",
-            "--model", "claude-3.5-sonnet",
-            "--api-key", "test-key"
+            "--provider",
+            "claude",
+            "--model",
+            "claude-3.5-sonnet",
+            "--api-key",
+            "test-key",
         ]
 
         args = self.parser.parse_args(test_args)
@@ -55,10 +56,7 @@ class TestPureCLIParser(unittest.TestCase):
 
     def test_organization_arguments(self):
         """Test organization-related arguments."""
-        test_args = [
-            "--organize",
-            "--ml-level", "3"
-        ]
+        test_args = ["--organize", "--ml-level", "3"]
 
         args = self.parser.parse_args(test_args)
 
@@ -128,7 +126,7 @@ class TestPureCLIParser(unittest.TestCase):
             input_dir="/test/input",
             output_dir="/test/output",
             provider="openai",
-            api_key="test-key"
+            api_key="test-key",
         )
 
         errors = self.parser.validate_args(args)
@@ -148,19 +146,14 @@ class TestPureCLIParser(unittest.TestCase):
 
         # Test conflicting feature flags
         args = ParsedArguments(
-            enable_organization_features=True,
-            disable_organization_features=True
+            enable_organization_features=True, disable_organization_features=True
         )
         errors = self.parser.validate_args(args)
         self.assertIn("Cannot both enable and disable organization features", errors)
 
     def test_quiet_mode_validation(self):
         """Test quiet mode requires API key for processing."""
-        args = ParsedArguments(
-            quiet_mode=True,
-            command_type="process",
-            api_key=None
-        )
+        args = ParsedArguments(quiet_mode=True, command_type="process", api_key=None)
 
         errors = self.parser.validate_args(args)
         self.assertIn("Quiet mode requires --api-key for headless operation", errors)
@@ -198,6 +191,7 @@ class TestPureCLIParser(unittest.TestCase):
         self.assertIn("usage:", usage_text.lower())
         self.assertIn("content-tamer-ai", usage_text.lower())
 
+
 class TestParsedArguments(unittest.TestCase):
     """Test ParsedArguments dataclass functionality."""
 
@@ -219,7 +213,7 @@ class TestParsedArguments(unittest.TestCase):
             provider="claude",
             model="claude-3.5-sonnet",
             organize=True,
-            ml_level=3
+            ml_level=3,
         )
 
         self.assertEqual(args.input_dir, "/test/input")
@@ -236,7 +230,7 @@ class TestParsedArguments(unittest.TestCase):
             no_organize=False,
             quiet_mode=True,
             verbose_mode=False,
-            reset_progress=True
+            reset_progress=True,
         )
 
         self.assertTrue(args.organize)
@@ -256,5 +250,6 @@ class TestParsedArguments(unittest.TestCase):
         self.assertIsNone(args.download_model)
         self.assertIsNone(args.configure_dependency)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -8,7 +8,7 @@ from the filename generation phase for memory efficiency.
 import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import spacy
 from dateutil import parser as date_parser
@@ -67,9 +67,7 @@ class ContentMetadataExtractor:
         from .rule_classifier import EnhancedRuleBasedClassifier
 
         classifier = EnhancedRuleBasedClassifier()
-        document_type, confidence = classifier.get_classification_confidence(
-            content, filename
-        )
+        document_type, confidence = classifier.get_classification_confidence(content, filename)
 
         metadata["document_type"] = document_type
         metadata["confidence_score"] = confidence
@@ -152,9 +150,7 @@ class ContentMetadataExtractor:
                     dates_found.append(
                         {
                             "raw_text": match,
-                            "parsed_date": parsed_date.isoformat()[
-                                :10
-                            ],  # YYYY-MM-DD format
+                            "parsed_date": parsed_date.isoformat()[:10],  # YYYY-MM-DD format
                             "year": parsed_date.year,
                             "method": "regex",
                         }
@@ -255,9 +251,7 @@ class ContentMetadataExtractor:
 
         # Look for quarter mentions
         quarter_matches = re.findall(r"q([1-4])\s+(\d{4})", content, re.IGNORECASE)
-        fiscal_hints["quarter_mentions"] = [
-            f"Q{q} {year}" for q, year in quarter_matches
-        ]
+        fiscal_hints["quarter_mentions"] = [f"Q{q} {year}" for q, year in quarter_matches]
 
         # Look for fiscal keywords
         fiscal_keywords = [

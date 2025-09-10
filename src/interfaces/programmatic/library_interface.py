@@ -5,15 +5,21 @@ Provides clean Python API for programmatic use cases.
 Enables Content Tamer AI to be used as a library in other applications.
 """
 
-from typing import Dict, Any, Optional, List, Callable, Union
-from dataclasses import dataclass
-from pathlib import Path
 import asyncio
 import logging
 
-from ..base_interfaces import ProgrammaticInterface, ProcessingResult
-from .configuration_manager import ProcessingConfiguration, ConfigurationManager
-from .cli_arguments import ParsedArguments
+# dataclass imported but not used - keeping for future data structures
+from dataclasses import dataclass  # pylint: disable=unused-import
+
+# Path imported but not used - keeping for future path utilities
+from pathlib import Path  # pylint: disable=unused-import
+from typing import Any, Callable, Dict, List, Optional
+
+from ..base_interfaces import ProcessingResult, ProgrammaticInterface
+
+# ParsedArguments imported but not used - keeping for future API expansion
+from .cli_arguments import ParsedArguments  # pylint: disable=unused-import
+from .configuration_manager import ConfigurationManager, ProcessingConfiguration
 
 
 class ContentTamerAPI(ProgrammaticInterface):
@@ -39,11 +45,13 @@ class ContentTamerAPI(ProgrammaticInterface):
             # Import here to avoid circular dependency
             try:
                 from core.application_container import ApplicationContainer
+
                 container = ApplicationContainer()
                 self._kernel = container.create_application_kernel()
             except ImportError:
                 # Fallback for when full kernel not available
                 from .mock_kernel import MockApplicationKernel
+
                 self._kernel = MockApplicationKernel()
 
         return self._kernel
@@ -71,25 +79,25 @@ class ContentTamerAPI(ProgrammaticInterface):
                     output_directory="",
                     errors=errors,
                     warnings=[],
-                    metadata={"validation_failed": True}
+                    metadata={"validation_failed": True},
                 )
 
             # Execute processing through kernel
             kernel = self.kernel
             if kernel is None:
                 raise RuntimeError("Application kernel is not available")
-            
+
             result = kernel.execute_processing(processing_config)
             # Ensure we return the correct ProcessingResult type
-            if hasattr(result, 'success') and hasattr(result, 'files_processed'):
+            if hasattr(result, "success") and hasattr(result, "files_processed"):
                 return ProcessingResult(
                     success=result.success,
                     files_processed=result.files_processed,
-                    files_failed=getattr(result, 'files_failed', 0),
-                    output_directory=getattr(result, 'output_directory', ""),
-                    errors=getattr(result, 'errors', []),
-                    warnings=getattr(result, 'warnings', []),
-                    metadata=getattr(result, 'metadata', {})
+                    files_failed=getattr(result, "files_failed", 0),
+                    output_directory=getattr(result, "output_directory", ""),
+                    errors=getattr(result, "errors", []),
+                    warnings=getattr(result, "warnings", []),
+                    metadata=getattr(result, "metadata", {}),
                 )
             return result
 
@@ -102,7 +110,7 @@ class ContentTamerAPI(ProgrammaticInterface):
                 output_directory="",
                 errors=[str(e)],
                 warnings=[],
-                metadata={"exception": str(e)}
+                metadata={"exception": str(e)},
             )
 
     def validate_configuration(self, config: Dict[str, Any]) -> List[str]:
@@ -166,7 +174,7 @@ class ContentTamerAPI(ProgrammaticInterface):
                     "claude": ["claude-3.5-sonnet", "claude-3.5-haiku"],
                     "gemini": ["gemini-2.0-flash", "gemini-1.5-pro"],
                     "deepseek": ["deepseek-chat"],
-                    "local": ["llama3.2-3b", "gemma2:2b"]
+                    "local": ["llama3.2-3b", "gemma2:2b"],
                 }
                 return model_fallbacks.get(provider, [])
             return kernel.get_provider_models(provider)
@@ -177,7 +185,7 @@ class ContentTamerAPI(ProgrammaticInterface):
                 "claude": ["claude-3.5-sonnet", "claude-3.5-haiku"],
                 "gemini": ["gemini-2.0-flash", "gemini-1.5-pro"],
                 "deepseek": ["deepseek-chat"],
-                "local": ["llama3.2-3b", "gemma2:2b"]
+                "local": ["llama3.2-3b", "gemma2:2b"],
             }
             return model_fallbacks.get(provider, [])
 
@@ -200,11 +208,25 @@ class ContentTamerAPI(ProgrammaticInterface):
         except Exception:
             # Basic validation - just check it's not empty
             return bool(api_key and api_key.strip())
+    
+    def validate_provider_api_key(self, provider: str, api_key: str) -> bool:
+        """Validate API key for specific provider.
+        
+        Args:
+            provider: AI provider name (openai, claude, etc.)
+            api_key: API key to validate
+            
+        Returns:
+            bool: True if API key appears valid
+        """
+        return self.validate_api_key(provider, api_key)
 
     async def process_documents_async(
         self,
         config: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[Callable[[str, int, int], None]] = None,
+        progress_callback: Optional[
+            Callable[[str, int, int], None]
+        ] = None,  # pylint: disable=unused-argument
     ) -> ProcessingResult:
         """Async document processing with progress callbacks.
 
@@ -223,7 +245,9 @@ class ContentTamerAPI(ProgrammaticInterface):
 
         return await loop.run_in_executor(None, sync_process)
 
-    def _prepare_configuration(self, config_override: Optional[Dict[str, Any]]) -> ProcessingConfiguration:
+    def _prepare_configuration(
+        self, config_override: Optional[Dict[str, Any]]
+    ) -> ProcessingConfiguration:
         """Prepare configuration by merging defaults with overrides."""
         # Start with current configuration
         config = ProcessingConfiguration(
@@ -238,7 +262,7 @@ class ContentTamerAPI(ProgrammaticInterface):
             organization_enabled=self.config.organization_enabled,
             ml_level=self.config.ml_level,
             quiet_mode=self.config.quiet_mode,
-            verbose_mode=self.config.verbose_mode
+            verbose_mode=self.config.verbose_mode,
         )
 
         # Apply overrides
@@ -264,12 +288,9 @@ class ContentTamerAPI(ProgrammaticInterface):
 
 # Convenience functions for simple use cases
 
+
 def process_documents_simple(
-    input_dir: str,
-    output_dir: str,
-    api_key: str,
-    provider: str = "openai",
-    **kwargs
+    input_dir: str, output_dir: str, api_key: str, provider: str = "openai", **kwargs
 ) -> ProcessingResult:
     """Simple function interface for basic processing.
 
@@ -290,17 +311,14 @@ def process_documents_simple(
         "output_dir": output_dir,
         "provider": provider,
         "api_key": api_key,
-        **kwargs
+        **kwargs,
     }
 
     return api.process_documents(config)
 
 
 def validate_setup(
-    input_dir: str,
-    output_dir: str,
-    provider: str = "openai",
-    api_key: Optional[str] = None
+    input_dir: str, output_dir: str, provider: str = "openai", api_key: Optional[str] = None
 ) -> List[str]:
     """Validate setup configuration.
 
@@ -342,15 +360,13 @@ def get_provider_info(provider: Optional[str] = None) -> Dict[str, Any]:
         return {
             "provider": provider,
             "models": api.get_supported_models(provider),
-            "supported": provider in api.get_supported_providers()
+            "supported": provider in api.get_supported_providers(),
         }
     else:
         providers = api.get_supported_providers()
         return {
             "supported_providers": providers,
-            "provider_models": {
-                p: api.get_supported_models(p) for p in providers
-            }
+            "provider_models": {p: api.get_supported_models(p) for p in providers},
         }
 
 

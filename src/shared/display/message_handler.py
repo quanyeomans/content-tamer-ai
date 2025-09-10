@@ -741,7 +741,9 @@ class SimpleMessageHandler:
     def show_summary(self) -> None:
         pass
 
-    def get_recent_messages(self, **kwargs) -> List[Dict[str, Any]]:  # pylint: disable=unused-argument
+    def get_recent_messages(
+        self, **kwargs  # pylint: disable=unused-argument
+    ) -> List[Dict[str, Any]]:
         return []
 
     def temporary_quiet(self):

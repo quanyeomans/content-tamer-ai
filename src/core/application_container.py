@@ -11,7 +11,7 @@ through dependency substitution.
 
 import os
 import sys
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from rich.console import Console
 
@@ -217,7 +217,8 @@ class TestApplicationContainer(ApplicationContainer):
     Application container optimized for testing.
 
     Pre-configured with StringIO Console and test-friendly settings
-    to eliminate Rich I/O conflicts during test execution.
+    to eliminate Rich I/O conflicts during test execution. Provides
+    state isolation mechanisms for reliable test execution.
     """
 
     def __init__(self, capture_output: bool = True):
@@ -239,6 +240,11 @@ class TestApplicationContainer(ApplicationContainer):
 
         super().__init__(console=test_console, test_mode=True)
 
+        # State management for test isolation
+        self._cached_services = {}
+        self._original_sys_path = None
+        self._service_overrides = {}
+
     def get_captured_output(self) -> str:
         """
         Get captured Console output.
@@ -255,6 +261,112 @@ class TestApplicationContainer(ApplicationContainer):
         if self._output_capture is not None:
             self._output_capture.seek(0)
             self._output_capture.truncate(0)
+
+    def reset_state(self) -> None:
+        """
+        Reset container state for clean test isolation.
+
+        Clears cached services, resets sys.path modifications,
+        and ensures fresh state for next test execution.
+        """
+        # Clear cached services
+        self._cached_services.clear()
+        self._service_overrides.clear()
+
+        # Reset Console Manager state
+        ConsoleManager.reset()
+
+        # Reset sys.path modifications if any were made
+        if self._original_sys_path is not None:
+            sys.path[:] = self._original_sys_path
+            self._original_sys_path = None
+
+        # Clear console output buffer
+        self.clear_output()
+
+        # Reset global container state
+        global _global_container  # pylint: disable=global-statement
+        _global_container = None
+
+    def preserve_sys_path(self) -> None:
+        """
+        Preserve current sys.path for restoration during reset.
+
+        Call this before making sys.path modifications that need
+        to be cleaned up during state reset.
+        """
+        if self._original_sys_path is None:
+            self._original_sys_path = sys.path.copy()
+
+    def override_services(self, **service_overrides):
+        """
+        Context manager for temporary service overrides.
+
+        Allows injecting mock or test services during test execution,
+        automatically restoring original services when context exits.
+
+        Args:
+            **service_overrides: Services to override (service_name=mock_service)
+
+        Returns:
+            Context manager that handles service override/restore
+        """
+        return ServiceOverrideContext(self, service_overrides)
+
+    def _apply_service_override(self, service_name: str, override_service: Any) -> None:
+        """Apply a service override internally."""
+        if service_name not in self._service_overrides:
+            # Store original service for restoration
+            original_method = getattr(self, f"create_{service_name}", None)
+            self._service_overrides[service_name] = original_method
+
+        # Set the override
+        setattr(self, f"create_{service_name}", lambda *args, **kwargs: override_service)
+
+    def _restore_service_override(self, service_name: str) -> None:
+        """Restore a service from override internally."""
+        if service_name in self._service_overrides:
+            original_method = self._service_overrides.pop(service_name)
+            if original_method is not None:
+                setattr(self, f"create_{service_name}", original_method)
+            else:
+                # Remove the override method if no original existed
+                if hasattr(self, f"create_{service_name}"):
+                    delattr(self, f"create_{service_name}")
+
+
+class ServiceOverrideContext:
+    """
+    Context manager for temporary service overrides in TestApplicationContainer.
+
+    Automatically applies service overrides on entry and restores
+    original services on exit, ensuring clean test isolation.
+    """
+
+    def __init__(self, container: TestApplicationContainer, overrides: Dict[str, Any]):
+        """
+        Initialize service override context.
+
+        Args:
+            container: TestApplicationContainer to manage overrides for
+            overrides: Dictionary of service_name -> override_service mappings
+        """
+        self._container = container
+        self._overrides = overrides
+        self._applied_overrides = []
+
+    def __enter__(self):
+        """Apply service overrides."""
+        for service_name, override_service in self._overrides.items():
+            self._container._apply_service_override(service_name, override_service)
+            self._applied_overrides.append(service_name)
+        return self._container
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Restore original services."""
+        for service_name in reversed(self._applied_overrides):
+            self._container._restore_service_override(service_name)
+        self._applied_overrides.clear()
 
 
 # Convenience functions for common usage patterns
@@ -275,17 +387,45 @@ def create_application_container(
     return ApplicationContainer(console)
 
 
-def create_test_container(capture_output: bool = True) -> TestApplicationContainer:
+def create_test_container(capture_output: bool = True, fresh_state: bool = False) -> TestApplicationContainer:
     """
     Create a test-optimized application container.
 
     Args:
         capture_output: Whether to capture Console output
+        fresh_state: Whether to ensure completely fresh state
 
     Returns:
         TestApplicationContainer: Test-configured container
     """
+    if fresh_state:
+        # Reset any global state before creating container
+        ConsoleManager.reset()
+        reset_global_container()
+
     return TestApplicationContainer(capture_output)
+
+
+def create_function_scoped_container(capture_output: bool = True) -> TestApplicationContainer:
+    """
+    Create a function-scoped test container with guaranteed state isolation.
+
+    This function creates a fresh TestApplicationContainer with reset state,
+    ensuring no contamination from previous tests. Use this for tests that
+    need guaranteed isolation.
+
+    Args:
+        capture_output: Whether to capture Console output
+
+    Returns:
+        TestApplicationContainer: Fresh test container with isolated state
+    """
+    container = create_test_container(capture_output=capture_output, fresh_state=True)
+
+    # Preserve sys.path for automatic cleanup
+    container.preserve_sys_path()
+
+    return container
 
 
 # Global container instance for application-wide access

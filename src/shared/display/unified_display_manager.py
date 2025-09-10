@@ -12,12 +12,14 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, TaskID
 from rich.table import Table
-from rich.text import Text
+
+# Text imported but not used - keeping for future rich text formatting
+from rich.text import Text  # pylint: disable=unused-import
+
+from .emoji_handler import SmartEmojiHandler
 
 # Dynamic import to avoid circular dependency
 # from interfaces.human.rich_console_manager import RichConsoleManager
-
-from .emoji_handler import SmartEmojiHandler
 
 
 class UnifiedDisplayManager:
@@ -39,6 +41,7 @@ class UnifiedDisplayManager:
         else:
             # Use local console manager to avoid complex import paths
             from .console_manager import ConsoleManager
+
             self.console = ConsoleManager.get_console()
 
         # Smart emoji handler for cross-platform compatibility
@@ -124,8 +127,14 @@ class UnifiedDisplayManager:
             return "quiet_mode"
 
         if self._active_progress is None:
-            from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn
-            
+            from rich.progress import (
+                BarColumn,
+                MofNCompleteColumn,
+                Progress,
+                SpinnerColumn,
+                TextColumn,
+            )
+
             self._active_progress = Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -133,7 +142,7 @@ class UnifiedDisplayManager:
                 MofNCompleteColumn(),
                 TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
                 console=self.console,
-                transient=False  # Keep progress visible after completion
+                transient=False,  # Keep progress visible after completion
             )
             self._active_progress.start()
 

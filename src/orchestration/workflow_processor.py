@@ -12,7 +12,6 @@ from typing import Any, Optional, Tuple
 
 from shared.infrastructure.error_handling import RetryHandler, create_retry_handler
 
-
 # Constants
 MAX_RETRIES = 3
 RETRY_DELAY = 2
@@ -28,20 +27,29 @@ def _extract_file_content(input_path: str, ocr_lang: str, display_context: Any) 
     """Extract content from file using appropriate processor."""
     display_context.set_status("extracting_content")
 
-    # Fallback content processor implementation
-    class ContentProcessorFactory:
-        def __init__(self, ocr_lang: str = "eng"):
-            pass
+    # Use domain extraction service with fallback
+    try:
+        # Import path adjustments for workflow_processor location
+        import os
+        import sys
 
-        def get_processor(self, file_path: str):
-            return None
+        sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-    content_factory = ContentProcessorFactory(ocr_lang)
-    processor = content_factory.get_processor(input_path)
-    if not processor:
-        raise ValueError(f"Unsupported file type: {input_path}")
+        from domains.content.extraction_service import ExtractionService
 
-    text, img_b64 = processor.extract_content(input_path)
+        extraction_service = ExtractionService(ocr_lang)
+        result = extraction_service.extract_from_file(input_path)
+
+        if result.quality.value == "failed":
+            raise ValueError(
+                f"Content extraction failed: {result.error_message or 'Unknown error'}"
+            )
+
+        text = result.text
+        img_b64 = result.image_data or ""
+
+    except ImportError:
+        raise ValueError(f"Content extraction service not available for: {input_path}")
 
     # If the extractor returned an error message, treat it as an unprocessable file.
     if text.startswith("Error"):
@@ -163,7 +171,9 @@ def _handle_processing_error(
     return success, result
 
 
-def _handle_runtime_error(error: RuntimeError, filename: str, display_context) -> tuple:
+def _handle_runtime_error(
+    error: RuntimeError, filename: str, display_context
+) -> tuple:  # pylint: disable=unused-argument
     """Handle runtime errors by logging with secret sanitization."""
     # Import secure logging to prevent API key exposure
     from shared.infrastructure.security import sanitize_log_message
@@ -201,27 +211,36 @@ def process_file_enhanced_core(
             return False, None
 
         # Extract content
-        text, img_b64 = _extract_file_content(input_path, ocr_lang, display_context)
+        try:
+            text, img_b64 = _extract_file_content(input_path, ocr_lang, display_context)
+        except Exception as e:
+            raise
 
         # Generate filename
-        new_file_name = _generate_filename(
-            text, img_b64, ai_client, organizer, display_context, filename=filename
-        )
+        try:
+            new_file_name = _generate_filename(
+                text, img_b64, ai_client, organizer, display_context, filename=filename
+            )
+        except Exception as e:
+            raise
 
         # Move file (without recording progress)
-        final_file_name = _move_file_only(
-            input_path,
-            filename,
-            renamed_folder,
-            new_file_name,
-            organizer,
-            display_context,
-        )
+        try:
+            final_file_name = _move_file_only(
+                input_path,
+                filename,
+                renamed_folder,
+                new_file_name,
+                organizer,
+                display_context,
+            )
+        except Exception as e:
+            raise
 
         result = final_file_name
 
-    except (ValueError, OSError, FileNotFoundError) as e:
-        # Handle unprocessable files by moving them to unprocessed folder
+    except (ValueError, FileNotFoundError) as e:
+        # Handle truly unprocessable files (not recoverable permission issues)
         try:
             if os.path.exists(input_path):
                 unprocessed_path = os.path.join(unprocessed_folder, filename)
@@ -235,6 +254,31 @@ def process_file_enhanced_core(
             display_context.show_error(f"Failed to move file: {str(move_error)}", filename=filename)
 
         return False, None
+
+    except (PermissionError, OSError) as e:
+        # Let recoverable errors bubble up to retry handler
+        # Only handle non-recoverable OS errors here
+        from shared.infrastructure.error_handling import ErrorClassifier
+        classification = ErrorClassifier.classify_error(e)
+        
+        if classification.is_recoverable and classification.retry_recommended:
+            # This should be retried - let it bubble up
+            raise e
+        else:
+            # This is a permanent OS error - handle it
+            try:
+                if os.path.exists(input_path):
+                    unprocessed_path = os.path.join(unprocessed_folder, filename)
+                    organizer.file_manager.safe_move(input_path, unprocessed_path)
+                    display_context.show_error(
+                        f"File moved to unprocessed: {str(e)}", filename=filename
+                    )
+                else:
+                    display_context.show_error(f"File not found: {str(e)}", filename=filename)
+            except Exception as move_error:
+                display_context.show_error(f"Failed to move file: {str(move_error)}", filename=filename)
+
+            return False, None
 
     except RuntimeError as e:
         return _handle_runtime_error(e, filename, display_context)
@@ -305,7 +349,7 @@ def process_file_with_retry(
             raise RuntimeError("File processing failed")
 
     # Use the retry handler to execute the operation
-    success, result, error_classification = retry_handler.execute_with_retry(
+    success, result, _error_classification = retry_handler.execute_with_retry(
         operation=_process_operation, display_context=display_context, filename=filename
     )
 
@@ -555,26 +599,29 @@ def process_file(
         return False
 
 
-def pdfs_to_text_string(filepath: str, max_pages: Optional[int] = None) -> str:
+def pdfs_to_text_string(
+    filepath: str, max_pages: Optional[int] = None
+) -> str:  # pylint: disable=unused-argument
     """
     Legacy function for extracting text, kept for compatibility.
     """
     try:
-        from shared.file_operations.pdf_processor import PDFProcessor
+        # Use domain extraction service instead of direct PDF processor
+        import os
+        import sys
+
+        sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+        from domains.content.extraction_service import ExtractionService
+
+        extraction_service = ExtractionService()
+        result = extraction_service.extract_from_file(filepath)
+
+        if result.quality.value != "failed" and result.text:
+            return result.text
+        else:
+            return ""
+
     except ImportError:
-        try:
-            from content_processors import PDFProcessor
-        except ImportError:
-            # Fallback implementation for type safety
-            class PDFProcessor:
-                def can_process(self, filepath: str) -> bool:
-                    return False
-
-                def extract_content(self, filepath: str) -> Tuple[str, str]:
-                    return "", ""
-
-    processor = PDFProcessor()
-    if processor.can_process(filepath):
-        text, _ = processor.extract_content(filepath)
-        return text
-    return ""
+        # Fallback when domain service not available
+        return ""

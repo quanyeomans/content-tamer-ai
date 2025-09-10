@@ -10,9 +10,9 @@ Services:
 - RequestService: API calls, retry logic, and error handling
 """
 
-from .provider_service import ProviderService
-from .model_service import ModelService
-from .request_service import RequestService
 from .ai_integration_service import AIIntegrationService
+from .model_service import ModelService
+from .provider_service import ProviderService
+from .request_service import RequestService
 
 __all__ = ["ProviderService", "ModelService", "RequestService", "AIIntegrationService"]

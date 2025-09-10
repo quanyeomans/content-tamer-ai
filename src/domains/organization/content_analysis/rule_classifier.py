@@ -8,8 +8,10 @@ for one-shot client discovery scenarios.
 
 import logging
 import re
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+
+# datetime imported but not used - keeping for future enhancements
+from datetime import datetime  # pylint: disable=unused-import
+from typing import Dict, List, Tuple
 
 import spacy
 
@@ -19,17 +21,25 @@ class EnhancedRuleBasedClassifier:
 
     _spacy_warning_shown = False  # Class-level flag to prevent warning spam
 
-    def __init__(self):
-        """Initialize classifier with enhanced patterns and spaCy model."""
-        try:
-            # Load spaCy model with minimal components for speed
-            self.nlp = spacy.load("en_core_web_sm", disable=["parser", "tagger"])
-        except OSError:
-            # Graceful fallback if spaCy not available - warn only once
-            if not EnhancedRuleBasedClassifier._spacy_warning_shown:
-                logging.warning("spaCy model not available, using basic fallback")
-                EnhancedRuleBasedClassifier._spacy_warning_shown = True
-            self.nlp = None
+    def __init__(self, spacy_model=None):
+        """Initialize classifier with enhanced patterns and spaCy model.
+        
+        Args:
+            spacy_model: Pre-loaded spaCy model to use (for performance optimization)
+        """
+        if spacy_model is not None:
+            # Use provided spaCy model (performance optimization for tests)
+            self.nlp = spacy_model
+        else:
+            try:
+                # Load spaCy model with minimal components for speed
+                self.nlp = spacy.load("en_core_web_sm", disable=["parser", "tagger"])
+            except OSError:
+                # Graceful fallback if spaCy not available - warn only once
+                if not EnhancedRuleBasedClassifier._spacy_warning_shown:
+                    logging.warning("spaCy model not available, using basic fallback")
+                    EnhancedRuleBasedClassifier._spacy_warning_shown = True
+                self.nlp = None
 
         # Enhanced pattern rules based on research and common document types
         self.classification_rules = self._load_enhanced_patterns()
@@ -216,9 +226,7 @@ class EnhancedRuleBasedClassifier:
                 elif ent.label_ in ["ORG", "PERSON"]:
                     # Organization/person entities boost contracts/correspondence
                     entity_scores["contracts"] = entity_scores.get("contracts", 0) + 0.1
-                    entity_scores["correspondence"] = (
-                        entity_scores.get("correspondence", 0) + 0.1
-                    )
+                    entity_scores["correspondence"] = entity_scores.get("correspondence", 0) + 0.1
                 elif ent.label_ == "LAW":
                     # Legal entities boost legal category
                     entity_scores["legal"] = entity_scores.get("legal", 0) + 0.3
@@ -245,9 +253,7 @@ class EnhancedRuleBasedClassifier:
 
         return combined
 
-    def get_classification_confidence(
-        self, content: str, filename: str
-    ) -> Tuple[str, float]:
+    def get_classification_confidence(self, content: str, filename: str) -> Tuple[str, float]:
         """
         Get classification with confidence score.
 

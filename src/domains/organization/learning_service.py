@@ -10,7 +10,7 @@ import logging
 import os
 import re
 import sqlite3
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -101,7 +101,7 @@ class StateManager:
                 return self._get_default_preferences()
 
         except Exception as e:
-            self.logger.warning(f"Failed to load preferences: {e}")
+            self.logger.warning("Failed to load preferences: %s", e)
             return self._get_default_preferences()
 
     def save_organization_preferences(self, preferences: Dict[str, Any]) -> bool:
@@ -116,7 +116,7 @@ class StateManager:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to save preferences: {e}")
+            self.logger.error("Failed to save preferences: %s", e)
             return False
 
     def load_learned_patterns(self) -> Dict[str, Any]:
@@ -130,7 +130,7 @@ class StateManager:
                 return {"rule_patterns": {}, "ml_patterns": {}, "user_corrections": []}
 
         except Exception as e:
-            self.logger.warning(f"Failed to load learned patterns: {e}")
+            self.logger.warning("Failed to load learned patterns: %s", e)
             return {"rule_patterns": {}, "ml_patterns": {}, "user_corrections": []}
 
     def save_learned_patterns(self, patterns: Dict[str, Any]) -> bool:
@@ -144,7 +144,7 @@ class StateManager:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to save learned patterns: {e}")
+            self.logger.error("Failed to save learned patterns: %s", e)
             return False
 
     def record_organization_session(self, session: OrganizationSession) -> bool:
@@ -183,11 +183,11 @@ class StateManager:
 
                 conn.commit()
 
-            self.logger.debug(f"Recorded organization session: {session.session_id}")
+            self.logger.debug("Recorded organization session: %s", session.session_id)
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to record session: {e}")
+            self.logger.error("Failed to record session: %s", e)
             return False
 
     def _initialize_history_db(self) -> None:
@@ -241,7 +241,7 @@ class StateManager:
                 conn.commit()
 
         except Exception as e:
-            self.logger.error(f"Failed to initialize history database: {e}")
+            self.logger.error("Failed to initialize history database: %s", e)
             raise
 
     def _get_default_preferences(self) -> Dict[str, Any]:
@@ -253,7 +253,7 @@ class StateManager:
             "ml_threshold": 0.7,
             "max_categories": 20,
             "min_category_size": 2,
-            "quality_threshold": 0.6,
+            "quality_threshold": 0.15,
             "auto_reorganization": False,
             "learning_enabled": True,
         }
@@ -262,13 +262,15 @@ class StateManager:
 class LearningService:
     """Service for continuous learning and improvement."""
 
-    def __init__(self, target_folder: str):
+    def __init__(self, target_folder: str, spacy_model=None):
         """Initialize learning service.
 
         Args:
             target_folder: Target folder for organization
+            spacy_model: Pre-loaded spaCy model to use (for performance optimization)
         """
         self.target_folder = target_folder
+        self.spacy_model = spacy_model
         self.logger = logging.getLogger(__name__)
         self.state_manager = StateManager(target_folder)
 
@@ -299,11 +301,11 @@ class LearningService:
                 timestamp=datetime.now(),
                 documents_processed=len(session_results),
                 success_rate=quality_metrics.get("success_rate", 0.0),
-                structure_type=folder_structure.structure_type.value,
+                structure_type=folder_structure.structure_type.value if folder_structure.structure_type else "unknown",
                 categories_created=folder_structure.categories,
                 quality_score=quality_metrics.get("overall_quality", 0.0),
                 metadata={
-                    "fiscal_year": folder_structure.fiscal_year_type.value,
+                    "fiscal_year": folder_structure.fiscal_year_type.value if folder_structure.fiscal_year_type else "unknown",
                     "time_granularity": folder_structure.time_granularity,
                     "quality_metrics": quality_metrics,
                 },
@@ -335,7 +337,7 @@ class LearningService:
             }
 
         except Exception as e:
-            self.logger.error(f"Learning from session failed: {e}")
+            self.logger.error("Learning from session failed: %s", e)
             return {"session_recorded": False, "error": str(e)}
 
     def _extract_successful_patterns(
@@ -352,7 +354,7 @@ class LearningService:
             if result.confidence >= 0.8:  # High confidence results
                 pattern = {
                     "category": result.category,
-                    "method": result.method.value,
+                    "method": result.method.value if result.method else "unknown",
                     "confidence": result.confidence,
                     "reasoning": result.reasoning,
                     "file_indicators": self._extract_file_indicators(file_path, result),
@@ -384,7 +386,7 @@ class LearningService:
             "filename_pattern": filename,
             "file_extension": os.path.splitext(filename)[1].lower(),
             "confidence": result.confidence,
-            "method": result.method.value,
+            "method": result.method.value if result.method else "unknown",
             "pattern_matched": result.metadata.get("rule_patterns_matched", []),
         }
 
@@ -420,7 +422,9 @@ class LearningService:
         historical_quality = self._get_historical_average_quality()
         if session.quality_score > historical_quality + 0.15:  # 15% improvement
             self.logger.info(
-                f"Session quality ({session.quality_score:.2f}) significantly better than average ({historical_quality:.2f})"
+                "Session quality (%.2f) significantly better than average (%.2f)",
+                session.quality_score,
+                historical_quality,
             )
 
             # Consider updating structure preferences
@@ -450,7 +454,7 @@ class LearningService:
 
         # Save updated preferences
         if self.state_manager.save_organization_preferences(self.preferences):
-            self.logger.info(f"Updated preferences: {list(updates.keys())}")
+            self.logger.info("Updated preferences: %s", list(updates.keys()))
         else:
             self.logger.error("Failed to save updated preferences")
 
@@ -468,7 +472,7 @@ class LearningService:
                 return result[0] if result and result[0] is not None else 0.5
 
         except Exception as e:
-            self.logger.warning(f"Failed to get historical quality: {e}")
+            self.logger.warning("Failed to get historical quality: %s", e)
             return 0.5  # Default baseline
 
     def record_user_correction(
@@ -501,7 +505,7 @@ class LearningService:
                 conn.commit()
 
             self.logger.info(
-                f"Recorded user correction: {file_name} {from_category} → {to_category}"
+                "Recorded user correction: %s %s → %s", file_name, from_category, to_category
             )
 
             # Update learning patterns based on correction
@@ -510,7 +514,7 @@ class LearningService:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to record user correction: {e}")
+            self.logger.error("Failed to record user correction: %s", e)
             return False
 
     def _learn_from_correction(self, file_name: str, from_category: str, to_category: str) -> None:
@@ -541,7 +545,7 @@ class LearningService:
             self.state_manager.save_learned_patterns(patterns)
 
         except Exception as e:
-            self.logger.error(f"Failed to learn from correction: {e}")
+            self.logger.error("Failed to learn from correction: %s", e)
 
     def _analyze_corrected_file_patterns(self, file_name: str) -> Dict[str, Any]:
         """Analyze patterns in corrected file for learning."""
@@ -641,7 +645,7 @@ class LearningService:
             )
 
         except Exception as e:
-            self.logger.error(f"Failed to get learning metrics: {e}")
+            self.logger.error("Failed to get learning metrics: %s", e)
             return LearningMetrics(
                 total_sessions=0,
                 average_quality_score=0.0,

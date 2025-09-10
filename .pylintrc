@@ -81,3 +81,10 @@ ignore-imports=yes
 [TYPECHECK]
 # List of module names for which member attributes should not be checked
 ignored-modules=google.genai,anthropic,openai,fcntl
+
+[IMPORTS]
+# Domain architecture import patterns - DO NOT AUTO-CORRECT THESE
+# Providers must use absolute imports from shared.* not relative ....shared.*
+allow-absolute-imports=shared.infrastructure,shared.display,shared.file_operations
+# Domains should not import from other domains directly
+forbidden-domain-imports=domains.content.from.domains.organization,domains.organization.from.domains.content

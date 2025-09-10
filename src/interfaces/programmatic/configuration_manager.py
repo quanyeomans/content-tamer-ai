@@ -5,12 +5,12 @@ Provides configuration loading and management without UI dependencies.
 Supports environment variables, config files, and programmatic configuration.
 """
 
-from typing import Dict, Any, Optional, List, Union
-from dataclasses import dataclass, asdict, field
-import os
 import json
-from pathlib import Path
 import logging
+import os
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from .cli_arguments import ParsedArguments
 
@@ -18,6 +18,7 @@ from .cli_arguments import ParsedArguments
 @dataclass
 class ProcessingConfiguration:
     """Complete processing configuration structure."""
+
     # File paths
     input_dir: str
     output_dir: str
@@ -98,15 +99,23 @@ class ConfigurationManager:
 
             # Update modification timestamp
             import datetime
+
             config.modified_at = datetime.datetime.now().isoformat()
             if not config.created_at:
                 config.created_at = config.modified_at
 
             config_dict = asdict(config)
 
+            # SECURITY: Never store API keys in plain text configuration files
+            if config_dict.get("api_key"):
+                # Remove API key from saved configuration for security
+                config_dict["api_key"] = None
+                config_dict["api_key_source"] = "environment_variable_required"
+                self.logger.info("API key excluded from configuration file for security")
+
             # Write configuration atomically
-            temp_file = self.config_file.with_suffix('.tmp')
-            with open(temp_file, 'w', encoding='utf-8') as f:
+            temp_file = self.config_file.with_suffix(".tmp")
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
 
             # Atomic move
@@ -150,7 +159,9 @@ class ConfigurationManager:
             if not config.api_key:
                 env_key = f"{config.provider.upper()}_API_KEY"
                 if not os.getenv(env_key):
-                    errors.append(f"API key required for {config.provider} (set {env_key} environment variable or use --api-key)")
+                    errors.append(
+                        f"API key required for {config.provider} (set {env_key} environment variable or use --api-key)"
+                    )
 
         # Validate ML level
         if config.ml_level not in [1, 2, 3]:
@@ -167,7 +178,10 @@ class ConfigurationManager:
         # Import defaults here to avoid circular imports
         try:
             from ...shared.infrastructure.path_utilities import get_default_directories
-            DEFAULT_DATA_DIR, DEFAULT_INPUT_DIR, DEFAULT_PROCESSED_DIR, _, _ = get_default_directories()
+
+            _DEFAULT_DATA_DIR, DEFAULT_INPUT_DIR, DEFAULT_PROCESSED_DIR, _, _ = (
+                get_default_directories()
+            )
         except ImportError:
             # Fallback defaults for testing
             DEFAULT_INPUT_DIR = "./data/input"
@@ -179,13 +193,13 @@ class ConfigurationManager:
             provider="openai",
             ocr_language="eng",
             ml_level=2,
-            feature_flags={}
+            feature_flags={},
         )
 
     def _merge_config_file(self, config: ProcessingConfiguration) -> ProcessingConfiguration:
         """Merge configuration file values."""
         try:
-            with open(self.config_file, 'r', encoding='utf-8') as f:
+            with open(self.config_file, "r", encoding="utf-8") as f:
                 file_config = json.load(f)
 
             # Update config with file values (only if not None/empty)
@@ -200,17 +214,19 @@ class ConfigurationManager:
 
         return config
 
-    def _merge_environment_variables(self, config: ProcessingConfiguration) -> ProcessingConfiguration:
+    def _merge_environment_variables(
+        self, config: ProcessingConfiguration
+    ) -> ProcessingConfiguration:
         """Merge environment variable values."""
         env_mappings = {
-            'CONTENT_TAMER_INPUT_DIR': 'input_dir',
-            'CONTENT_TAMER_OUTPUT_DIR': 'output_dir',
-            'CONTENT_TAMER_PROVIDER': 'provider',
-            'CONTENT_TAMER_MODEL': 'model',
-            'CONTENT_TAMER_OCR_LANG': 'ocr_language',
-            'CONTENT_TAMER_ML_LEVEL': 'ml_level',
-            'CONTENT_TAMER_QUIET': 'quiet_mode',
-            'CONTENT_TAMER_VERBOSE': 'verbose_mode',
+            "CONTENT_TAMER_INPUT_DIR": "input_dir",
+            "CONTENT_TAMER_OUTPUT_DIR": "output_dir",
+            "CONTENT_TAMER_PROVIDER": "provider",
+            "CONTENT_TAMER_MODEL": "model",
+            "CONTENT_TAMER_OCR_LANG": "ocr_language",
+            "CONTENT_TAMER_ML_LEVEL": "ml_level",
+            "CONTENT_TAMER_QUIET": "quiet_mode",
+            "CONTENT_TAMER_VERBOSE": "verbose_mode",
         }
 
         # Also check for provider-specific API keys
@@ -224,21 +240,23 @@ class ConfigurationManager:
             env_value = os.getenv(env_var)
             if env_value:
                 # Convert string values to appropriate types
-                if config_attr == 'ml_level':
+                if config_attr == "ml_level":
                     try:
                         env_value = int(env_value)
                     except ValueError:
                         self.logger.warning(f"Invalid ML level in {env_var}: {env_value}")
                         continue
-                elif config_attr in ['quiet_mode', 'verbose_mode']:
-                    env_value = env_value.lower() in ('true', '1', 'yes', 'on')
+                elif config_attr in ["quiet_mode", "verbose_mode"]:
+                    env_value = env_value.lower() in ("true", "1", "yes", "on")
 
                 setattr(config, config_attr, env_value)
                 self.logger.debug(f"Applied environment variable {env_var}={env_value}")
 
         return config
 
-    def _merge_command_line_arguments(self, config: ProcessingConfiguration, args: ParsedArguments) -> ProcessingConfiguration:
+    def _merge_command_line_arguments(
+        self, config: ProcessingConfiguration, args: ParsedArguments
+    ) -> ProcessingConfiguration:
         """Merge command line argument values (highest precedence)."""
         # Only override config if argument was explicitly provided
         if args.input_dir:
@@ -295,6 +313,7 @@ class ConfigurationManager:
         elif format.lower() == "yaml":
             try:
                 import yaml
+
                 return yaml.dump(asdict(config), default_flow_style=False, sort_keys=True)
             except ImportError:
                 raise ValueError("PyYAML not installed - cannot export as YAML")
@@ -305,7 +324,12 @@ class ConfigurationManager:
             config_dict = asdict(config)
 
             for key, value in config_dict.items():
-                if value is not None and key not in ['created_at', 'modified_at', 'version', 'feature_flags']:
+                if value is not None and key not in [
+                    "created_at",
+                    "modified_at",
+                    "version",
+                    "feature_flags",
+                ]:
                     env_key = f"CONTENT_TAMER_{key.upper()}"
                     env_lines.append(f"export {env_key}='{value}'")
 
@@ -332,6 +356,10 @@ class ConfigurationManager:
             "OCR Language": config.ocr_language,
             "Organization": "Enabled" if config.organization_enabled else "Disabled",
             "ML Level": config.ml_level,
-            "Display Mode": "Quiet" if config.quiet_mode else ("Verbose" if config.verbose_mode else "Normal"),
-            "Configuration File": str(self.config_file) if self.config_file.exists() else "Not found"
+            "Display Mode": (
+                "Quiet" if config.quiet_mode else ("Verbose" if config.verbose_mode else "Normal")
+            ),
+            "Configuration File": (
+                str(self.config_file) if self.config_file.exists() else "Not found"
+            ),
         }

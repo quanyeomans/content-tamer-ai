@@ -6,14 +6,16 @@ Ensures consistency across human, programmatic, and protocol interfaces.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Union, Coroutine
 from dataclasses import dataclass
+from typing import Any, Coroutine, Dict, List, Optional, Union
+
 from rich.console import Console
 
 
 @dataclass
 class ProcessingResult:
     """Result of document processing operation."""
+
     success: bool
     files_processed: int
     files_failed: int
@@ -42,7 +44,9 @@ class HumanInterface(ABC):
         pass
 
     @abstractmethod
-    def prompt_user_choice(self, message: str, choices: List[str], default: Optional[str] = None) -> str:
+    def prompt_user_choice(
+        self, message: str, choices: List[str], default: Optional[str] = None
+    ) -> str:
         """Interactive user prompting with validation."""
         pass
 
@@ -90,7 +94,9 @@ class ProtocolInterface(ABC):
         pass
 
     @abstractmethod
-    def handle_request(self, request: Dict[str, Any]) -> Union[Dict[str, Any], Coroutine[Any, Any, Dict[str, Any]]]:
+    def handle_request(
+        self, request: Dict[str, Any]
+    ) -> Union[Dict[str, Any], Coroutine[Any, Any, Dict[str, Any]]]:
         """Handle protocol-specific request (can be sync or async)."""
         pass
 

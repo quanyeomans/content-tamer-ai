@@ -6,8 +6,11 @@ and user interaction with beautiful Rich-powered UI while maintaining
 backward compatibility with existing code.
 """
 
-import io
-import sys
+# io imported but not used - keeping for future I/O enhancements
+import io  # pylint: disable=unused-import
+
+# sys imported but not used - keeping for future system utilities
+import sys  # pylint: disable=unused-import
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, TextIO
@@ -53,7 +56,9 @@ class RichProcessingContext:
         if self._progress_started:
             self.display.progress.finish("Content organization completed successfully.")
 
-    def start_file(self, filename: str, target_filename: str = "") -> None:
+    def start_file(
+        self, filename: str, target_filename: str = ""
+    ) -> None:  # pylint: disable=unused-argument
         """Start processing a new file."""
         self.current_file = filename
         self.display.progress.start_file(filename)
@@ -368,7 +373,9 @@ class RichDisplayManager:
             for folder, count in folder_structure.items():
                 self.info(f"   • {folder}: {count} documents")
 
-    def show_organization_error(self, error_msg: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def show_organization_error(
+        self, error_msg: str, details: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Display organization error with Rich styling and recovery suggestions."""
         if self.options.quiet:
             return
@@ -414,7 +421,9 @@ class RichDisplayManager:
                 self.debug("Suggestion: Reducing ML level may help with classification issues")
 
     @contextmanager
-    def organization_context(self, total_docs: int, ml_level: int = 2):
+    def organization_context(
+        self, total_docs: int, ml_level: int = 2
+    ):  # pylint: disable=unused-argument
         """Create organization progress context."""
         level_names = {1: "Basic Rules", 2: "Selective ML", 3: "Temporal Intelligence"}
         engine_name = level_names.get(ml_level, f"Level {ml_level}")

@@ -34,15 +34,12 @@ def main():
         console_mgr = RichConsoleManager()
         main_console = console_mgr.console
 
-        # Beautiful welcome with smart emoji usage
+        # Show welcome header  
         main_console.print()
-
-        # Use emojis where supported, ASCII where not (correct Rich pattern)
         if hasattr(main_console, "options") and main_console.options.encoding == "utf-8":
             main_console.print("🎯 [bold blue]CONTENT TAMER AI[/bold blue]")
         else:
             main_console.print(">> [bold blue]CONTENT TAMER AI[/bold blue] <<")
-
         main_console.print("[cyan]Intelligent Document Organization System[/cyan]")
         main_console.print()
 

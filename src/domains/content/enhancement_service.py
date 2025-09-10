@@ -5,27 +5,29 @@ Quality assessment, cleaning, and normalization of extracted content.
 Provides content improvement and preparation for AI processing.
 """
 
+import logging
 import re
 import unicodedata
-from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
-import logging
+from typing import Any, Dict, List, Tuple
 
-from .extraction_service import ExtractedContent, ContentQuality
+from .extraction_service import ContentQuality, ExtractedContent
 
 
 class EnhancementMethod(Enum):
     """Methods for content enhancement."""
-    CLEANING = "cleaning"           # Remove artifacts, normalize text
-    SUMMARIZATION = "summarization" # Extract key information
-    STRUCTURE = "structure"         # Improve text structure
-    LANGUAGE = "language"          # Language detection and normalization
+
+    CLEANING = "cleaning"  # Remove artifacts, normalize text
+    SUMMARIZATION = "summarization"  # Extract key information
+    STRUCTURE = "structure"  # Improve text structure
+    LANGUAGE = "language"  # Language detection and normalization
 
 
 @dataclass
 class EnhancementResult:
     """Result of content enhancement."""
+
     enhanced_content: str
     original_content: str
     quality_before: ContentQuality
@@ -51,17 +53,20 @@ class ContentCleaner:
     def normalize_unicode(text: str) -> str:
         """Normalize Unicode characters."""
         # Normalize to NFC form (canonical decomposition, then canonical composition)
-        normalized = unicodedata.normalize('NFC', text)
+        normalized = unicodedata.normalize("NFC", text)
 
         # Remove or replace problematic Unicode characters
         # Replace various quotation marks with standard ones
         replacements = {
-            '"': '"', '"': '"',  # Smart quotes
-            ''': "'", ''': "'",  # Smart apostrophes
-            '–': '-', '—': '-',  # En/em dashes
-            '…': '...',          # Ellipsis
-            ' ': ' ',           # Non-breaking space
-            '​': '',             # Zero-width space
+            '"': '"',
+            '"': '"',  # Smart quotes
+            "'": "'",
+            "'": "'",  # Smart apostrophes
+            "–": "-",
+            "—": "-",  # En/em dashes
+            "…": "...",  # Ellipsis
+            " ": " ",  # Non-breaking space
+            "​": "",  # Zero-width space
         }
 
         for old, new in replacements.items():
@@ -73,63 +78,65 @@ class ContentCleaner:
     def remove_extraction_artifacts(text: str) -> str:
         """Remove common PDF/OCR extraction artifacts."""
         # Remove excessive whitespace
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
 
         # Remove standalone numbers (often page numbers)
-        text = re.sub(r'\b\d+\b\s*\n', '\n', text)
+        text = re.sub(r"\b\d+\b\s*\n", "\n", text)
 
         # Remove repeated characters (OCR artifacts)
-        text = re.sub(r'(.)\1{4,}', r'\1\1', text)
+        text = re.sub(r"(.)\1{4,}", r"\1\1", text)
 
         # Fix common OCR mistakes
         ocr_fixes = {
-            r'\bl\b': 'I',      # lowercase l often mistaken for I
-            r'\b0\b': 'O',      # zero often mistaken for O in text
-            r'\brn\b': 'm',     # rn often mistaken for m
-            r'\bvv\b': 'w',     # vv often mistaken for w
+            r"\bl\b": "I",  # lowercase l often mistaken for I
+            r"\b0\b": "O",  # zero often mistaken for O in text
+            r"\brn\b": "m",  # rn often mistaken for m
+            r"\bvv\b": "w",  # vv often mistaken for w
         }
 
         for pattern, replacement in ocr_fixes.items():
             text = re.sub(pattern, replacement, text)
 
         # Remove header/footer patterns
-        lines = text.split('\n')
+        lines = text.split("\n")
         cleaned_lines = []
 
         for line in lines:
             line = line.strip()
             # Skip likely header/footer content
-            if (len(line) < 3 or
-                line.isdigit() or  # Page numbers
-                line.lower() in ['confidential', 'page', 'draft'] or
-                re.match(r'^page \d+', line.lower())):
+            if (
+                len(line) < 3
+                or line.isdigit()  # Page numbers
+                or line.lower() in ["confidential", "page", "draft"]
+                or re.match(r"^page \d+", line.lower())
+            ):
                 continue
             cleaned_lines.append(line)
 
-        return '\n'.join(cleaned_lines).strip()
+        return "\n".join(cleaned_lines).strip()
 
     @staticmethod
     def improve_structure(text: str) -> str:
         """Improve text structure and formatting."""
         # Split into paragraphs
-        paragraphs = text.split('\n\n')
+        paragraphs = text.split("\n\n")
         improved_paragraphs = []
 
         for paragraph in paragraphs:
             # Clean up paragraph
-            para_lines = [line.strip() for line in paragraph.split('\n') if line.strip()]
+            para_lines = [line.strip() for line in paragraph.split("\n") if line.strip()]
 
             if para_lines:
                 # Join lines with proper spacing
-                improved_para = ' '.join(para_lines)
+                improved_para = " ".join(para_lines)
 
                 # Ensure proper sentence endings
-                if improved_para and not improved_para.endswith(('.', '!', '?', ':')):
-                    improved_para += '.'
+                if improved_para and not improved_para.endswith((".", "!", "?", ":")):
+                    improved_para += "."
 
                 improved_paragraphs.append(improved_para)
 
-        return '\n\n'.join(improved_paragraphs)
+        return "\n\n".join(improved_paragraphs)
 
 
 class ContentSummarizer:
@@ -158,12 +165,12 @@ class ContentSummarizer:
         # Select top sentences that fit within limit
         selected_sentences = self._select_top_sentences(sentence_scores, self.max_length)
 
-        return ' '.join(selected_sentences)
+        return " ".join(selected_sentences)
 
     def _split_into_sentences(self, text: str) -> List[str]:
         """Split text into sentences."""
         # Simple sentence splitting
-        sentences = re.split(r'[.!?]+\s+', text)
+        sentences = re.split(r"[.!?]+\s+", text)
         return [s.strip() for s in sentences if len(s.strip()) > 10]
 
     def _score_sentences(self, sentences: List[str]) -> List[Tuple[str, float]]:
@@ -185,13 +192,21 @@ class ContentSummarizer:
 
             # Prefer sentences with key information indicators
             key_indicators = [
-                'date', 'amount', 'total', 'invoice', 'contract', 'agreement',
-                'summary', 'conclusion', 'purpose', 'objective'
+                "date",
+                "amount",
+                "total",
+                "invoice",
+                "contract",
+                "agreement",
+                "summary",
+                "conclusion",
+                "purpose",
+                "objective",
             ]
             score += 0.5 * sum(1 for word in key_indicators if word in sentence_lower)
 
             # Prefer sentences with numbers (often important data)
-            if re.search(r'\d+', sentence):
+            if re.search(r"\d+", sentence):
                 score += 0.3
 
             # Prefer sentences with proper capitalization
@@ -202,12 +217,14 @@ class ContentSummarizer:
 
         return sorted(scored, key=lambda x: x[1], reverse=True)
 
-    def _select_top_sentences(self, scored_sentences: List[Tuple[str, float]], max_length: int) -> List[str]:
+    def _select_top_sentences(
+        self, scored_sentences: List[Tuple[str, float]], max_length: int
+    ) -> List[str]:
         """Select top sentences that fit within length limit."""
         selected = []
         current_length = 0
 
-        for sentence, score in scored_sentences:
+        for sentence, _score in scored_sentences:
             if current_length + len(sentence) <= max_length:
                 selected.append(sentence)
                 current_length += len(sentence)
@@ -251,7 +268,7 @@ class EnhancementService:
                 methods_applied=[],
                 improvements=[],
                 warnings=["Content extraction failed, no enhancement possible"],
-                metadata={"enhancement_skipped": True}
+                metadata={"enhancement_skipped": True},
             )
 
         original_text = content.text
@@ -274,7 +291,9 @@ class EnhancementService:
             if len(enhanced_text) > self.max_content_length:
                 enhanced_text = self.summarizer.summarize_for_ai(enhanced_text)
                 methods_applied.append(EnhancementMethod.SUMMARIZATION)
-                improvements.append(f"Summarized from {len(original_text)} to {len(enhanced_text)} characters")
+                improvements.append(
+                    f"Summarized from {len(original_text)} to {len(enhanced_text)} characters"
+                )
 
             # Assess final quality
             final_quality = self._assess_enhanced_quality(enhanced_text, content.quality)
@@ -290,8 +309,10 @@ class EnhancementService:
                 metadata={
                     "original_length": len(original_text),
                     "enhanced_length": len(enhanced_text),
-                    "compression_ratio": len(enhanced_text) / len(original_text) if original_text else 0
-                }
+                    "compression_ratio": (
+                        len(enhanced_text) / len(original_text) if original_text else 0
+                    ),
+                },
             )
 
         except Exception as e:
@@ -304,10 +325,12 @@ class EnhancementService:
                 methods_applied=[],
                 improvements=[],
                 warnings=[f"Enhancement failed: {e}"],
-                metadata={"enhancement_error": str(e)}
+                metadata={"enhancement_error": str(e)},
             )
 
-    def _assess_enhanced_quality(self, enhanced_text: str, original_quality: ContentQuality) -> ContentQuality:
+    def _assess_enhanced_quality(
+        self, enhanced_text: str, original_quality: ContentQuality
+    ) -> ContentQuality:
         """Assess quality after enhancement."""
         if not enhanced_text or len(enhanced_text.strip()) < 10:
             return ContentQuality.FAILED
@@ -318,7 +341,7 @@ class EnhancementService:
             ContentQuality.POOR,
             ContentQuality.FAIR,
             ContentQuality.GOOD,
-            ContentQuality.EXCELLENT
+            ContentQuality.EXCELLENT,
         ]
 
         try:
@@ -336,7 +359,7 @@ class EnhancementService:
 
         # Count quality indicators
         words = text.split()
-        sentences = text.count('.') + text.count('!') + text.count('?')
+        sentences = text.count(".") + text.count("!") + text.count("?")
 
         # Quality scoring
         if len(words) >= 50 and sentences >= 3 and len(text) >= 200:
@@ -380,5 +403,5 @@ class EnhancementService:
             "max_content_length": self.max_content_length,
             "available_methods": [method.value for method in EnhancementMethod],
             "cleaner_available": True,
-            "summarizer_available": True
+            "summarizer_available": True,
         }

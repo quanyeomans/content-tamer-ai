@@ -11,7 +11,6 @@ import re
 import shutil
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from .clustering_service import ClassificationResult
@@ -118,7 +117,7 @@ class FolderAnalyzer:
             )
 
         except Exception as e:
-            self.logger.error(f"Existing structure analysis failed: {e}")
+            self.logger.error("Existing structure analysis failed: %s", e)
             return None
 
     def _detect_structure_type(self, subdirs: List[str]) -> FolderStructureType:
@@ -146,9 +145,8 @@ class FolderAnalyzer:
 
         if len(year_dirs) > len(category_dirs):
             return FolderStructureType.TIME_FIRST
-        elif len(category_dirs) > len(year_dirs):
+        if len(category_dirs) > len(year_dirs):
             return FolderStructureType.CATEGORY_FIRST
-        else:
             # Default to category-first if uncertain
             return FolderStructureType.CATEGORY_FIRST
 
@@ -191,11 +189,10 @@ class FolderAnalyzer:
             # Categories would be in subdirectories of time folders
             # For now, return common categories as we'd need to scan deeper
             return []
-        else:
-            # Filter out time-based directories to get categories
-            year_pattern = r"^(19|20)\d{2}$"
-            categories = [d for d in subdirs if not re.match(year_pattern, d)]
-            return categories
+        # Filter out time-based directories to get categories
+        year_pattern = r"^(19|20)\d{2}$"
+        categories = [d for d in subdirs if not re.match(year_pattern, d)]
+        return categories
 
     def _calculate_pattern_confidence(
         self, subdirs: List[str], detected_type: FolderStructureType
@@ -274,8 +271,8 @@ class FolderService:
             return optimal_structure, file_operations
 
         except Exception as e:
-            self.logger.error(f"Folder structure creation failed: {e}")
-            raise RuntimeError(f"Failed to create folder structure: {e}")
+            self.logger.error("Folder structure creation failed: %s", e)
+            raise RuntimeError(f"Failed to create folder structure: {e}") from e
 
     def _determine_optimal_structure(
         self,
@@ -366,7 +363,6 @@ class FolderService:
         # If most documents have strong categories, use category-first
         if strong_categories / len(classifications) >= 0.6:
             return FolderStructureType.CATEGORY_FIRST
-        else:
             return FolderStructureType.TIME_FIRST
 
     def _choose_time_granularity(self, classifications: Dict[str, ClassificationResult]) -> str:
@@ -411,7 +407,7 @@ class FolderService:
                             category=category,
                             confidence=result.confidence,
                             metadata={
-                                "classification_method": result.method.value,
+                                "classification_method": result.method.value if result.method else "unknown",
                                 "original_category": result.category,
                                 "reasoning": result.reasoning,
                             },
@@ -419,7 +415,7 @@ class FolderService:
                     )
 
             except Exception as e:
-                self.logger.error(f"Failed to plan operations for category {category}: {e}")
+                self.logger.error("Failed to plan operations for category %s: %s", category, e)
 
         return operations
 
@@ -442,12 +438,10 @@ class FolderService:
         if structure.structure_type == FolderStructureType.CATEGORY_FIRST:
             if structure.time_granularity == "year":
                 return os.path.join(structure.base_path, category)
-            else:
-                # Would include time component - simplified for now
-                return os.path.join(structure.base_path, category)
-        else:  # TIME_FIRST
             # Would include time component - simplified for now
-            return os.path.join(structure.base_path, "2025", category)  # Placeholder
+            return os.path.join(structure.base_path, category)
+        # TIME_FIRST - Would include time component - simplified for now
+        return os.path.join(structure.base_path, "2025", category)  # Placeholder
 
     def execute_file_operations(self, operations: List[FileOperation]) -> Dict[str, Any]:
         """Execute planned file operations safely.
@@ -491,7 +485,7 @@ class FolderService:
 
         # Log summary
         success_rate = (results["successful_operations"] / results["total_operations"]) * 100
-        self.logger.info(f"File operations complete: {success_rate:.1f}% success rate")
+        self.logger.info("File operations complete: %.1f%% success rate", success_rate)
 
         return results
 
@@ -499,9 +493,9 @@ class FolderService:
         """Safely create directory with proper permissions."""
         try:
             os.makedirs(dir_path, mode=0o755, exist_ok=True)
-            self.logger.debug(f"Created directory: {dir_path}")
+            self.logger.debug("Created directory: %s", dir_path)
         except Exception as e:
-            raise RuntimeError(f"Failed to create directory {dir_path}: {e}")
+            raise RuntimeError(f"Failed to create directory {dir_path}: {e}") from e
 
     def _safe_move_file(self, source_path: str, target_path: str) -> None:
         """Safely move file with conflict resolution."""
@@ -517,10 +511,10 @@ class FolderService:
 
             # Move file atomically
             shutil.move(source_path, target_path)
-            self.logger.debug(f"Moved file: {source_path} → {target_path}")
+            self.logger.debug("Moved file: %s → %s", source_path, target_path)
 
         except Exception as e:
-            raise RuntimeError(f"Failed to move {source_path} to {target_path}: {e}")
+            raise RuntimeError(f"Failed to move {source_path} to {target_path}: {e}") from e
 
     def _safe_copy_file(self, source_path: str, target_path: str) -> None:
         """Safely copy file with conflict resolution."""
@@ -536,10 +530,10 @@ class FolderService:
 
             # Copy file
             shutil.copy2(source_path, target_path)  # copy2 preserves metadata
-            self.logger.debug(f"Copied file: {source_path} → {target_path}")
+            self.logger.debug("Copied file: %s → %s", source_path, target_path)
 
         except Exception as e:
-            raise RuntimeError(f"Failed to copy {source_path} to {target_path}: {e}")
+            raise RuntimeError(f"Failed to copy {source_path} to {target_path}: {e}") from e
 
     def _resolve_filename_conflict(self, target_path: str) -> str:
         """Resolve filename conflicts by appending counter."""
@@ -601,7 +595,7 @@ class FolderService:
             "valid": len(issues) == 0,
             "issues": issues,
             "warnings": warnings,
-            "structure_type": structure.structure_type.value,
+            "structure_type": structure.structure_type.value if structure.structure_type else "unknown",
             "total_categories": len(structure.categories),
             "base_path": structure.base_path,
         }
@@ -690,7 +684,7 @@ class FolderService:
             }
 
         except Exception as e:
-            self.logger.error(f"Folder statistics failed: {e}")
+            self.logger.error("Folder statistics failed: %s", e)
             return {"exists": True, "error": str(e)}
 
     def validate_file_operation(

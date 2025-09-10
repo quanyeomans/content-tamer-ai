@@ -5,15 +5,16 @@ Provides guided navigation, expert mode, and Rich UI components
 for human users. Depends on programmatic interface for business logic.
 """
 
-from typing import Optional, List, Dict, Any
+# os imported but not used - keeping for future utilities
+import os  # pylint: disable=unused-import
 import sys
-import os
+from typing import Any, Dict, List, Optional
 
 from ..base_interfaces import HumanInterface, ProcessingResult
-from ..programmatic.cli_arguments import PureCLIParser, ParsedArguments
+from ..programmatic.cli_arguments import ParsedArguments, PureCLIParser
 from ..programmatic.configuration_manager import ConfigurationManager, ProcessingConfiguration
-from .rich_console_manager import RichConsoleManager
 from .configuration_wizard import ExpertConfigurationWizard
+from .rich_console_manager import RichConsoleManager
 
 # Integration with shared display infrastructure
 try:
@@ -45,22 +46,17 @@ class InteractiveCLI(HumanInterface):
 
     def show_progress(self, stage: str, current: int, total: int, detail: str = "") -> None:
         """Display human-friendly progress information."""
-        if not hasattr(self, '_current_progress') or self._current_progress is None:
+        if not hasattr(self, "_current_progress") or self._current_progress is None:
             self._current_progress = self.console_manager.create_progress_display()
             self._current_progress.start()
 
         # Update or create task
-        if not hasattr(self, '_progress_task'):
-            self._progress_task = self._current_progress.add_task(
-                description=stage,
-                total=total
-            )
+        if not hasattr(self, "_progress_task"):
+            self._progress_task = self._current_progress.add_task(description=stage, total=total)
 
         # Update progress
         self._current_progress.update(
-            self._progress_task,
-            completed=current,
-            description=f"{stage} {detail}".strip()
+            self._progress_task, completed=current, description=f"{stage} {detail}".strip()
         )
 
         # Stop progress when complete
@@ -75,36 +71,42 @@ class InteractiveCLI(HumanInterface):
 
         # Provide context-specific suggestions
         if "API key" in error_msg.lower():
-            suggestions.extend([
-                "Check that your API key is set correctly",
-                f"Set environment variable: {context.get('provider', 'PROVIDER').upper()}_API_KEY",
-                "Use --api-key argument to provide key directly"
-            ])
+            suggestions.extend(
+                [
+                    "Check that your API key is set correctly",
+                    f"Set environment variable: {context.get('provider', 'PROVIDER').upper()}_API_KEY",
+                    "Use --api-key argument to provide key directly",
+                ]
+            )
 
         if "permission" in error_msg.lower():
-            suggestions.extend([
-                "Check file/directory permissions",
-                "Try running with appropriate permissions",
-                "Verify you have write access to output directory"
-            ])
+            suggestions.extend(
+                [
+                    "Check file/directory permissions",
+                    "Try running with appropriate permissions",
+                    "Verify you have write access to output directory",
+                ]
+            )
 
         if "network" in error_msg.lower() or "connection" in error_msg.lower():
-            suggestions.extend([
-                "Check your internet connection",
-                "Verify firewall settings allow connections",
-                "Try again in a few moments"
-            ])
+            suggestions.extend(
+                [
+                    "Check your internet connection",
+                    "Verify firewall settings allow connections",
+                    "Try again in a few moments",
+                ]
+            )
 
         if not suggestions:
             suggestions.append("Check the documentation or run with --verbose for more details")
 
         self.console_manager.show_error_panel(
-            title="Error",
-            error=error_msg,
-            suggestions=suggestions
+            title="Error", error=error_msg, suggestions=suggestions
         )
 
-    def prompt_user_choice(self, message: str, choices: List[str], default: Optional[str] = None) -> str:
+    def prompt_user_choice(
+        self, message: str, choices: List[str], default: Optional[str] = None
+    ) -> str:
         """Interactive user prompting with validation."""
         return self.console_manager.prompt_choice(message, choices, default)
 
@@ -114,7 +116,7 @@ class InteractiveCLI(HumanInterface):
             details = {
                 "Files Processed": result.files_processed,
                 "Output Directory": result.output_directory,
-                "Total Time": result.metadata.get("processing_time", "N/A")
+                "Total Time": result.metadata.get("processing_time", "N/A"),
             }
 
             if result.files_failed > 0:
@@ -123,7 +125,7 @@ class InteractiveCLI(HumanInterface):
             self.console_manager.show_success_panel(
                 title="Processing Complete",
                 message="Your documents have been successfully processed and organized!",
-                details=details
+                details=details,
             )
 
             # Show any warnings
@@ -135,13 +137,14 @@ class InteractiveCLI(HumanInterface):
             self.console_manager.show_error_panel(
                 title="Processing Failed",
                 error="Document processing encountered errors",
-                suggestions=[f"Error: {error}" for error in result.errors[:3]]  # Show first 3 errors
+                suggestions=[
+                    f"Error: {error}" for error in result.errors[:3]
+                ],  # Show first 3 errors
             )
 
     def run_interactive_setup(self) -> Optional[ParsedArguments]:
         """Main interactive setup flow."""
-        # Show welcome screen
-        self.console_manager.show_welcome_panel()
+        # Welcome is already shown by main.py, don't duplicate it
 
         # Check if user provided command line arguments
         if len(sys.argv) > 1:
@@ -162,18 +165,16 @@ class InteractiveCLI(HumanInterface):
     def _run_guided_setup(self) -> Optional[ParsedArguments]:
         """Run guided interactive setup."""
         self.console_manager.show_section_header(
-            "Configuration",
-            "Let's set up Content Tamer AI for your document processing needs"
+            "Configuration", "Let's set up Content Tamer AI for your document processing needs"
         )
 
-        # Ask about setup mode
+        # Ask about setup mode with clear options
+        self.console_manager.console.print("[dim]Quick: Smart defaults for fast setup | Expert: Advanced configuration with full control[/dim]")
         mode_choice = self.console_manager.prompt_choice(
-            "Choose your setup mode:",
-            choices=["quick", "expert"],
-            default="quick"
+            "Choose your setup mode:", choices=["q", "e"], default="q"
         )
 
-        if mode_choice == "expert":
+        if mode_choice == "e":
             return self._run_expert_mode()
         else:
             return self._run_quick_start()
@@ -181,20 +182,20 @@ class InteractiveCLI(HumanInterface):
     def _run_quick_start(self) -> Optional[ParsedArguments]:
         """Quick start with smart defaults."""
         self.console_manager.show_section_header(
-            "Quick Start Setup",
-            "Using smart defaults for fast setup"
+            "Quick Start Setup", "Using smart defaults for fast setup"
         )
 
         # Load default configuration
         config = self.config_manager.load_configuration()
 
-        # Check for API key
+        # Check for API key using expert mode component (avoid code duplication)
         if not config.api_key:
-            api_key = self._prompt_api_key(config.provider)
-            if not api_key:
+            self.console_manager.console.print()  # Add spacing before API key section
+            config.api_key = self.wizard._prompt_api_key_configuration(config.provider, config.api_key)
+            if not config.api_key:
                 return None
-            config.api_key = api_key
 
+        self.console_manager.console.print()  # Add spacing before configuration summary
         # Show configuration summary
         summary = self.config_manager.get_configuration_summary(config)
         self.console_manager.show_configuration_table(summary, "Quick Start Configuration")
@@ -209,8 +210,7 @@ class InteractiveCLI(HumanInterface):
     def _run_expert_mode(self) -> Optional[ParsedArguments]:
         """Run expert configuration wizard."""
         self.console_manager.show_section_header(
-            "Expert Mode",
-            "Advanced configuration with full control"
+            "Expert Mode", "Advanced configuration with full control"
         )
 
         try:
@@ -224,48 +224,7 @@ class InteractiveCLI(HumanInterface):
             self.console_manager.show_status("Setup interrupted by user", "warning")
             return None
 
-    def _prompt_api_key(self, provider: str) -> Optional[str]:
-        """Prompt user for API key."""
-        env_var = f"{provider.upper()}_API_KEY"
-
-        self.console_manager.show_info_panel(
-            title="API Key Required",
-            content=f"""
-To use {provider.capitalize()}, you need to provide an API key.
-
-You can either:
-1. Set the environment variable: {env_var}
-2. Provide it now (will be used for this session only)
-3. Save it to the configuration file for future use
-
-Get your API key from:
-• OpenAI: https://platform.openai.com/api-keys
-• Claude: https://console.anthropic.com/
-• Gemini: https://aistudio.google.com/app/apikey
-            """,
-            style="info"
-        )
-
-        api_key = self.console_manager.prompt_text(
-            f"Enter your {provider.capitalize()} API key (or press Enter to skip):"
-        )
-
-        if api_key:
-            # Ask if user wants to save it
-            save_key = self.console_manager.prompt_confirm(
-                "Save this API key to configuration file for future use?",
-                default=False
-            )
-
-            if save_key:
-                config = self.config_manager.load_configuration()
-                config.api_key = api_key
-                if self.config_manager.save_configuration(config):
-                    self.console_manager.show_status("API key saved to configuration", "success")
-                else:
-                    self.console_manager.show_status("Failed to save API key", "warning")
-
-        return api_key if api_key else None
+    # Removed duplicate _prompt_api_key method - quick start now uses expert mode wizard component
 
     def _config_to_args(self, config: ProcessingConfiguration) -> ParsedArguments:
         """Convert ProcessingConfiguration to ParsedArguments."""
@@ -281,7 +240,7 @@ Get your API key from:
             organize=config.organization_enabled,
             ml_level=config.ml_level,
             quiet_mode=config.quiet_mode,
-            verbose_mode=config.verbose_mode
+            verbose_mode=config.verbose_mode,
         )
 
     def _show_validation_errors(self, errors: List[str]) -> None:
@@ -289,7 +248,7 @@ Get your API key from:
         self.console_manager.show_error_panel(
             title="Configuration Errors",
             error="Please fix the following issues:",
-            suggestions=errors
+            suggestions=errors,
         )
 
     def show_help(self) -> None:
@@ -297,17 +256,19 @@ Get your API key from:
         help_text = self.parser.get_help_text()
 
         self.console_manager.show_info_panel(
-            title="Command Line Help",
-            content=help_text,
-            style="info"
+            title="Command Line Help", content=help_text, style="info"
         )
 
     def show_version_info(self) -> None:
         """Show version and system information."""
         try:
             # Import version info
-            from ...shared.infrastructure.path_utilities import get_project_root
             import platform
+
+            # get_project_root imported but not used - keeping for future version info enhancements
+            from ...shared.infrastructure.path_utilities import (  # pylint: disable=unused-import
+                get_project_root,
+            )
 
             version_info = {
                 "Python Version": platform.python_version(),
@@ -315,20 +276,13 @@ Get your API key from:
                 "Architecture": platform.machine(),
             }
 
-            self.console_manager.show_configuration_table(
-                version_info,
-                "System Information"
-            )
+            self.console_manager.show_configuration_table(version_info, "System Information")
 
         except Exception as e:
             self.console_manager.show_error_panel(
-                title="Version Info Error",
-                error=f"Could not retrieve version information: {e}"
+                title="Version Info Error", error=f"Could not retrieve version information: {e}"
             )
 
     def confirm_exit(self) -> bool:
         """Ask user to confirm exit."""
-        return self.console_manager.prompt_confirm(
-            "Are you sure you want to exit?",
-            default=True
-        )
+        return self.console_manager.prompt_confirm("Are you sure you want to exit?", default=True)

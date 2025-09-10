@@ -6,17 +6,23 @@ Tests the folder service that handles file operations and folder structure
 management for document organization.
 """
 
-import unittest
 import os
 import sys
 import tempfile
+import unittest
 
 # Add src to path for imports - correct path for domain structure
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
 # Import from organization domain
-from domains.organization.folder_service import FolderService, FolderStructureType, FiscalYearType, FolderStructure
+from domains.organization.folder_service import (
+    FiscalYearType,
+    FolderService,
+    FolderStructure,
+    FolderStructureType,
+)
 from tests.utils.rich_test_utils import RichTestCase
+
 
 class TestFolderServiceDefaults(unittest.TestCase):
     """Test Folder Service default behavior and initialization."""
@@ -40,7 +46,7 @@ class TestFolderServiceDefaults(unittest.TestCase):
                 time_granularity="year",
                 base_path=temp_dir,
                 categories=["financial", "legal"],
-                metadata={}
+                metadata={},
             )
 
             validation = self.service.validate_folder_structure(structure)
@@ -53,7 +59,7 @@ class TestFolderServiceDefaults(unittest.TestCase):
             # Create some test structure
             os.makedirs(os.path.join(temp_dir, "test_folder"))
             test_file = os.path.join(temp_dir, "test.txt")
-            with open(test_file, 'w') as f:
+            with open(test_file, "w") as f:
                 f.write("test content")
 
             stats = self.service.get_folder_statistics(temp_dir)
@@ -61,6 +67,7 @@ class TestFolderServiceDefaults(unittest.TestCase):
             self.assertTrue(stats["exists"])
             if "total_files" in stats:
                 self.assertGreaterEqual(stats["total_files"], 1)
+
 
 class TestFolderStructureAnalysis(unittest.TestCase):
     """Test folder structure analysis functionality."""
@@ -82,6 +89,7 @@ class TestFolderStructureAnalysis(unittest.TestCase):
                 self.assertIsInstance(analysis, FolderStructure)
                 self.assertIn(analysis.structure_type, list(FolderStructureType))
 
+
 class TestFileOperations(unittest.TestCase, RichTestCase):
     """Test file operation functionality with Rich test framework."""
 
@@ -97,7 +105,7 @@ class TestFileOperations(unittest.TestCase, RichTestCase):
             source_file = os.path.join(temp_dir, "source.txt")
             target_dir = os.path.join(temp_dir, "target")
 
-            with open(source_file, 'w') as f:
+            with open(source_file, "w") as f:
                 f.write("test content")
 
             os.makedirs(target_dir)
@@ -111,6 +119,7 @@ class TestFileOperations(unittest.TestCase, RichTestCase):
             if not valid:
                 # Log what the validation error was
                 print("Validation error: {error}")
+
 
 if __name__ == "__main__":
     unittest.main()

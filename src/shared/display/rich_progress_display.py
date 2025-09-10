@@ -8,10 +8,15 @@ cross-platform compatibility, beautiful colors, and rich formatting.
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Union
 
-from rich.console import Console, RenderableType
+# Path imported but not used - keeping for future path utilities
+from pathlib import Path  # pylint: disable=unused-import
+
+# Some typing imports not used - keeping for future type hints
+from typing import Any, Dict, List, Optional, TextIO, Union  # pylint: disable=unused-import
+
+# RenderableType imported but not used - keeping for future rich typing
+from rich.console import Console, RenderableType  # pylint: disable=unused-import
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import (
@@ -25,7 +30,9 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
-from rich.style import Style
+
+# Style imported but not used - keeping for future styling enhancements
+from rich.style import Style  # pylint: disable=unused-import
 from rich.table import Table
 from rich.text import Text
 
@@ -69,9 +76,9 @@ class RichProgressDisplay:
     def __init__(
         self,
         console: Console,
-        no_color: bool = False,
+        no_color: bool = False,  # pylint: disable=unused-argument
         show_stats: bool = True,
-        width: Optional[int] = None,
+        width: Optional[int] = None,  # pylint: disable=unused-argument
     ):
         """
         Initialize RichProgressDisplay with injected Console.
@@ -497,7 +504,9 @@ class RichProgressDisplay:
         # Clear current filename to show failure in cascade
         self.update(filename="", target_filename="", status="failed", increment=True)
 
-    def warn_file(self, filename: str, warning: str = "") -> None:
+    def warn_file(
+        self, filename: str, warning: str = ""
+    ) -> None:  # pylint: disable=unused-argument
         """Add warning for file processing."""
         self.add_warning(filename)
         self.update(filename=filename, status="warning", increment=False)

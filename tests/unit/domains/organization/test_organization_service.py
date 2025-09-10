@@ -6,75 +6,88 @@ Tests the main orchestrating service for document organization domain
 that implements the progressive enhancement architecture from PRD_04.
 """
 
-import unittest
 import os
 import sys
-import tempfile
+import unittest
+from pathlib import Path
+
+import pytest
+
 # Add src to path for imports - correct path for domain structure
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
 
+from datetime import datetime
+from unittest.mock import patch
+
+from domains.organization.clustering_service import (
+    ClassificationResult,
+    ClusteringConfig,
+    ClusteringMethod,
+)
+from domains.organization.folder_service import FiscalYearType, FolderStructure, FolderStructureType
+
 # Import from organization domain
 from domains.organization.organization_service import OrganizationService
-from domains.organization.clustering_service import ClusteringConfig, ClassificationResult, ClusteringMethod
-from domains.organization.folder_service import FolderStructure, FolderStructureType, FiscalYearType
-from datetime import datetime
+
 
 class TestOrganizationServiceDefaults(unittest.TestCase):
     """Test Organization Service default behavior and initialization."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.service = OrganizationService(self.temp_dir)
+        # tmp_path will be injected by pytest fixture
+        pass
 
     def tearDown(self):
         """Clean up test fixtures."""
-        import shutil
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        # No manual cleanup needed - pytest tmp_path handles it
+        pass
 
-    def test_organization_service_initialization(self):
+    @pytest.mark.usefixtures("tmp_path")
+    def test_organization_service_initialization(self, tmp_path):
         """Test organization service initializes correctly."""
-        self.assertIsInstance(self.service, OrganizationService)
-        self.assertEqual(self.service.target_folder, self.temp_dir)
-        self.assertIsNotNone(self.service.clustering_service)
-        self.assertIsNotNone(self.service.folder_service)
-        self.assertIsNotNone(self.service.learning_service)
-        self.assertIsNotNone(self.service.preferences)
+        service = OrganizationService(str(tmp_path))
+        self.assertIsInstance(service, OrganizationService)
+        self.assertEqual(service.target_folder, str(tmp_path))
+        self.assertIsNotNone(service.clustering_service)
+        self.assertIsNotNone(service.folder_service)
+        self.assertIsNotNone(service.learning_service)
+        self.assertIsNotNone(service.preferences)
 
-    def test_initialization_with_custom_config(self):
+    @pytest.mark.usefixtures("tmp_path")
+    def test_initialization_with_custom_config(self, tmp_path):
         """Test initialization with custom clustering configuration."""
-        custom_config = ClusteringConfig(
-            ml_threshold=0.6,
-            max_categories=15,
-            enable_ensemble=True
-        )
+        custom_config = ClusteringConfig(ml_threshold=0.6, max_categories=15, enable_ensemble=True)
 
-        service = OrganizationService(self.temp_dir, custom_config)
+        service = OrganizationService(str(tmp_path), custom_config)
 
         self.assertEqual(service.clustering_service.config.ml_threshold, 0.6)
         self.assertEqual(service.clustering_service.config.max_categories, 15)
         self.assertTrue(service.clustering_service.config.enable_ensemble)
 
-    def test_preferences_loaded_from_learning_service(self):
+    @pytest.mark.usefixtures("tmp_path")
+    def test_preferences_loaded_from_learning_service(self, tmp_path):
         """Test that preferences are loaded from learning service."""
-        preferences = self.service.preferences
+        service = OrganizationService(str(tmp_path))
+        preferences = service.preferences
 
         self.assertIsInstance(preferences, dict)
         self.assertIn("structure_type", preferences)
         self.assertIn("learning_enabled", preferences)
+
 
 class TestDocumentOrganization(unittest.TestCase):
     """Test document organization functionality."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.service = OrganizationService(self.temp_dir)
+        # tmp_path will be injected by pytest fixture
+        pass
 
     def tearDown(self):
         """Clean up test fixtures."""
-        import shutil
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
+        # No manual cleanup needed - pytest tmp_path handles it
+        pass
 
     def test_organize_processed_documents_success(self):
         """Test successful document organization."""
@@ -84,44 +97,58 @@ class TestDocumentOrganization(unittest.TestCase):
                 "file_path": os.path.join(self.temp_dir, "invoice1.pd"),
                 "content": "Invoice for services rendered amount due $1000",
                 "filename": "invoice1.pd",
-                "metadata": {}
+                "metadata": {},
             },
             {
                 "file_path": os.path.join(self.temp_dir, "contract1.pd"),
                 "content": "Legal contract agreement between parties",
                 "filename": "contract1.pd",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         ]
 
         # Create the actual files for organization
         for doc in documents:
-            with open(doc["file_path"], 'w') as f:
+            with open(doc["file_path"], "w") as f:
                 f.write("test content")
 
         # Mock the services to avoid complex dependencies
-        with patch.object(self.service.clustering_service, 'batch_classify_documents') as mock_classify, \
-             patch.object(self.service.clustering_service, 'validate_clustering_quality') as mock_validate, \
-             patch.object(self.service.folder_service, 'create_folder_structure') as mock_create, \
-             patch.object(self.service.folder_service, 'validate_folder_structure') as mock_validate_folder, \
-             patch.object(self.service.folder_service, 'execute_file_operations') as mock_execute:
+        with patch.object(
+            self.service.clustering_service, "batch_classify_documents"
+        ) as mock_classify, patch.object(
+            self.service.clustering_service, "validate_clustering_quality"
+        ) as mock_validate, patch.object(
+            self.service.folder_service, "create_folder_structure"
+        ) as mock_create, patch.object(
+            self.service.folder_service, "validate_folder_structure"
+        ) as mock_validate_folder, patch.object(
+            self.service.folder_service, "execute_file_operations"
+        ) as mock_execute:
 
             # Setup mocks
             mock_classify.return_value = {
                 documents[0]["file_path"]: ClassificationResult(
-                    category="financial", confidence=0.9, method=ClusteringMethod.RULE_BASED,
-                    reasoning="Invoice detected", alternative_categories=[], metadata={}
+                    category="financial",
+                    confidence=0.9,
+                    method=ClusteringMethod.RULE_BASED,
+                    reasoning="Invoice detected",
+                    alternative_categories=[],
+                    metadata={},
                 ),
                 documents[1]["file_path"]: ClassificationResult(
-                    category="legal", confidence=0.85, method=ClusteringMethod.RULE_BASED,
-                    reasoning="Contract detected", alternative_categories=[], metadata={}
-                )
+                    category="legal",
+                    confidence=0.85,
+                    method=ClusteringMethod.RULE_BASED,
+                    reasoning="Contract detected",
+                    alternative_categories=[],
+                    metadata={},
+                ),
             }
 
             mock_validate.return_value = {
                 "valid": True,
                 "overall_score": 85.0,
-                "recommendations": []
+                "recommendations": [],
             }
 
             mock_folder_structure = FolderStructure(
@@ -130,7 +157,7 @@ class TestDocumentOrganization(unittest.TestCase):
                 time_granularity="year",
                 base_path=self.temp_dir,
                 categories=["financial", "legal"],
-                metadata={}
+                metadata={},
             )
 
             mock_create.return_value = (mock_folder_structure, [])
@@ -140,7 +167,7 @@ class TestDocumentOrganization(unittest.TestCase):
                 "successful_operations": 2,
                 "moved_files": 2,
                 "created_directories": 2,
-                "errors": []
+                "errors": [],
             }
 
             # Test organization
@@ -161,29 +188,36 @@ class TestDocumentOrganization(unittest.TestCase):
                 "file_path": os.path.join(self.temp_dir, "unclear1.pd"),
                 "content": "Unclear document content",
                 "filename": "unclear1.pd",
-                "metadata": {}
+                "metadata": {},
             }
         ]
 
         # Create test file
-        with open(documents[0]["file_path"], 'w') as f:
+        with open(documents[0]["file_path"], "w") as f:
             f.write("test content")
 
-        with patch.object(self.service.clustering_service, 'batch_classify_documents') as mock_classify, \
-             patch.object(self.service.clustering_service, 'validate_clustering_quality') as mock_validate:
+        with patch.object(
+            self.service.clustering_service, "batch_classify_documents"
+        ) as mock_classify, patch.object(
+            self.service.clustering_service, "validate_clustering_quality"
+        ) as mock_validate:
 
             # Setup poor quality classification
             mock_classify.return_value = {
                 documents[0]["file_path"]: ClassificationResult(
-                    category="uncategorized", confidence=0.1, method=ClusteringMethod.FALLBACK,
-                    reasoning="Poor quality", alternative_categories=[], metadata={}
+                    category="uncategorized",
+                    confidence=0.1,
+                    method=ClusteringMethod.FALLBACK,
+                    reasoning="Poor quality",
+                    alternative_categories=[],
+                    metadata={},
                 )
             }
 
             mock_validate.return_value = {
                 "valid": False,
                 "overall_score": 35.0,  # Below 40 threshold
-                "recommendations": ["Use manual organization"]
+                "recommendations": ["Use manual organization"],
             }
 
             # Test organization - should fall back to time-based
@@ -209,31 +243,45 @@ class TestDocumentOrganization(unittest.TestCase):
                 "file_path": os.path.join(self.temp_dir, "test.pd"),
                 "content": "Test document",
                 "filename": "test.pd",
-                "metadata": {}
+                "metadata": {},
             }
         ]
 
         # Create test file
-        with open(documents[0]["file_path"], 'w') as f:
+        with open(documents[0]["file_path"], "w") as f:
             f.write("test content")
 
-        with patch.object(self.service.clustering_service, 'batch_classify_documents') as mock_classify, \
-             patch.object(self.service.clustering_service, 'validate_clustering_quality') as mock_validate, \
-             patch.object(self.service.folder_service, 'create_folder_structure') as mock_create, \
-             patch.object(self.service.folder_service, 'validate_folder_structure') as mock_validate_folder, \
-             patch.object(self.service.folder_service, 'execute_file_operations') as mock_execute:
+        with patch.object(
+            self.service.clustering_service, "batch_classify_documents"
+        ) as mock_classify, patch.object(
+            self.service.clustering_service, "validate_clustering_quality"
+        ) as mock_validate, patch.object(
+            self.service.folder_service, "create_folder_structure"
+        ) as mock_create, patch.object(
+            self.service.folder_service, "validate_folder_structure"
+        ) as mock_validate_folder, patch.object(
+            self.service.folder_service, "execute_file_operations"
+        ) as mock_execute:
 
             # Setup basic mocks
             mock_classify.return_value = {
                 documents[0]["file_path"]: ClassificationResult(
-                    category="test", confidence=0.8, method=ClusteringMethod.RULE_BASED,
-                    reasoning="Test", alternative_categories=[], metadata={}
+                    category="test",
+                    confidence=0.8,
+                    method=ClusteringMethod.RULE_BASED,
+                    reasoning="Test",
+                    alternative_categories=[],
+                    metadata={},
                 )
             }
             mock_validate.return_value = {"valid": True, "overall_score": 80.0}
             mock_create.return_value = (Mock(), [])
             mock_validate_folder.return_value = {"valid": True}
-            mock_execute.return_value = {"total_operations": 1, "successful_operations": 1, "moved_files": 1}
+            mock_execute.return_value = {
+                "total_operations": 1,
+                "successful_operations": 1,
+                "moved_files": 1,
+            }
 
             # Test with learning disabled
             results = self.service.organize_processed_documents(documents, enable_learning=False)
@@ -241,6 +289,7 @@ class TestDocumentOrganization(unittest.TestCase):
             # Should succeed without learning results
             self.assertIsInstance(results, dict)
             self.assertEqual(results.get("learning_results", {}), {})
+
 
 class TestOrganizationPreview(unittest.TestCase):
     """Test organization preview functionality."""
@@ -253,49 +302,54 @@ class TestOrganizationPreview(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_preview_organization(self):
         """Test preview organization without file movement."""
         documents = [
-            {
-                "content": "Invoice document",
-                "filename": "invoice.pd",
-                "metadata": {}
-            },
-            {
-                "content": "Contract document",
-                "filename": "contract.pd",
-                "metadata": {}
-            }
+            {"content": "Invoice document", "filename": "invoice.pd", "metadata": {}},
+            {"content": "Contract document", "filename": "contract.pd", "metadata": {}},
         ]
 
-        with patch.object(self.service.clustering_service, 'batch_classify_documents') as mock_classify, \
-             patch.object(self.service.clustering_service, 'validate_clustering_quality') as mock_validate, \
-             patch.object(self.service.folder_service, 'create_folder_structure') as mock_create:
+        with patch.object(
+            self.service.clustering_service, "batch_classify_documents"
+        ) as mock_classify, patch.object(
+            self.service.clustering_service, "validate_clustering_quality"
+        ) as mock_validate, patch.object(
+            self.service.folder_service, "create_folder_structure"
+        ) as mock_create:
 
             # Setup mocks
             mock_classify.return_value = {
                 "doc1": ClassificationResult(
-                    category="financial", confidence=0.9, method=ClusteringMethod.RULE_BASED,
-                    reasoning="Invoice", alternative_categories=[], metadata={}
+                    category="financial",
+                    confidence=0.9,
+                    method=ClusteringMethod.RULE_BASED,
+                    reasoning="Invoice",
+                    alternative_categories=[],
+                    metadata={},
                 ),
                 "doc2": ClassificationResult(
-                    category="legal", confidence=0.85, method=ClusteringMethod.RULE_BASED,
-                    reasoning="Contract", alternative_categories=[], metadata={}
-                )
+                    category="legal",
+                    confidence=0.85,
+                    method=ClusteringMethod.RULE_BASED,
+                    reasoning="Contract",
+                    alternative_categories=[],
+                    metadata={},
+                ),
             }
 
             mock_validate.return_value = {
                 "valid": True,
                 "overall_score": 87.0,
-                "recommendations": ["Good quality clustering"]
+                "recommendations": ["Good quality clustering"],
             }
 
             # Create mock file operations
             mock_file_ops = [
                 Mock(operation_type="move", category="financial", source_path="/test/invoice.pd"),
-                Mock(operation_type="move", category="legal", source_path="/test/contract.pd")
+                Mock(operation_type="move", category="legal", source_path="/test/contract.pd"),
             ]
 
             mock_folder_structure = FolderStructure(
@@ -304,7 +358,7 @@ class TestOrganizationPreview(unittest.TestCase):
                 time_granularity="year",
                 base_path=self.temp_dir,
                 categories=["financial", "legal"],
-                metadata={}
+                metadata={},
             )
 
             mock_create.return_value = (mock_folder_structure, mock_file_ops)
@@ -331,6 +385,7 @@ class TestOrganizationPreview(unittest.TestCase):
         self.assertIn("error", preview)
         self.assertFalse(preview["success"])
 
+
 class TestOrganizationStatus(unittest.TestCase):
     """Test organization status functionality."""
 
@@ -342,31 +397,36 @@ class TestOrganizationStatus(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_get_organization_status(self):
         """Test getting organization status."""
-        with patch.object(self.service.folder_service, 'get_folder_statistics') as mock_folder_stats, \
-             patch.object(self.service.clustering_service, 'get_clustering_statistics') as mock_clustering_stats, \
-             patch.object(self.service.learning_service, 'get_learning_metrics') as mock_learning_metrics:
+        with patch.object(
+            self.service.folder_service, "get_folder_statistics"
+        ) as mock_folder_stats, patch.object(
+            self.service.clustering_service, "get_clustering_statistics"
+        ) as mock_clustering_stats, patch.object(
+            self.service.learning_service, "get_learning_metrics"
+        ) as mock_learning_metrics:
 
             # Setup mocks
             mock_folder_stats.return_value = {
                 "exists": True,
                 "total_files": 10,
-                "total_directories": 3
+                "total_directories": 3,
             }
 
             mock_clustering_stats.return_value = {
                 "capabilities": {"rule_classifier": True, "ml_refiner": False},
-                "config": {"ml_threshold": 0.7}
+                "config": {"ml_threshold": 0.7},
             }
 
             mock_learning_metrics.return_value = Mock(
                 total_sessions=5,
                 average_quality_score=0.78,
                 improvement_trend=0.05,
-                user_corrections=2
+                user_corrections=2,
             )
 
             # Test status
@@ -383,7 +443,7 @@ class TestOrganizationStatus(unittest.TestCase):
 
     def test_get_organization_status_error(self):
         """Test status retrieval with error."""
-        with patch.object(self.service.folder_service, 'get_folder_statistics') as mock_stats:
+        with patch.object(self.service.folder_service, "get_folder_statistics") as mock_stats:
             # Simulate error
             mock_stats.side_effect = Exception("Test error")
 
@@ -391,6 +451,7 @@ class TestOrganizationStatus(unittest.TestCase):
 
             self.assertIn("error", status)
             self.assertFalse(status["ready_for_organization"])
+
 
 class TestPreferencesManagement(unittest.TestCase):
     """Test organization preferences management."""
@@ -403,6 +464,7 @@ class TestPreferencesManagement(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_configure_valid_preferences(self):
@@ -411,7 +473,7 @@ class TestPreferencesManagement(unittest.TestCase):
             "structure_type": "time_first",
             "ml_threshold": 0.8,
             "max_categories": 15,
-            "quality_threshold": 0.6
+            "quality_threshold": 0.6,
         }
 
         success = self.service.configure_organization_preferences(valid_preferences)
@@ -428,7 +490,7 @@ class TestPreferencesManagement(unittest.TestCase):
         invalid_preferences = {
             "ml_threshold": 1.5,  # Invalid: > 1.0
             "max_categories": -5,  # Invalid: < 1
-            "structure_type": "invalid_type"  # Invalid type
+            "structure_type": "invalid_type",  # Invalid type
         }
 
         success = self.service.configure_organization_preferences(invalid_preferences)
@@ -453,13 +515,12 @@ class TestPreferencesManagement(unittest.TestCase):
         self.assertIn("Structure type must be one of:", result["errors"][0])
 
         # Test valid preferences
-        result = self.service._validate_preferences({
-            "ml_threshold": 0.7,
-            "max_categories": 20,
-            "structure_type": "category_first"
-        })
+        result = self.service._validate_preferences(
+            {"ml_threshold": 0.7, "max_categories": 20, "structure_type": "category_first"}
+        )
         self.assertTrue(result["valid"])
         self.assertEqual(len(result["errors"]), 0)
+
 
 class TestMethodDistribution(unittest.TestCase):
     """Test method distribution calculation."""
@@ -472,27 +533,44 @@ class TestMethodDistribution(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         import shutil
+
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_get_method_distribution(self):
         """Test calculation of classification method distribution."""
         classifications = {
             "doc1": ClassificationResult(
-                category="test1", confidence=0.9, method=ClusteringMethod.RULE_BASED,
-                reasoning="Rule", alternative_categories=[], metadata={}
+                category="test1",
+                confidence=0.9,
+                method=ClusteringMethod.RULE_BASED,
+                reasoning="Rule",
+                alternative_categories=[],
+                metadata={},
             ),
             "doc2": ClassificationResult(
-                category="test2", confidence=0.8, method=ClusteringMethod.RULE_BASED,
-                reasoning="Rule", alternative_categories=[], metadata={}
+                category="test2",
+                confidence=0.8,
+                method=ClusteringMethod.RULE_BASED,
+                reasoning="Rule",
+                alternative_categories=[],
+                metadata={},
             ),
             "doc3": ClassificationResult(
-                category="test3", confidence=0.7, method=ClusteringMethod.ML_ENHANCED,
-                reasoning="ML", alternative_categories=[], metadata={}
+                category="test3",
+                confidence=0.7,
+                method=ClusteringMethod.ML_ENHANCED,
+                reasoning="ML",
+                alternative_categories=[],
+                metadata={},
             ),
             "doc4": ClassificationResult(
-                category="test4", confidence=0.2, method=ClusteringMethod.FALLBACK,
-                reasoning="Fallback", alternative_categories=[], metadata={}
-            )
+                category="test4",
+                confidence=0.2,
+                method=ClusteringMethod.FALLBACK,
+                reasoning="Fallback",
+                alternative_categories=[],
+                metadata={},
+            ),
         }
 
         distribution = self.service._get_method_distribution(classifications)
@@ -510,6 +588,7 @@ class TestMethodDistribution(unittest.TestCase):
 
         self.assertIsInstance(distribution, dict)
         self.assertEqual(len(distribution), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

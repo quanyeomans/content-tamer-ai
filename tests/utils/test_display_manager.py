@@ -9,26 +9,27 @@ I/O conflicts during test execution.
 import os
 import sys
 from contextlib import contextmanager
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 # Add src to path if not already added
-src_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'src')
+src_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
+
 # Create compatible DisplayOptions class
-class TestDisplayOptions:
+class MockDisplayOptions:
     def __init__(self, quiet: bool = False, no_color: bool = False, **_):
         self.quiet = quiet
         self.no_color = no_color
 
 
-class TestDisplayManager:
+class MockDisplayManager:
     """Test-specific display manager that avoids Rich I/O conflicts."""
 
-    def __init__(self, options: Optional[TestDisplayOptions] = None):
+    def __init__(self, options: Optional[MockDisplayOptions] = None):
         """Initialize test display manager."""
-        self.options = options or TestDisplayOptions(quiet=True, no_color=True)
+        self.options = options or MockDisplayOptions(quiet=True, no_color=True)
         self.quiet = self.options.quiet
 
         # Track statistics for test validation
@@ -40,7 +41,7 @@ class TestDisplayManager:
                 self.total: int = 0
                 self.success_rate: float = 0.0
                 self.succeeded: int = 0  # Alternative naming
-                self.errors: int = 0      # Alternative naming
+                self.errors: int = 0  # Alternative naming
 
         self.stats = Stats()
 
@@ -87,7 +88,11 @@ class TestDisplayManager:
     def show_completion_summary(self, stats=None, **_):
         """Show completion summary."""
         if not self.quiet and stats:
-            successful = stats.get('successful', 0) if isinstance(stats, dict) else getattr(stats, 'successful', 0)
+            successful = (
+                stats.get("successful", 0)
+                if isinstance(stats, dict)
+                else getattr(stats, "successful", 0)
+            )
             self.output_lines.append(f"SUMMARY: Processed {successful} files successfully")
 
     def show_completion_stats(self, stats=None, **_):
@@ -109,24 +114,26 @@ class TestDisplayManager:
 
         try:
             # Create a simple context object
-            context = TestProcessingContext(self)
+            context = MockProcessingContext(self)
             yield context
         finally:
             # Calculate final statistics
             if self.stats.total > 0:
                 self.stats.success_rate = (self.stats.processed / self.stats.total) * 100
             if not self.quiet:
-                self.output_lines.append(f"COMPLETED: {self.stats.processed}/{self.stats.total} files processed")
+                self.output_lines.append(
+                    f"COMPLETED: {self.stats.processed}/{self.stats.total} files processed"
+                )
 
     def get_output(self) -> str:
         """Get captured output for test validation."""
         return "\n".join(self.output_lines)
 
 
-class TestProcessingContext:
+class MockProcessingContext:
     """Test-specific processing context."""
 
-    def __init__(self, display_manager: TestDisplayManager):
+    def __init__(self, display_manager: MockDisplayManager):
         """Initialize processing context."""
         self.display_manager = display_manager
         self.current_file: Optional[str] = None
@@ -167,8 +174,8 @@ class TestProcessingContext:
 def create_test_display_options(**kwargs) -> Dict[str, Any]:
     """Create display options optimized for testing."""
     return {
-        'quiet': kwargs.get('quiet', True),
-        'no_color': kwargs.get('no_color', True),
-        'use_test_display': True,  # Signal to use test display manager
-        **kwargs
+        "quiet": kwargs.get("quiet", True),
+        "no_color": kwargs.get("no_color", True),
+        "use_test_display": True,  # Signal to use test display manager
+        **kwargs,
     }

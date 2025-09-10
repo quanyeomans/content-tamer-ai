@@ -3,7 +3,7 @@ Domain Services Layer
 
 Provides clean domain service boundaries following the persona-driven architecture:
 - Content Domain: Document processing, extraction, and enhancement
-- AI Integration Domain: Provider management, model selection, and API handling  
+- AI Integration Domain: Provider management, model selection, and API handling
 - Organization Domain: Document clustering, folder management, and learning
 
 Each domain contains:
@@ -28,4 +28,4 @@ try:
 except ImportError:
     OrganizationService = None
 
-__all__ = ['ContentService', 'AIIntegrationService', 'OrganizationService']
+__all__ = ["ContentService", "AIIntegrationService", "OrganizationService"]

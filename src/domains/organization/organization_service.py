@@ -23,26 +23,27 @@ from .learning_service import LearningService
 class OrganizationService:
     """Main service coordinating all organization domain operations."""
 
-    def __init__(self, target_folder: str, config: Optional[ClusteringConfig] = None):
+    def __init__(self, target_folder: str = None, config: Optional[ClusteringConfig] = None, spacy_model=None):
         """Initialize organization service.
 
         Args:
             target_folder: Target directory for organization
             config: Clustering configuration (optional)
+            spacy_model: Pre-loaded spaCy model to use (for performance optimization)
         """
-        self.target_folder = target_folder
+        self.target_folder = target_folder or "./output"  # Default if not provided
         self.logger = logging.getLogger(__name__)
 
-        # Initialize domain services
-        self.clustering_service = ClusteringService(config)
+        # Initialize domain services with shared spacy model
+        self.clustering_service = ClusteringService(config, spacy_model=spacy_model)
         self.folder_service = FolderService()
-        self.learning_service = LearningService(target_folder)
+        self.learning_service = LearningService(self.target_folder, spacy_model=spacy_model)
 
         # Load learned preferences
         self.preferences = self.learning_service.preferences
 
     def organize_processed_documents(
-        self, documents: List[Dict[str, Any]], enable_learning: bool = True
+        self, documents: List[Dict[str, Any]], enable_learning: bool = True, ml_enhancement_level: int = 2
     ) -> Dict[str, Any]:
         """Organize processed documents using progressive enhancement.
 
@@ -88,7 +89,7 @@ class OrganizationService:
                 raise RuntimeError(f"Invalid folder structure: {structure_validation['issues']}")
 
             # Step 5: Execute file operations
-            self.logger.info(f"Step 5: Executing {len(file_operations)} file operations...")
+            self.logger.info("Step 5: Executing %d file operations...", len(file_operations))
             operation_results = self.folder_service.execute_file_operations(file_operations)
 
             # Step 6: Learn from session (if enabled)
@@ -106,19 +107,30 @@ class OrganizationService:
                     },
                 )
 
-            # Compile final results
+            # Compile final results with expected API contract
             organization_results = {
                 "session_id": session_id,
                 "success": operation_results["successful_operations"] > 0,
                 "documents_processed": len(documents),
                 "files_organized": operation_results["moved_files"],
                 "directories_created": operation_results["created_directories"],
+                "classified_documents": self._format_classified_documents(classifications),
                 "classification_results": classifications,
-                "folder_structure": folder_structure,
-                "operation_results": operation_results,
+                # API Contract: Use organization_structure instead of folder_structure
+                "organization_structure": self._format_organization_structure(folder_structure),
+                "folder_structure": folder_structure,  # Keep for backward compatibility
+                # API Contract: Map operation_results to execution_result
+                "execution_result": self._format_execution_result(operation_results),
+                "operation_results": operation_results,  # Keep for backward compatibility
                 "quality_metrics": quality_validation,
                 "learning_results": learning_results,
                 "recommendations": quality_validation.get("recommendations", []),
+                # API Contract: Add should_reorganize flag
+                "should_reorganize": quality_validation["overall_score"] >= 70.0,
+                # API Contract: Add ML metrics
+                "ml_metrics": self._format_ml_metrics(classifications, ml_enhancement_level),
+                # API Contract: Add temporal analysis for level 3
+                "temporal_analysis": self._format_temporal_analysis(folder_structure, ml_enhancement_level),
             }
 
             self.logger.info(
@@ -127,7 +139,7 @@ class OrganizationService:
             return organization_results
 
         except Exception as e:
-            self.logger.error(f"Document organization failed: {e}")
+            self.logger.error("Document organization failed: %s", e)
             return {
                 "session_id": session_id,
                 "success": False,
@@ -144,7 +156,11 @@ class OrganizationService:
         distribution = {}
 
         for result in classifications.values():
-            method = result.method.value
+            # Defensive check for None method
+            if result.method is None:
+                method = "unknown"
+            else:
+                method = result.method.value
             distribution[method] = distribution.get(method, 0) + 1
 
         return distribution
@@ -211,9 +227,21 @@ class OrganizationService:
                 "documents_processed": len(documents),
                 "files_organized": operation_results["moved_files"],
                 "directories_created": operation_results["created_directories"],
+                "classified_documents": self._format_classified_documents(time_classifications),
                 "classification_results": time_classifications,
-                "folder_structure": time_structure,
-                "operation_results": operation_results,
+                # API Contract: Use organization_structure instead of folder_structure
+                "organization_structure": self._format_organization_structure(time_structure),
+                "folder_structure": time_structure,  # Keep for backward compatibility
+                # API Contract: Map operation_results to execution_result
+                "execution_result": self._format_execution_result(operation_results),
+                "operation_results": operation_results,  # Keep for backward compatibility
+                "quality_metrics": {"overall_score": 40.0, "valid": False, "recommendations": ["Time-based fallback used"]},
+                # API Contract: Add should_reorganize flag
+                "should_reorganize": True,  # Always true for time-based fallback
+                # API Contract: Add ML metrics (disabled for fallback)
+                "ml_metrics": {"ml_applied": False, "ml_available": False, "ml_enhancement_level": 1},
+                # API Contract: Add temporal analysis (empty for fallback)
+                "temporal_analysis": {},
                 "recommendations": [
                     "Used time-based fallback due to poor content clustering",
                     "Consider manual reorganization for better categorization",
@@ -221,7 +249,7 @@ class OrganizationService:
             }
 
         except Exception as e:
-            self.logger.error(f"Time-based fallback also failed: {e}")
+            self.logger.error("Time-based fallback also failed: %s", e)
             return {
                 "session_id": session_id,
                 "success": False,
@@ -269,12 +297,12 @@ class OrganizationService:
                 "total_operations": len(file_operations),
                 "quality_metrics": quality_validation,
                 "categories": folder_structure.categories,
-                "structure_type": folder_structure.structure_type.value,
+                "structure_type": folder_structure.structure_type.value if folder_structure.structure_type else "unknown",
                 "recommendations": quality_validation.get("recommendations", []),
             }
 
         except Exception as e:
-            self.logger.error(f"Organization preview failed: {e}")
+            self.logger.error("Organization preview failed: %s", e)
             return {"preview": True, "error": str(e), "success": False}
 
     def get_organization_status(self) -> Dict[str, Any]:
@@ -308,7 +336,7 @@ class OrganizationService:
             }
 
         except Exception as e:
-            self.logger.error(f"Status check failed: {e}")
+            self.logger.error("Status check failed: %s", e)
             return {
                 "target_folder": self.target_folder,
                 "error": str(e),
@@ -328,7 +356,7 @@ class OrganizationService:
             # Validate preferences
             valid_preferences = self._validate_preferences(preferences)
             if not valid_preferences["valid"]:
-                self.logger.error(f"Invalid preferences: {valid_preferences['errors']}")
+                self.logger.error("Invalid preferences: %s", valid_preferences["errors"])
                 return False
 
             # Update preferences
@@ -340,12 +368,12 @@ class OrganizationService:
             )
 
             if success:
-                self.logger.info(f"Updated organization preferences: {list(preferences.keys())}")
+                self.logger.info("Updated organization preferences: %s", list(preferences.keys()))
 
             return success
 
         except Exception as e:
-            self.logger.error(f"Failed to configure preferences: {e}")
+            self.logger.error("Failed to configure preferences: %s", e)
             return False
 
     def _validate_preferences(self, preferences: Dict[str, Any]) -> Dict[str, Any]:
@@ -376,3 +404,70 @@ class OrganizationService:
                 errors.append(f"Structure type must be one of: {valid_structure_types}")
 
         return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
+
+    def _format_classified_documents(self, classifications: Dict[str, ClassificationResult]) -> List[Dict[str, Any]]:
+        """Format classification results for API contract."""
+        classified_docs = []
+        for doc_id, result in classifications.items():
+            classified_docs.append({
+                "document_id": doc_id,
+                "category": result.category,
+                "confidence": result.confidence,
+                "method": result.method.value if result.method else "unknown",
+                "reasoning": result.reasoning,
+                "metadata": result.metadata,
+            })
+        return classified_docs
+
+    def _format_organization_structure(self, folder_structure) -> Dict[str, Any]:
+        """Format folder structure to match expected organization_structure API contract."""
+        if not folder_structure:
+            return {}
+        
+        return {
+            "folders": folder_structure.categories,  # Map categories to folders for API contract
+            "structure_type": folder_structure.structure_type.value if folder_structure.structure_type else "unknown",
+            "time_granularity": folder_structure.time_granularity,
+            "base_path": folder_structure.base_path,
+            "categories": folder_structure.categories,
+            "metadata": folder_structure.metadata,
+        }
+
+    def _format_execution_result(self, operation_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Format operation results to match expected execution_result API contract."""
+        return {
+            "success": operation_results.get("successful_operations", 0) > 0,
+            "files_moved": operation_results.get("moved_files", 0),
+            "files_failed": operation_results.get("failed_operations", 0),
+            "total_files": operation_results.get("total_operations", 0),
+            "created_directories": operation_results.get("created_directories", 0),
+            "error_details": operation_results.get("operation_details", []),
+            "operation_summary": operation_results.get("operation_summary", {}),
+        }
+
+    def _format_ml_metrics(self, classifications: Dict[str, ClassificationResult], ml_enhancement_level: int) -> Dict[str, Any]:
+        """Format ML metrics to match expected API contract."""
+        ml_applied_count = sum(1 for result in classifications.values() 
+                              if result.metadata.get("ml_enhancement_applied", False))
+        
+        return {
+            "ml_applied": ml_applied_count > 0,
+            "ml_available": ml_enhancement_level >= 2,
+            "ml_enhancement_level": ml_enhancement_level,
+            "documents_enhanced": ml_applied_count,
+            "total_documents": len(classifications),
+            "ml_success_rate": (ml_applied_count / len(classifications)) if classifications else 0.0,
+        }
+
+    def _format_temporal_analysis(self, folder_structure, ml_enhancement_level: int) -> Dict[str, Any]:
+        """Format temporal analysis to match expected API contract."""
+        if ml_enhancement_level < 3:
+            return {}
+        
+        return {
+            "temporal_intelligence_applied": True,
+            "recommended_time_structure": folder_structure.structure_type.value if folder_structure and folder_structure.structure_type else "year-based",
+            "time_granularity": folder_structure.time_granularity if folder_structure else "year",
+            "fiscal_year_type": folder_structure.fiscal_year_type.value if folder_structure and folder_structure.fiscal_year_type else "calendar",
+            "temporal_patterns_detected": folder_structure.metadata.get("temporal_patterns", []) if folder_structure else [],
+        }

@@ -1,5 +1,0 @@
-# Orchestration layer has architectural import issues during transition
-# These files are under refactoring and legacy imports are expected
-application_kernel.py
-main_workflow.py
-workflow_processor.py

@@ -5,11 +5,13 @@ Input validation and content sanitization for safe processing.
 Prevents injection attacks and validates content integrity.
 """
 
-import re
 import html
-import os
-from typing import Optional, List, Dict, Any
 import logging
+import os
+import re
+
+# Some typing imports not used - keeping for future type hints
+from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 
 
 class ContentSanitizer:
@@ -25,26 +27,26 @@ class ContentSanitizer:
 
         # Patterns to detect and remove
         self.dangerous_patterns = [
-            r'<script.*?>.*?</script>',         # Script tags
-            r'javascript:',                     # JavaScript URLs
-            r'data:.*base64,',                  # Data URLs
-            r'on\w+\s*=',                      # Event handlers (onclick, etc.)
-            r'expression\s*\(',                # CSS expressions
-            r'@import\s+',                     # CSS imports
-            r'\\x[0-9a-fA-F]{2}',              # Hex encoded characters
-            r'%[0-9a-fA-F]{2}',                # URL encoded characters
+            r"<script.*?>.*?</script>",  # Script tags
+            r"javascript:",  # JavaScript URLs
+            r"data:.*base64,",  # Data URLs
+            r"on\w+\s*=",  # Event handlers (onclick, etc.)
+            r"expression\s*\(",  # CSS expressions
+            r"@import\s+",  # CSS imports
+            r"\\x[0-9a-fA-F]{2}",  # Hex encoded characters
+            r"%[0-9a-fA-F]{2}",  # URL encoded characters
         ]
 
         # Suspicious content indicators
         self.suspicious_indicators = [
-            r'eval\s*\(',                      # Code evaluation
-            r'exec\s*\(',                      # Code execution
-            r'document\.',                     # DOM manipulation
-            r'window\.',                       # Browser window access
-            r'location\.',                     # URL manipulation
-            r'cookie',                         # Cookie access
-            r'localStorage',                   # Storage access
-            r'sessionStorage',                 # Session storage
+            r"eval\s*\(",  # Code evaluation
+            r"exec\s*\(",  # Code execution
+            r"document\.",  # DOM manipulation
+            r"window\.",  # Browser window access
+            r"location\.",  # URL manipulation
+            r"cookie",  # Cookie access
+            r"localStorage",  # Storage access
+            r"sessionStorage",  # Session storage
         ]
 
     def sanitize_content_for_ai(self, content: str) -> str:
@@ -62,13 +64,17 @@ class ContentSanitizer:
         try:
             # Check size limits
             if len(content) > self.max_content_size:
-                self.logger.warning("Content too large (%d bytes), truncating to %d", len(content), self.max_content_size)
-                content = content[:self.max_content_size]
+                self.logger.warning(
+                    "Content too large (%d bytes), truncating to %d",
+                    len(content),
+                    self.max_content_size,
+                )
+                content = content[: self.max_content_size]
 
             # Remove dangerous patterns
             sanitized = content
             for pattern in self.dangerous_patterns:
-                sanitized = re.sub(pattern, '[REMOVED]', sanitized, flags=re.IGNORECASE | re.DOTALL)
+                sanitized = re.sub(pattern, "[REMOVED]", sanitized, flags=re.IGNORECASE | re.DOTALL)
 
             # Log if suspicious patterns detected
             self._log_suspicious_content(sanitized)
@@ -134,10 +140,10 @@ class ContentSanitizer:
             sanitized = html.unescape(filename)
 
             # Remove dangerous characters
-            sanitized = re.sub(r'[<>:"|?*\\/]', '_', sanitized)
+            sanitized = re.sub(r'[<>:"|?*\\/]', "_", sanitized)
 
             # Remove control characters
-            sanitized = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', sanitized)
+            sanitized = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", sanitized)
 
             # Limit length
             if len(sanitized) > self.max_filename_length:
@@ -161,7 +167,11 @@ class ContentSanitizer:
             for pattern in self.suspicious_indicators:
                 matches = re.findall(pattern, content, re.IGNORECASE)
                 if matches:
-                    self.logger.warning("Suspicious content pattern detected: %s (matches: %d)", pattern, len(matches))
+                    self.logger.warning(
+                        "Suspicious content pattern detected: %s (matches: %d)",
+                        pattern,
+                        len(matches),
+                    )
 
         except Exception as e:
             self.logger.error("Suspicious content detection failed: %s", e)
@@ -170,14 +180,14 @@ class ContentSanitizer:
         """Normalize content formatting and encoding."""
         try:
             # Normalize line endings
-            normalized = content.replace('\r\n', '\n').replace('\r', '\n')
+            normalized = content.replace("\r\n", "\n").replace("\r", "\n")
 
             # Collapse excessive whitespace
-            normalized = re.sub(r'\n\s*\n\s*\n', '\n\n', normalized)  # Max 2 consecutive newlines
-            normalized = re.sub(r'[ \t]+', ' ', normalized)           # Multiple spaces to single space
+            normalized = re.sub(r"\n\s*\n\s*\n", "\n\n", normalized)  # Max 2 consecutive newlines
+            normalized = re.sub(r"[ \t]+", " ", normalized)  # Multiple spaces to single space
 
             # Ensure UTF-8 compatibility
-            normalized = normalized.encode('utf-8', errors='replace').decode('utf-8')
+            normalized = normalized.encode("utf-8", errors="replace").decode("utf-8")
 
             return normalized
 
@@ -190,9 +200,9 @@ class ContentSanitizer:
         try:
             quality_metrics = {
                 "length": len(content),
-                "lines": content.count('\n'),
+                "lines": content.count("\n"),
                 "words": len(content.split()),
-                "file_path": os.path.basename(file_path)
+                "file_path": os.path.basename(file_path),
             }
 
             self.logger.debug("Content quality: %s", quality_metrics)
@@ -203,6 +213,7 @@ class ContentSanitizer:
 
 class SecurityError(Exception):
     """Exception raised when security validation fails."""
+
     pass
 
 

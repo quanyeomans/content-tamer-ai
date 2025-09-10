@@ -5,9 +5,9 @@ Tests for Filename Configuration in Shared Infrastructure
 Tests the filename configuration functionality without domain dependencies.
 """
 
-import unittest
 import os
 import sys
+import unittest
 
 # Add src to path for imports - correct path for domain structure
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "src"))
@@ -15,12 +15,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..
 # Import from shared infrastructure (correct layer)
 from shared.infrastructure.filename_config import (
     DEFAULT_SYSTEM_PROMPTS,
+    MAX_FILENAME_LENGTH,
+    MIN_FILENAME_LENGTH,
     get_secure_filename_prompt_template,
     get_token_limit_for_provider,
     validate_generated_filename,
-    MAX_FILENAME_LENGTH,
-    MIN_FILENAME_LENGTH,
 )
+
 
 class TestFilenameValidation(unittest.TestCase):
     """Test filename validation and sanitization."""
@@ -30,7 +31,7 @@ class TestFilenameValidation(unittest.TestCase):
         valid_filenames = [
             "Financial_Report_Q1_2024",
             "Meeting_Notes_January_15",
-            "Invoice_123456_CompanyName"
+            "Invoice_123456_CompanyName",
         ]
 
         for filename in valid_filenames:
@@ -58,7 +59,7 @@ class TestFilenameValidation(unittest.TestCase):
             "file<name>with<forbidden>",
             'file"with"quotes',
             "file|with|pipes",
-            "file?with?questions"
+            "file?with?questions",
         ]
 
         for filename in problematic_filenames:
@@ -70,6 +71,7 @@ class TestFilenameValidation(unittest.TestCase):
             self.assertNotIn('"', result)
             self.assertNotIn("|", result)
             self.assertNotIn("?", result)
+
 
 class TestProviderConfiguration(unittest.TestCase):
     """Test provider-specific configuration."""
@@ -105,6 +107,7 @@ class TestProviderConfiguration(unittest.TestCase):
             # Should contain security guidance
             self.assertIn("filename", template.lower())
 
+
 class TestFilenameConfigConstants(unittest.TestCase):
     """Test filename configuration constants."""
 
@@ -126,6 +129,7 @@ class TestFilenameConfigConstants(unittest.TestCase):
 
         # Should have default fallback
         self.assertIn("default", DEFAULT_SYSTEM_PROMPTS)
+
 
 if __name__ == "__main__":
     unittest.main()
