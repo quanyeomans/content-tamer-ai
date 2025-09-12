@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from core.application_container import TestApplicationContainer
+from src.core.application_container import TestApplicationContainer
 
 
 class TestDomainServiceIntegration(unittest.TestCase):

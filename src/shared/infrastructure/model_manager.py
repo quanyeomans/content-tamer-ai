@@ -54,8 +54,8 @@ class ModelManager:
 
     # Model specifications based on our research
     MODEL_SPECS = {
-        "gemma-2-2b": ModelInfo(
-            name="gemma-2-2b",
+        "gemma2:2b": ModelInfo(
+            name="gemma2:2b",
             size_gb=1.7,
             memory_requirement_gb=2.5,
             description="Ultra-lightweight model for 4GB RAM systems",
@@ -82,7 +82,7 @@ class ModelManager:
 
     # Hardware tier definitions
     HARDWARE_TIERS = [
-        HardwareTier("ultra_lightweight", 4, 6, ["gemma-2-2b"], "Laptops, older hardware"),
+        HardwareTier("ultra_lightweight", 4, 6, ["gemma2:2b"], "Laptops, older hardware"),
         HardwareTier("standard", 6, 8, ["llama3.2-3b"], "Most desktop systems"),
         HardwareTier("enhanced", 8, 10, ["mistral-7b"], "Quality-focused users"),
         HardwareTier("premium", 10, 32, ["llama3.1-8b"], "High-end systems"),
@@ -132,6 +132,8 @@ class ModelManager:
 
     def _get_model_status(self, model_name: str) -> ModelStatus:
         """Get the current status of a model."""
+        from .model_name_mapper import ModelNameMapper
+        
         if not self.is_ollama_running():
             return ModelStatus.ERROR
 
@@ -141,19 +143,52 @@ class ModelManager:
             response.raise_for_status()
 
             ollama_models = response.json().get("models", [])
-            model_names = [model.get("name", "").split(":")[0] for model in ollama_models]
-
-            if model_name in model_names:
+            
+            # Get full model names from Ollama (e.g., "llama3.1:8b")
+            ollama_model_names = [model.get("name", "") for model in ollama_models]
+            
+            # Convert our internal model name to Ollama format for comparison
+            ollama_format = ModelNameMapper.to_ollama_format(model_name)
+            
+            if ollama_format in ollama_model_names:
                 return ModelStatus.AVAILABLE
             return ModelStatus.NOT_DOWNLOADED
 
         except requests.RequestException:
             return ModelStatus.ERROR
 
+    def recommend_model(self) -> Optional[ModelInfo]:
+        """Recommend a model based on system capabilities."""
+        import psutil
+        
+        # Get available memory in GB
+        available_memory = psutil.virtual_memory().available / (1024 ** 3)
+        
+        # Get list of models sorted by memory requirement
+        models = self.list_available_models()
+        sorted_models = sorted(models, key=lambda m: m.memory_requirement_gb)
+        
+        # Find the best model that fits in available memory
+        # Leave 2GB for system operations
+        for model in sorted_models:
+            if model.memory_requirement_gb <= (available_memory - 2):
+                return model
+        
+        # If no model fits, return the smallest one
+        return sorted_models[0] if sorted_models else None
+    
     def download_model(self, model_name: str, progress_callback=None) -> bool:
         """Download a model through Ollama."""
-        if model_name not in self.MODEL_SPECS:
-            raise ValueError(f"Unknown model: {model_name}")
+        from .model_name_mapper import ModelNameMapper
+        
+        # Convert to Ollama format for download
+        ollama_model = ModelNameMapper.to_ollama_format(model_name)
+        
+        # Check if internal name is known
+        internal_name = ModelNameMapper.to_internal_format(ollama_model)
+        if internal_name not in self.MODEL_SPECS and model_name not in self.MODEL_SPECS:
+            # Allow download of unknown models with warning
+            self.logger.warning(f"Model {model_name} not in known specs, proceeding anyway")
 
         if not self.is_ollama_running():
             raise RuntimeError(
@@ -161,8 +196,8 @@ class ModelManager:
             )
 
         try:
-            # Start model download
-            data = {"name": model_name}
+            # Start model download with Ollama format
+            data = {"name": ollama_model}
             response = self.session.post(
                 f"{self.base_url}/api/pull",
                 json=data,
@@ -237,17 +272,22 @@ class ModelManager:
 
     def remove_model(self, model_name: str) -> bool:
         """Remove a model from Ollama."""
+        from .model_name_mapper import ModelNameMapper
+        
         if not self.is_ollama_running():
             raise RuntimeError("Ollama is not running")
 
+        # Convert to Ollama format for removal
+        ollama_model = ModelNameMapper.to_ollama_format(model_name)
+        
         try:
-            data = {"name": model_name}
+            data = {"name": ollama_model}
             response = self.session.delete(f"{self.base_url}/api/delete", json=data, timeout=30)
             response.raise_for_status()
             return True
 
         except requests.RequestException as e:
-            raise RuntimeError(f"Failed to remove model {model_name}: {str(e)}") from e
+            raise RuntimeError(f"Failed to remove model {ollama_model}: {str(e)}") from e
 
     def get_model_info(self, model_name: str) -> Optional[ModelInfo]:
         """Get detailed information about a specific model."""

@@ -121,11 +121,11 @@ class ConfigurationManager:
             # Atomic move
             temp_file.replace(self.config_file)
 
-            self.logger.info(f"Configuration saved to {self.config_file}")
+            self.logger.info("Configuration saved to %s", self.config_file)
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to save configuration: {e}")
+            self.logger.error("Failed to save configuration: %s", e)
             return False
 
     def validate_configuration(self, config: ProcessingConfiguration) -> List[str]:
@@ -207,10 +207,10 @@ class ConfigurationManager:
                 if hasattr(config, key) and value is not None:
                     setattr(config, key, value)
 
-            self.logger.debug(f"Loaded configuration from {self.config_file}")
+            self.logger.debug("Loaded configuration from %s", self.config_file)
 
         except (json.JSONDecodeError, FileNotFoundError, KeyError) as e:
-            self.logger.warning(f"Could not load configuration file: {e}")
+            self.logger.warning("Could not load configuration file: %s", e)
 
         return config
 
@@ -244,13 +244,13 @@ class ConfigurationManager:
                     try:
                         env_value = int(env_value)
                     except ValueError:
-                        self.logger.warning(f"Invalid ML level in {env_var}: {env_value}")
+                        self.logger.warning("Invalid ML level in %s: %s", env_var, env_value)
                         continue
                 elif config_attr in ["quiet_mode", "verbose_mode"]:
                     env_value = env_value.lower() in ("true", "1", "yes", "on")
 
                 setattr(config, config_attr, env_value)
-                self.logger.debug(f"Applied environment variable {env_var}={env_value}")
+                self.logger.debug("Applied environment variable %s=%s", env_var, env_value)
 
         return config
 
@@ -343,7 +343,7 @@ class ConfigurationManager:
         try:
             return ProcessingConfiguration(**config_dict)
         except TypeError as e:
-            self.logger.error(f"Invalid configuration dictionary: {e}")
+            self.logger.error("Invalid configuration dictionary: %s", e)
             raise ValueError(f"Invalid configuration: {e}")
 
     def get_configuration_summary(self, config: ProcessingConfiguration) -> Dict[str, Any]:

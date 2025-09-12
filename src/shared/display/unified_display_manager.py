@@ -138,7 +138,7 @@ class UnifiedDisplayManager:
             self._active_progress = Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
-                BarColumn(complete_style="progress.complete", finished_style="progress.complete"),
+                BarColumn(complete_style="green", finished_style="green"),
                 MofNCompleteColumn(),
                 TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
                 console=self.console,

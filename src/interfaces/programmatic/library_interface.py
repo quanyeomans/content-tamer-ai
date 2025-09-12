@@ -102,7 +102,7 @@ class ContentTamerAPI(ProgrammaticInterface):
             return result
 
         except Exception as e:
-            self.logger.error(f"Document processing failed: {e}")
+            self.logger.error("Document processing failed: %s", e)
             return ProcessingResult(
                 success=False,
                 files_processed=0,

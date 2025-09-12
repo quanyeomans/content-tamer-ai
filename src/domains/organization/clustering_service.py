@@ -319,8 +319,15 @@ class ClusteringService:
 
         # Step 1: Classify all documents with rules
         for i, doc in enumerate(documents):
-            # Use the document path as ID if available, otherwise fall back to doc_i
-            doc_id = doc.get("id", doc.get("path", f"doc_{i}"))
+            # Use the document path as ID if available
+            # Check for various path keys that might be used
+            doc_id = (
+                doc.get("id") or 
+                doc.get("current_path") or  # From application_kernel processed docs
+                doc.get("path") or 
+                doc.get("original_path") or  # Fallback to original path
+                f"doc_{i}"  # Last resort fallback
+            )
 
             try:
                 result = self.classify_document(doc)

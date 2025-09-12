@@ -188,12 +188,25 @@ class InteractiveCLI(HumanInterface):
         # Load default configuration
         config = self.config_manager.load_configuration()
 
-        # Check for API key using expert mode component (avoid code duplication)
-        if not config.api_key:
+        # Only check for API key if not using local provider
+        if config.provider != "local" and not config.api_key:
             self.console_manager.console.print()  # Add spacing before API key section
+            self.console_manager.console.print(f"[yellow]Provider '{config.provider}' requires an API key[/yellow]")
             config.api_key = self.wizard._prompt_api_key_configuration(config.provider, config.api_key)
             if not config.api_key:
                 return None
+        elif config.provider == "local":
+            # For local provider, verify Ollama is available
+            from shared.infrastructure.dependency_manager import DependencyManager
+            dep_manager = DependencyManager()
+            ollama_path = dep_manager.find_dependency("ollama")
+            if not ollama_path:
+                self.console_manager.show_error(
+                    "Local LLM provider requires Ollama to be installed",
+                    ["Install Ollama from: https://ollama.ai", "Then run setup again"]
+                )
+                return None
+            self.console_manager.console.print(f"[green]Using Local LLM with Ollama[/green]")
 
         self.console_manager.console.print()  # Add spacing before configuration summary
         # Show configuration summary

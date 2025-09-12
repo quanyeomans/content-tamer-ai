@@ -31,6 +31,12 @@ class SmartEmojiHandler:
         "🎯": ">>",
         "📋": "[LIST]",
         "🔍": "[DEBUG]",
+        # UI feedback
+        "🎉": "[SUCCESS]",
+        "📁": "[FILES]",
+        "📂": "[FOLDER]",
+        "🛑": "[STOP]",
+        "💥": "[ERROR]",
         # Generic markers
         ">>": ">>",  # Already ASCII
         "<<": "<<",  # Already ASCII
@@ -99,6 +105,17 @@ class SmartEmojiHandler:
         if self._supports_unicode:
             return emoji
         return self.EMOJI_FALLBACKS.get(emoji, emoji)
+
+    def get(self, emoji: str) -> str:
+        """Convenience alias for get_icon.
+
+        Args:
+            emoji: Emoji character
+
+        Returns:
+            str: Emoji or ASCII fallback
+        """
+        return self.get_icon(emoji)
 
     def supports_unicode(self) -> bool:
         """Check if Unicode/emoji is supported.

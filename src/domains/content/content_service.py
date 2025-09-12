@@ -61,6 +61,20 @@ class ContentService:
             elif extracted.quality != ContentQuality.FAILED:
                 ai_content = self.enhancement_service.prepare_for_ai_processing(extracted)
 
+            # Special handling for OCR content - be more lenient
+            is_ocr = extracted.extraction_method == "ocr" or extracted.extraction_method == "ocr_extraction"
+            min_content_length = 5 if is_ocr else 10  # OCR might produce shorter but valid content
+            
+            # Log extraction details for debugging
+            if ai_content:
+                self.logger.debug(
+                    "Extracted content: method=%s, quality=%s, length=%d, words=%d",
+                    extracted.extraction_method,
+                    extracted.quality.value,
+                    len(ai_content),
+                    len(ai_content.split())
+                )
+
             return {
                 "file_path": file_path,
                 "extraction": extracted,
@@ -68,7 +82,7 @@ class ContentService:
                 "metadata": metadata,
                 "ai_ready_content": ai_content,
                 "success": extracted.quality != ContentQuality.FAILED,
-                "ready_for_ai": bool(ai_content and len(ai_content.strip()) > 10),
+                "ready_for_ai": bool(ai_content and len(ai_content.strip()) > min_content_length),
             }
 
         except Exception as e:
@@ -88,11 +102,12 @@ class ContentService:
                 "error": str(e),
             }
 
-    def batch_process_documents(self, file_paths: List[str]) -> Dict[str, Dict[str, Any]]:
-        """Process multiple documents in batch.
+    def batch_process_documents(self, file_paths: List[str], progress_callback=None) -> Dict[str, Dict[str, Any]]:
+        """Process multiple documents in batch with progress reporting.
 
         Args:
             file_paths: List of file paths to process
+            progress_callback: Optional callback for progress updates (current, total, message)
 
         Returns:
             Dictionary mapping file paths to processing results
@@ -101,9 +116,18 @@ class ContentService:
 
         self.logger.info("Starting batch processing of %d documents", len(file_paths))
 
+        total_files = len(file_paths)
         for i, file_path in enumerate(file_paths):
             try:
-                self.logger.debug("Processing %d/%d: %s", i + 1, len(file_paths), file_path)
+                # Report progress if callback provided
+                if progress_callback:
+                    progress_callback(
+                        i + 1,
+                        total_files,
+                        f"Extracting: {os.path.basename(file_path)}"
+                    )
+                
+                self.logger.debug("Processing %d/%d: %s", i + 1, total_files, file_path)
                 result = self.process_document_complete(file_path)
                 results[file_path] = result
 
@@ -113,7 +137,7 @@ class ContentService:
 
         # Log batch summary
         successful = sum(1 for result in results.values() if result.get("success", False))
-        self.logger.info("Batch processing complete: %d/%d successful", successful, len(file_paths))
+        self.logger.info("Batch processing complete: %d/%d successful", successful, total_files)
 
         return results
 

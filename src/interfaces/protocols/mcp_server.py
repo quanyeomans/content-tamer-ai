@@ -167,7 +167,7 @@ class MCPServer(ProtocolInterface):
 
     async def start_server(self, host: str = "localhost", port: int = 8000) -> None:
         """Start the MCP server (foundation implementation)."""
-        self.logger.info(f"Starting MCP server on {host}:{port}")
+        self.logger.info("Starting MCP server on %s:%s", host, port)
         self._running = True
 
         # This is a foundation implementation
@@ -187,7 +187,7 @@ class MCPServer(ProtocolInterface):
             # Initialize any protocol-specific configuration
             return True
         except Exception as e:
-            self.logger.error(f"Failed to initialize MCP protocol: {e}")
+            self.logger.error("Failed to initialize MCP protocol: %s", e)
             return False
 
     def get_capabilities(self) -> Dict[str, Any]:
@@ -210,7 +210,7 @@ class MCPServer(ProtocolInterface):
             try:
                 return await self._request_handlers[method](params)
             except Exception as e:
-                self.logger.error(f"Error handling {method}: {e}")
+                self.logger.error("Error handling %s: %s", method, e)
                 return {"error": {"code": -32000, "message": str(e)}}
         else:
             return {"error": {"code": -32601, "message": f"Method not found: {method}"}}

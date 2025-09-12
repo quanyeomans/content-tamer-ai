@@ -55,7 +55,7 @@ class HardwareDetector:
 
     # Model requirements (matching ModelManager specs)
     MODEL_REQUIREMENTS = {
-        "gemma-2-2b": {
+        "gemma2:2b": {
             "min_ram_gb": 2.5,
             "optimal_ram_gb": 4.0,
             "description": "Ultra-lightweight for 4GB RAM systems",

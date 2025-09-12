@@ -107,9 +107,9 @@ class FeatureFlagManager:
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     config_data = json.load(f)
                 flags = FeatureFlags.from_dict(config_data)
-                logger.debug(f"Loaded feature flags from {self.config_file}")
+                logger.debug("Loaded feature flags from %s", self.config_file)
             except (json.JSONDecodeError, TypeError, ValueError) as e:
-                logger.warning(f"Error loading feature flags from {self.config_file}: {e}")
+                logger.warning("Error loading feature flags from %s: %s", self.config_file, e)
                 # Continue with defaults
 
         # Override with environment variables
@@ -173,7 +173,7 @@ class FeatureFlagManager:
         try:
             return int(value)
         except ValueError:
-            logger.warning(f"Invalid integer value for {key}: {value}, using default {default}")
+            logger.warning("Invalid integer value for %s: %s, using default %s", key, value, default)
             return default
 
     def _get_float_env(self, key: str, default: float) -> float:
@@ -184,7 +184,7 @@ class FeatureFlagManager:
         try:
             return float(value)
         except ValueError:
-            logger.warning(f"Invalid float value for {key}: {value}, using default {default}")
+            logger.warning("Invalid float value for %s: %s, using default %s", key, value, default)
             return default
 
     def save_flags(self, flags: FeatureFlags) -> bool:
@@ -197,12 +197,12 @@ class FeatureFlagManager:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(flags.to_dict(), f, indent=2)
 
-            logger.info(f"Feature flags saved to {self.config_file}")
+            logger.info("Feature flags saved to %s", self.config_file)
             self._flags = flags  # Update cache
             return True
 
         except OSError as e:
-            logger.error(f"Error saving feature flags to {self.config_file}: {e}")
+            logger.error("Error saving feature flags to %s: %s", self.config_file, e)
             return False
 
     def get_organization_flags(self) -> OrganizationFeatureFlags:

@@ -234,7 +234,7 @@ class EnhancedRuleBasedClassifier:
             return entity_scores
 
         except Exception as e:
-            logging.warning(f"Entity recognition failed: {e}")
+            logging.warning("Entity recognition failed: %s", e)
             return {}
 
     def _combine_scores(

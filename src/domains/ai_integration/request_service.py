@@ -196,7 +196,11 @@ class RequestService:
                 raise TimeoutError(f"Request timed out after {timeout} seconds")
 
             if result_container["error"]:
-                raise result_container["error"]
+                error = result_container["error"]
+                if isinstance(error, Exception):
+                    raise error
+                else:
+                    raise RuntimeError(f"Request failed: {error}")
 
             result = result_container["result"]
             if result is None:

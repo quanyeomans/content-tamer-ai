@@ -90,7 +90,7 @@ class MetadataExtractor:
                 "modification_date": datetime.datetime.fromtimestamp(file_stat.st_mtime),
             }
         except Exception as e:
-            self.logger.error(f"Failed to extract file metadata from {file_path}: {e}")
+            self.logger.error("Failed to extract file metadata from %s: %s", file_path, e)
             return {
                 "file_path": file_path,
                 "file_name": os.path.basename(file_path),
@@ -272,7 +272,7 @@ class MetadataExtractor:
             )
 
         except Exception as e:
-            self.logger.error(f"Metadata extraction failed for {file_path}: {e}")
+            self.logger.error("Metadata extraction failed for %s: %s", file_path, e)
 
             # Return minimal metadata on error
             return DocumentMetadata(
@@ -321,7 +321,7 @@ class MetadataExtractor:
             return max(0.0, min(100.0, score))
 
         except Exception as e:
-            self.logger.warning(f"Readability calculation failed: {e}")
+            self.logger.warning("Readability calculation failed: %s", e)
             return None
 
     def _detect_language(self, text: str) -> Optional[str]:
@@ -464,7 +464,7 @@ class MetadataAnalyzer:  # Renamed to avoid duplicate class names
             )
 
         except Exception as e:
-            self.logger.error(f"Metadata extraction failed for {file_path}: {e}")
+            self.logger.error("Metadata extraction failed for %s: %s", file_path, e)
 
             # Return minimal metadata on error
             return DocumentMetadata(
@@ -513,7 +513,7 @@ class MetadataAnalyzer:  # Renamed to avoid duplicate class names
             return max(0.0, min(100.0, score))
 
         except Exception as e:
-            self.logger.warning(f"Readability calculation failed: {e}")
+            self.logger.warning("Readability calculation failed: %s", e)
             return None
 
     def _detect_language(self, text: str) -> Optional[str]:
@@ -721,7 +721,7 @@ class MetadataService:
                 results[file_path] = metadata
 
             except Exception as e:
-                self.logger.error(f"Metadata analysis failed for {file_path}: {e}")
+                self.logger.error("Metadata analysis failed for %s: %s", file_path, e)
                 results[file_path] = self._create_error_metadata(file_path, str(e))
 
         return results
@@ -826,7 +826,7 @@ class MetadataService:
             )
 
         except Exception as e:
-            self.logger.error(f"Metadata extraction failed for {file_path}: {e}")
+            self.logger.error("Metadata extraction failed for %s: %s", file_path, e)
 
             # Return minimal metadata on error
             return DocumentMetadata(
@@ -875,5 +875,5 @@ class MetadataService:
             return max(0.0, min(100.0, score))
 
         except Exception as e:
-            self.logger.warning(f"Readability calculation failed: {e}")
+            self.logger.warning("Readability calculation failed: %s", e)
             return None

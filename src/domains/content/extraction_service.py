@@ -123,18 +123,40 @@ class PDFContentProcessor(ContentProcessor):
         try:
             import pytesseract
             from PIL import Image
-            from ...shared.infrastructure.dependency_manager import get_dependency_manager
-
-            dep_manager = get_dependency_manager()
-            tesseract_path = dep_manager.find_dependency("tesseract")
+            
+            # Try to get dependency manager
+            try:
+                from shared.infrastructure.dependency_manager import DependencyManager
+                dep_manager = DependencyManager()
+                tesseract_path = dep_manager.find_dependency("tesseract")
+                self.tesseract_path = tesseract_path
+            except ImportError:
+                # Fallback to checking common locations
+                tesseract_path = None
+                import platform
+                if platform.system() == "Windows":
+                    import os
+                    common_paths = [
+                        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"
+                    ]
+                    for path in common_paths:
+                        if os.path.exists(path):
+                            tesseract_path = path
+                            break
+                self.tesseract_path = tesseract_path
 
             if tesseract_path:
                 pytesseract.pytesseract.tesseract_cmd = tesseract_path
                 self.have_tesseract = True
+                self.logger.info("Tesseract found at: %s", tesseract_path)
             else:
                 self.have_tesseract = False
-        except ImportError:
+                self.logger.warning("Tesseract not found")
+        except ImportError as e:
             self.have_tesseract = False
+            self.tesseract_path = None
+            self.logger.warning("OCR dependencies not available: %s", e)
 
     def can_process(self, file_path: str) -> bool:
         """Check if file is a PDF."""
@@ -163,6 +185,8 @@ class PDFContentProcessor(ContentProcessor):
             ]
 
             best_result = None
+            text_extraction_attempted = False
+            minimal_text_found = False
 
             for method_name, method_func in methods:
                 if not self._method_available(method_name):
@@ -170,11 +194,29 @@ class PDFContentProcessor(ContentProcessor):
 
                 try:
                     result = method_func(file_path)
+                    
+                    # Track if we've tried text extraction
+                    if method_name in ["pymupdf_text", "pypdf_text"]:
+                        text_extraction_attempted = True
+                        # Check if text extraction found minimal content (likely scanned PDF)
+                        if result and result.text:
+                            # Less than 100 chars per page suggests scanned document
+                            page_count = result.metadata.get("page_count", 1) if result.metadata else 1
+                            chars_per_page = len(result.text.strip()) / max(page_count, 1)
+                            if chars_per_page < 100:
+                                minimal_text_found = True
+                                self.logger.info("Minimal text found (%d chars/page), likely scanned PDF", chars_per_page)
+                    
                     if result and result.quality != ContentQuality.FAILED:
                         result.extraction_method = method_name
 
-                        # Return first successful extraction
-                        if result.quality in [ContentQuality.EXCELLENT, ContentQuality.GOOD]:
+                        # For OCR method or good quality text, return immediately
+                        if method_name == "ocr_extraction" or result.quality in [ContentQuality.EXCELLENT, ContentQuality.GOOD]:
+                            # But if text extraction found minimal content and OCR hasn't been tried, continue
+                            if minimal_text_found and method_name != "ocr_extraction" and self._method_available("ocr_extraction"):
+                                self.logger.info("Minimal text detected, will attempt OCR extraction")
+                                best_result = result
+                                continue
                             return result
 
                         # Keep best result as fallback
@@ -182,7 +224,7 @@ class PDFContentProcessor(ContentProcessor):
                             best_result = result
 
                 except Exception as e:
-                    self.logger.warning(f"Extraction method {method_name} failed: {e}")
+                    self.logger.warning("Extraction method %s failed: %s", method_name, e)
                     continue
 
             # Return best result found, or failure
@@ -196,7 +238,7 @@ class PDFContentProcessor(ContentProcessor):
             )
 
         except Exception as e:
-            self.logger.error(f"PDF extraction failed for {file_path}: {e}")
+            self.logger.error("PDF extraction failed for %s: %s", file_path, e)
             return ExtractedContent(
                 text=f"Extraction error: {e}",
                 quality=ContentQuality.FAILED,
@@ -213,7 +255,7 @@ class PDFContentProcessor(ContentProcessor):
             # Check file size (50MB limit for security)
             file_size = os.path.getsize(file_path)
             if file_size > 50 * 1024 * 1024:  # 50MB
-                self.logger.warning(f"File too large: {file_path} ({file_size / 1024 / 1024:.1f}MB)")
+                self.logger.warning("File too large: %s (%.1fMB)", file_path, file_size / 1024 / 1024)
                 return False
 
             if file_size == 0:
@@ -226,11 +268,11 @@ class PDFContentProcessor(ContentProcessor):
                 # Continue processing regardless of threat level (non-destructive approach)
                 return True
             except (NameError, Exception) as e:
-                self.logger.warning(f"PDF security analysis failed: {e}")
+                self.logger.warning("PDF security analysis failed: %s", e)
                 return True  # Allow processing if security analysis fails
 
         except Exception as e:
-            self.logger.error(f"Security validation error for {file_path}: {e}")
+            self.logger.error("Security validation error for %s: %s", file_path, e)
             return False
 
     def _method_available(self, method_name: str) -> bool:
@@ -392,7 +434,7 @@ class PDFContentProcessor(ContentProcessor):
             img_data = mat.tobytes("png")
             return base64.b64encode(img_data).decode('utf-8')
         except Exception as e:
-            self.logger.warning(f"Page rendering failed: {e}")
+            self.logger.warning("Page rendering failed: %s", e)
             return None
 
     def _assess_text_quality(self, text: str) -> ContentQuality:
@@ -400,6 +442,14 @@ class PDFContentProcessor(ContentProcessor):
         if not text or len(text.strip()) < 10:
             return ContentQuality.FAILED
 
+        # Check for meaningful content (not just whitespace or minimal text)
+        stripped_text = text.strip()
+        word_count = len(stripped_text.split())
+        
+        # If very little actual content, mark as failed to trigger OCR
+        if word_count < 20:  # Less than 20 words total
+            return ContentQuality.FAILED
+        
         # Check for common extraction quality indicators
         text_lower = text.lower()
 
@@ -526,7 +576,7 @@ class ImageContentProcessor(ContentProcessor):
             )
 
         except Exception as e:
-            self.logger.error(f"Image OCR failed for {file_path}: {e}")
+            self.logger.error("Image OCR failed for %s: %s", file_path, e)
             return ExtractedContent(
                 text=f"OCR error: {e}",
                 quality=ContentQuality.FAILED,
@@ -624,7 +674,7 @@ class ExtractionService:
             return result
 
         except Exception as e:
-            self.logger.error(f"Content extraction failed for {file_path}: {e}")
+            self.logger.error("Content extraction failed for %s: %s", file_path, e)
             return ExtractedContent(
                 text=f"Extraction error: {e}",
                 quality=ContentQuality.FAILED,
@@ -672,10 +722,10 @@ class ExtractionService:
                 result = self.extract_from_file(file_path)
                 results[file_path] = result
 
-                self.logger.debug(f"Extracted content from {file_path}: {result.quality.value}")
+                self.logger.debug("Extracted content from %s: %s", file_path, result.quality.value)
 
             except Exception as e:
-                self.logger.error(f"Batch extraction failed for {file_path}: {e}")
+                self.logger.error("Batch extraction failed for %s: %s", file_path, e)
                 results[file_path] = ExtractedContent(
                     text=f"Batch extraction error: {e}",
                     quality=ContentQuality.FAILED,

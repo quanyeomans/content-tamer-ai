@@ -67,8 +67,8 @@ class UncertaintyDetector:
                 certain_docs.append(doc)
 
         logging.info(
-            f"Uncertainty detection: {len(certain_docs)} certain, "
-            f"{len(uncertain_docs)} uncertain documents"
+            "Uncertainty detection: %d certain, %d uncertain documents",
+            len(certain_docs), len(uncertain_docs)
         )
 
         return certain_docs, uncertain_docs
@@ -266,7 +266,7 @@ class UncertaintyDetector:
         """Adjust the confidence threshold for uncertainty detection."""
         if 0.0 <= new_threshold <= 1.0:
             self.confidence_threshold = new_threshold
-            logging.info(f"Uncertainty threshold updated to {new_threshold}")
+            logging.info("Uncertainty threshold updated to %s", new_threshold)
         else:
             raise ValueError("Threshold must be between 0.0 and 1.0")
 

@@ -94,7 +94,7 @@ class PathValidator:
             return True, ""
 
         except Exception as e:
-            self.logger.error(f"Path validation error: {e}")
+            self.logger.error("Path validation error: %s", e)
             return False, f"Path validation failed: {e}"
 
     def sanitize_filename(self, filename: str) -> str:

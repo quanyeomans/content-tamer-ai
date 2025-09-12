@@ -57,20 +57,49 @@ class OrganizationService:
         session_id = f"org_session_{int(datetime.now().timestamp())}"
         try:
             self.logger.info(
-                f"Starting organization session {session_id} for {len(documents)} documents"
+                "Starting organization session %s for %d documents", session_id, len(documents)
             )
 
             # Step 1: Classify documents using clustering service
             self.logger.info("Step 1: Classifying documents...")
             classifications = self.clustering_service.batch_classify_documents(documents)
+            
+            # Map classifications to actual file paths
+            # The classifications dict might have doc IDs as keys, but we need actual file paths
+            path_classifications = {}
+            for doc_id, classification in classifications.items():
+                # Find the corresponding document to get its actual path
+                matching_doc = None
+                for doc in documents:
+                    # Check if this doc matches the doc_id
+                    if (doc.get("current_path") == doc_id or 
+                        doc.get("path") == doc_id or
+                        doc.get("original_path") == doc_id or
+                        doc.get("id") == doc_id):
+                        matching_doc = doc
+                        break
+                
+                if matching_doc:
+                    # Use the current_path (renamed file) as the key for folder operations
+                    actual_path = matching_doc.get("current_path") or matching_doc.get("path") or matching_doc.get("original_path")
+                    if actual_path:
+                        path_classifications[actual_path] = classification
+                    else:
+                        self.logger.warning("No valid path found for document: %s", doc_id)
+                else:
+                    # If doc_id is already a path, use it directly
+                    if os.path.exists(doc_id) or os.path.isabs(doc_id):
+                        path_classifications[doc_id] = classification
+                    else:
+                        self.logger.warning("Could not map classification for: %s", doc_id)
 
             # Step 2: Validate clustering quality
             quality_validation = self.clustering_service.validate_clustering_quality(
-                classifications
+                path_classifications
             )
             if not quality_validation["valid"]:
                 self.logger.warning(
-                    f"Clustering quality below threshold: {quality_validation['overall_score']:.1f}"
+                    "Clustering quality below threshold: %.1f", quality_validation['overall_score']
                 )
 
                 # Apply fallback strategy if quality is poor
@@ -80,7 +109,7 @@ class OrganizationService:
             # Step 3: Create folder structure
             self.logger.info("Step 3: Creating folder structure...")
             folder_structure, file_operations = self.folder_service.create_folder_structure(
-                self.target_folder, classifications
+                self.target_folder, path_classifications
             )
 
             # Step 4: Validate folder structure
@@ -97,13 +126,13 @@ class OrganizationService:
             if enable_learning and operation_results["successful_operations"] > 0:
                 self.logger.info("Step 6: Learning from session results...")
                 learning_results = self.learning_service.learn_from_session(
-                    classifications,
+                    path_classifications,
                     folder_structure,
                     {
                         "overall_quality": quality_validation["overall_score"],
                         "success_rate": operation_results["successful_operations"]
                         / operation_results["total_operations"],
-                        "method_distribution": self._get_method_distribution(classifications),
+                        "method_distribution": self._get_method_distribution(path_classifications),
                     },
                 )
 
@@ -114,8 +143,8 @@ class OrganizationService:
                 "documents_processed": len(documents),
                 "files_organized": operation_results["moved_files"],
                 "directories_created": operation_results["created_directories"],
-                "classified_documents": self._format_classified_documents(classifications),
-                "classification_results": classifications,
+                "classified_documents": self._format_classified_documents(path_classifications),
+                "classification_results": path_classifications,
                 # API Contract: Use organization_structure instead of folder_structure
                 "organization_structure": self._format_organization_structure(folder_structure),
                 "folder_structure": folder_structure,  # Keep for backward compatibility
@@ -128,13 +157,13 @@ class OrganizationService:
                 # API Contract: Add should_reorganize flag
                 "should_reorganize": quality_validation["overall_score"] >= 70.0,
                 # API Contract: Add ML metrics
-                "ml_metrics": self._format_ml_metrics(classifications, ml_enhancement_level),
+                "ml_metrics": self._format_ml_metrics(path_classifications, ml_enhancement_level),
                 # API Contract: Add temporal analysis for level 3
                 "temporal_analysis": self._format_temporal_analysis(folder_structure, ml_enhancement_level),
             }
 
             self.logger.info(
-                f"Organization session {session_id} completed: {operation_results['moved_files']} files organized"
+                "Organization session %s completed: %d files organized", session_id, operation_results['moved_files']
             )
             return organization_results
 

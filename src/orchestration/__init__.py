@@ -10,6 +10,10 @@ Components:
 - SessionManager: State persistence and resume capability
 """
 
-from .application_kernel import ApplicationKernel
-
-__all__ = ["ApplicationKernel"]
+try:
+    from .application_kernel import ApplicationKernel
+    __all__ = ["ApplicationKernel"]
+except ImportError:
+    # If ApplicationKernel can't be imported, don't expose it
+    __all__ = []
+    ApplicationKernel = None

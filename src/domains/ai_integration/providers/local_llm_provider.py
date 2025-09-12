@@ -53,15 +53,43 @@ class LocalLLMProvider(AIProvider):
 
     def generate_filename(self, content: str, original_filename: str = "") -> str:
         """Generate intelligent filename using local LLM."""
+        # First check if Ollama is running
+        from shared.infrastructure.model_manager import ModelManager
+        from shared.infrastructure.model_name_mapper import ModelNameMapper
+        
+        model_manager = ModelManager()
+        
+        if not model_manager.is_ollama_running():
+            self.logger.error("Ollama service is not running")
+            raise RuntimeError(
+                "Ollama is not running. Please start it with: ollama serve"
+            )
+        
+        # Convert model name to Ollama format
+        ollama_model = ModelNameMapper.to_ollama_format(self.model)
+        self.logger.debug(f"Using Ollama model: {ollama_model} (from internal: {self.model})")
+        
+        # Check if the model is available
+        models = model_manager.list_available_models()
+        # Models list has internal names, we need to check against our internal name
+        model_available = any(m.name == self.model and m.status.value == "available" for m in models)
+        
+        if not model_available:
+            self.logger.error(f"Model {ollama_model} is not available in Ollama")
+            raise RuntimeError(
+                f"Model '{ollama_model}' is not available. "
+                f"Download it with: ollama pull {ollama_model}"
+            )
+        
         try:
             prompt = get_secure_filename_prompt_template()
             full_prompt = f"{prompt}\n\nDocument Content:\n{content}"
 
-            # Call Ollama API
+            # Call Ollama API with mapped model name
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": self.model,
+                    "model": ollama_model,
                     "prompt": full_prompt,
                     "stream": False,
                 },
@@ -74,6 +102,16 @@ class LocalLLMProvider(AIProvider):
 
             return validate_generated_filename(raw_filename)
 
+        except requests.exceptions.ConnectionError as e:
+            self.logger.error("Cannot connect to Ollama: %s", e)
+            raise RuntimeError(
+                "Cannot connect to Ollama. Please ensure it's running with: ollama serve"
+            ) from e
+        except requests.exceptions.Timeout as e:
+            self.logger.error("Ollama request timed out: %s", e)
+            raise RuntimeError(
+                "Ollama request timed out. The model may be loading. Please try again."
+            ) from e
         except Exception as e:
             self.logger.error("Local LLM filename generation failed: %s", e)
             raise RuntimeError(f"Local LLM error: {str(e)}") from e

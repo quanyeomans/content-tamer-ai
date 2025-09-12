@@ -316,7 +316,7 @@ class EnhancementService:
             )
 
         except Exception as e:
-            self.logger.error(f"Content enhancement failed: {e}")
+            self.logger.error("Content enhancement failed: %s", e)
             return EnhancementResult(
                 enhanced_content=original_text,
                 original_content=original_text,

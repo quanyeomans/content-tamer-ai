@@ -110,7 +110,7 @@ class DependencyManager:
             with open(self.config_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError) as e:
-            logging.warning(f"Failed to load dependency config: {e}")
+            logging.warning("Failed to load dependency config: %s", e)
             return {}
 
     def _save_config(self) -> None:
@@ -119,7 +119,7 @@ class DependencyManager:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2)
         except OSError as e:
-            logging.warning(f"Failed to save dependency config: {e}")
+            logging.warning("Failed to save dependency config: %s", e)
 
     def find_dependency(self, name: str, force_refresh: bool = False) -> Optional[str]:
         """
@@ -157,7 +157,7 @@ class DependencyManager:
                 self._save_config()
                 return path
 
-        logging.debug(f"Dependency '{name}' not found in PATH or common locations")
+        logging.debug("Dependency '%s' not found in PATH or common locations", name)
         return None
 
     def configure_dependency(self, name: str, path: str) -> bool:
@@ -172,12 +172,12 @@ class DependencyManager:
             True if path is valid and was configured
         """
         if not os.path.exists(path):
-            logging.error(f"Dependency path does not exist: {path}")
+            logging.error("Dependency path does not exist: %s", path)
             return False
 
         self.config[name] = path
         self._save_config()
-        logging.info(f"Configured {name} at {path}")
+        logging.info("Configured %s at %s", name, path)
         return True
 
     def get_dependency_info(self) -> Dict[str, Dict[str, Any]]:

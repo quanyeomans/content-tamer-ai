@@ -50,7 +50,7 @@ class SelectiveMLRefinement:
                     self.embedding_model = None
                 logging.info("ML refinement initialized with all-mpnet-base-v2")
             except Exception as e:
-                logging.warning(f"Failed to load embedding model: {e}")
+                logging.warning("Failed to load embedding model: %s", e)
                 self.embedding_model = None
         else:
             logging.info("ML refinement disabled - dependencies not available")
@@ -74,10 +74,10 @@ class SelectiveMLRefinement:
             return {}
 
         if len(uncertain_docs) < self.min_documents_for_ml:
-            logging.info(f"Skipping ML refinement - only {len(uncertain_docs)} uncertain documents")
+            logging.info("Skipping ML refinement - only %d uncertain documents", len(uncertain_docs))
             return {}
 
-        logging.info(f"Applying ML refinement to {len(uncertain_docs)} uncertain documents")
+        logging.info("Applying ML refinement to %d uncertain documents", len(uncertain_docs))
 
         try:
             # Generate embeddings for uncertain documents
@@ -96,7 +96,7 @@ class SelectiveMLRefinement:
             return refined_classifications
 
         except Exception as e:
-            logging.warning(f"ML refinement failed: {e}")
+            logging.warning("ML refinement failed: %s", e)
             return {}
 
     def _generate_embeddings(self, documents: List[Dict[str, Any]]) -> Optional[np.ndarray]:
@@ -115,7 +115,7 @@ class SelectiveMLRefinement:
             return embeddings
 
         except Exception as e:
-            logging.warning(f"Embedding generation failed: {e}")
+            logging.warning("Embedding generation failed: %s", e)
             return None
 
     def _create_document_summary(self, doc: Dict[str, Any]) -> str:
@@ -168,7 +168,7 @@ class SelectiveMLRefinement:
             return cluster_labels.tolist()
 
         except Exception as e:
-            logging.warning(f"Clustering failed: {e}")
+            logging.warning("Clustering failed: %s", e)
             return list(range(n_docs))  # Each doc in its own cluster
 
     def _determine_optimal_cluster_count(self, embeddings: np.ndarray, n_docs: int) -> int:
@@ -302,7 +302,7 @@ class SelectiveMLRefinement:
                         best_category = category
 
                 except Exception as e:
-                    logging.debug(f"Failed to process reference category {category}: {e}")
+                    logging.debug("Failed to process reference category %s: %s", category, e)
                     continue
 
             # Convert similarity to confidence score
@@ -311,7 +311,7 @@ class SelectiveMLRefinement:
             return {"category": best_category, "confidence": confidence}
 
         except Exception as e:
-            logging.warning(f"Cluster classification failed: {e}")
+            logging.warning("Cluster classification failed: %s", e)
             return self._classify_cluster_by_patterns(cluster_docs)
 
     def _classify_cluster_by_patterns(

@@ -364,9 +364,9 @@ class FileOrganizer:
             from ..shared.infrastructure.security import sanitize_log_message
 
             sanitized_error = sanitize_log_message(str(error))
-            logging.warning(f"Organization error in {context}: {sanitized_error}")
+            logging.warning("Organization error in %s: %s", context, sanitized_error)
         except ImportError:
-            logging.warning(f"Organization error in {context}: {str(error)}")
+            logging.warning("Organization error in %s: %s", context, str(error))
 
         return error_response
 

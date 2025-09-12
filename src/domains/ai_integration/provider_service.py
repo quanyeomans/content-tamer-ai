@@ -51,9 +51,9 @@ class ProviderConfiguration:
         ],
         "local": [
             "llama3.2-3b",  # Balanced for most systems
-            "gemma2:2b",  # Very efficient
-            "mistral:7b",  # Good quality
-            "llama3.1:8b",  # High capability
+            "gemma2-2b",  # Very efficient (using internal format)
+            "mistral-7b",  # Good quality
+            "llama3.1-8b",  # High capability
         ],
     }
 
@@ -62,7 +62,7 @@ class ProviderConfiguration:
         "gemini": "gemini-2.0-flash",
         "claude": "claude-3.5-haiku",
         "deepseek": "deepseek-chat",
-        "local": "llama3.2-3b",
+        "local": "llama3.1-8b",  # Default to better model
     }
 
 
@@ -103,12 +103,14 @@ class ProviderCapabilities:
 
         # Local (requires ollama)
         try:
-            from ...shared.infrastructure.dependency_manager import get_dependency_manager
+            from shared.infrastructure.dependency_manager import DependencyManager
 
-            dep_manager = get_dependency_manager()
+            dep_manager = DependencyManager()
             ollama_path = dep_manager.find_dependency("ollama")
             capabilities["local"] = ollama_path is not None
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to detect local provider: {e}")
             capabilities["local"] = False
 
         return capabilities
@@ -119,6 +121,16 @@ class ProviderCapabilities:
         if provider not in ProviderConfiguration.AI_PROVIDERS:
             return False
 
+        # For local provider, normalize model names for comparison
+        if provider == "local":
+            from shared.infrastructure.model_name_mapper import ModelNameMapper
+            # Check both original and internal format
+            internal_model = ModelNameMapper.to_internal_format(ModelNameMapper.to_ollama_format(model))
+            return (
+                model in ProviderConfiguration.AI_PROVIDERS[provider] or
+                internal_model in ProviderConfiguration.AI_PROVIDERS[provider]
+            )
+        
         return model in ProviderConfiguration.AI_PROVIDERS[provider]
 
     @staticmethod

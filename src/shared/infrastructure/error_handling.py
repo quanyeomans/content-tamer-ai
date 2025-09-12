@@ -315,7 +315,7 @@ class RetryHandler:
 
                 # Log the attempt with sanitized error message
                 sanitized_error = sanitize_log_message(str(e))
-                logger.debug(f"Attempt {attempt + 1} failed for {filename}: {sanitized_error}")
+                logger.debug("Attempt %d failed for %s: %s", attempt + 1, filename, sanitized_error)
 
                 # Check if we should retry
                 if (

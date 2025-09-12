@@ -38,14 +38,14 @@ class FileLockManager:
         if not hasattr(file_obj, "fileno"):
             # If object doesn't support locking, log warning but don't fail
             logging.getLogger(__name__).warning(
-                f"Cannot lock object of type {type(file_obj)} - no fileno() method"
+                "Cannot lock object of type %s - no fileno() method", type(file_obj)
             )
             return
 
         try:
             fileno = file_obj.fileno()
         except (AttributeError, OSError, ValueError) as e:
-            logging.getLogger(__name__).warning(f"Cannot get file descriptor for locking: {e}")
+            logging.getLogger(__name__).warning("Cannot get file descriptor for locking: %s", e)
             return
 
         if platform.system() == "Windows":
@@ -107,7 +107,7 @@ class AtomicFileOperations:
                 # Unix systems support atomic replace
                 os.replace(temp_path, file_path)
 
-            self.logger.debug(f"Atomically wrote file: {file_path}")
+            self.logger.debug("Atomically wrote file: %s", file_path)
             return True
 
         except Exception as e:
@@ -118,7 +118,7 @@ class AtomicFileOperations:
                 except Exception:
                     pass
 
-            self.logger.error(f"Atomic write failed for {file_path}: {e}")
+            self.logger.error("Atomic write failed for %s: %s", file_path, e)
             return False
 
     def atomic_move(
@@ -145,7 +145,7 @@ class AtomicFileOperations:
             try:
                 os.makedirs(dst_dir, exist_ok=True)
             except Exception as e:
-                self.logger.error(f"Cannot create destination directory {dst_dir}: {e}")
+                self.logger.error("Cannot create destination directory %s: %s", dst_dir, e)
                 return False
 
         last_err = None
@@ -156,12 +156,12 @@ class AtomicFileOperations:
 
                 # Try direct move first
                 shutil.move(src_path, actual_dst_path)
-                self.logger.debug(f"Successfully moved: {src_path} → {actual_dst_path}")
+                self.logger.debug("Successfully moved: %s → %s", src_path, actual_dst_path)
                 return True
 
             except OSError as e:
                 last_err = e
-                self.logger.warning(f"Move attempt {attempt + 1} failed: {e}")
+                self.logger.warning("Move attempt %d failed: %s", attempt + 1, e)
 
                 if attempt < attempts - 1:  # Not last attempt
                     time.sleep(delay * (attempt + 1))
@@ -172,12 +172,12 @@ class AtomicFileOperations:
             actual_dst_path = self._resolve_filename_conflict(dst_path)
             shutil.copy2(src_path, actual_dst_path)
             os.remove(src_path)
-            self.logger.info(f"Fallback copy-delete successful: {src_path} → {actual_dst_path}")
+            self.logger.info("Fallback copy-delete successful: %s → %s", src_path, actual_dst_path)
             return True
 
         except Exception as e:
             self.logger.error(
-                f"All move attempts failed. Last error: {last_err}, Fallback error: {e}"
+                "All move attempts failed. Last error: %s, Fallback error: %s", last_err, e
             )
             return False
 
@@ -271,7 +271,7 @@ class SafeFileManager:
 
         except Exception as e:
             self._operation_stats["operations_failed"] += 1
-            self.logger.error(f"Copy failed: {src} → {dst}: {e}")
+            self.logger.error("Copy failed: %s → %s: %s", src, dst, e)
             return False
 
     def safe_create_directory(self, dir_path: str, mode: int = 0o755) -> bool:
@@ -287,12 +287,12 @@ class SafeFileManager:
         try:
             os.makedirs(dir_path, mode=mode, exist_ok=True)
             self._operation_stats["directories_created"] += 1
-            self.logger.debug(f"Created directory: {dir_path}")
+            self.logger.debug("Created directory: %s", dir_path)
             return True
 
         except Exception as e:
             self._operation_stats["operations_failed"] += 1
-            self.logger.error(f"Directory creation failed: {dir_path}: {e}")
+            self.logger.error("Directory creation failed: %s: %s", dir_path, e)
             return False
 
     def safe_delete(self, file_path: str) -> bool:
@@ -307,12 +307,12 @@ class SafeFileManager:
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
-                self.logger.debug(f"Deleted file: {file_path}")
+                self.logger.debug("Deleted file: %s", file_path)
             return True
 
         except Exception as e:
             self._operation_stats["operations_failed"] += 1
-            self.logger.error(f"Delete failed: {file_path}: {e}")
+            self.logger.error("Delete failed: %s: %s", file_path, e)
             return False
 
     def create_temp_file(

@@ -132,7 +132,7 @@ class ContentMetadataExtractor:
                 entities[key] = list(set(entities[key]))[:5]  # Limit to 5 per category
 
         except Exception as e:
-            logging.warning(f"Entity extraction failed: {e}")
+            logging.warning("Entity extraction failed: %s", e)
 
         return entities
 

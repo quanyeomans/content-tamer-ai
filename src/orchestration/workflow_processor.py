@@ -305,7 +305,12 @@ def process_file_enhanced_core(
         try:
             organizer.progress_tracker.record_progress(progress_f, filename, organizer.file_manager)
         except Exception as progress_error:
-            print(f"Warning: Progress recording failed for {filename}: {progress_error}")
+            # Use display context if available, otherwise log
+            if display_context and hasattr(display_context, 'show_warning'):
+                display_context.show_warning(f"Progress recording failed for {filename}: {progress_error}")
+            else:
+                import logging
+                logging.getLogger(__name__).warning(f"Progress recording failed for {filename}: {progress_error}")
 
     # Success is determined by completing all processing steps successfully
     # If we got a result from _move_file_only, the file was processed successfully
@@ -525,18 +530,36 @@ def process_file(
         if not os.path.isfile(input_path):
             return False
 
-        # Create mock display context for legacy compatibility
-        class MockDisplayContext:
+        # Create display context with Rich console output
+        class LegacyDisplayContext:
+            def __init__(self):
+                # Try to use Rich console if available
+                try:
+                    from shared.display.console_manager import ConsoleManager
+                    self.console_manager = ConsoleManager.get_instance()
+                    self.console = self.console_manager.console
+                    self.has_rich = True
+                except ImportError:
+                    self.has_rich = False
+                    import logging
+                    self.logger = logging.getLogger(__name__)
+            
             def set_status(self, status, **kwargs):
-                pass
+                pass  # Status is shown in progress bar
 
             def show_warning(self, msg, **kwargs):
-                pass
+                if self.has_rich:
+                    self.console.print(f"[yellow]⚠ {msg}[/yellow]")
+                else:
+                    self.logger.warning(msg)
 
             def show_error(self, msg, **kwargs):
-                pass
+                if self.has_rich:
+                    self.console.print(f"[red]✗ {msg}[/red]")
+                else:
+                    self.logger.error(msg)
 
-        mock_display = MockDisplayContext()
+        mock_display = LegacyDisplayContext()
 
         # Extract content from file
         text, img_b64 = _extract_file_content(input_path, ocr_lang, mock_display)
@@ -560,7 +583,7 @@ def process_file(
 
     except (ValueError, OSError, FileNotFoundError) as e:
         error_msg = f"Error with file {filename}: {str(e)}"
-        print(f"\\n{error_msg}")
+        mock_display.show_error(error_msg)
         try:
             if os.path.exists(input_path):
                 unprocessed_path = os.path.join(unprocessed_folder, filename)
@@ -586,12 +609,12 @@ def process_file(
         error_msg = f"Unexpected error with file {filename}: {str(e)}"
         # Sanitize error message before displaying and logging
         sanitized_error_msg = sanitize_log_message(error_msg)
-        print(f"\\n{sanitized_error_msg}")
+        mock_display.show_error(sanitized_error_msg)
         try:
             with open(ERROR_LOG_FILE, mode="a", encoding="utf-8") as log:
                 log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')}: {sanitized_error_msg}\\n")
         except (IOError, OSError) as log_error:
-            print(f"Warning: Could not write to error log: {str(log_error)}")
+            mock_display.show_warning(f"Could not write to error log: {str(log_error)}")
         pbar.set_postfix({"Status": "Error", "Message": "Unexpected error"})
 
         # Update progress bar for runtime error case
