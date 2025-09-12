@@ -7,6 +7,7 @@ from the filename generation phase for memory efficiency.
 
 import logging
 import re
+import warnings
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -22,8 +23,13 @@ class ContentMetadataExtractor:
     def __init__(self):
         """Initialize metadata extractor with spaCy and date parsing."""
         try:
-            # Load spaCy model for entity recognition
-            self.nlp = spacy.load("en_core_web_sm", disable=["parser", "tagger"])
+            # Suppress spaCy warnings during model loading
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=UserWarning, module="spacy")
+                # Load spaCy model optimized for entity recognition and metadata extraction
+                # Keep tagger, attribute_ruler, and lemmatizer for better text analysis
+                # Only disable parser since we don't need dependency parsing for metadata extraction
+                self.nlp = spacy.load("en_core_web_sm", disable=["parser"])
         except OSError:
             # Graceful fallback if spaCy not available - warn only once
             if not ContentMetadataExtractor._spacy_warning_shown:

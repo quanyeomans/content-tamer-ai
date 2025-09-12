@@ -670,19 +670,33 @@ class ClusteringService:
         # Quality assessment
         quality_score = (high_confidence_docs / total_docs) * 100
 
-        # Check for balanced distribution (avoid too many small categories)
+        # Check for balanced distribution with adaptive minimum category size
+        # For small datasets, allow categories with just 1 document
+        adaptive_min_size = 1 if total_docs <= 10 else self.config.min_category_size
         small_categories = sum(
-            1 for count in categories.values() if count < self.config.min_category_size
+            1 for count in categories.values() if count < adaptive_min_size
         )
         balance_score = (
             max(0, 100 - (small_categories / len(categories) * 100)) if categories else 0
         )
 
         overall_score = (quality_score + balance_score) / 2
+        
+        # Adaptive quality threshold based on dataset size
+        # Small datasets (< 10 docs) get lower thresholds for more lenient clustering
+        if total_docs <= 5:
+            threshold = 40  # Very small sets need flexible thresholds
+        elif total_docs <= 10:
+            threshold = 50  # Small sets get moderate thresholds
+        elif total_docs <= 20:
+            threshold = 55  # Medium sets get slightly lower thresholds
+        else:
+            threshold = 60  # Large sets use standard threshold
 
         return {
-            "valid": overall_score >= 60,  # 60% threshold for acceptable clustering
+            "valid": overall_score >= threshold,
             "overall_score": overall_score,
+            "threshold_used": threshold,
             "quality_metrics": {
                 "total_documents": total_docs,
                 "high_confidence": high_confidence_docs,

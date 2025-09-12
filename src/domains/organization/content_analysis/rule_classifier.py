@@ -8,6 +8,7 @@ for one-shot client discovery scenarios.
 
 import logging
 import re
+import warnings
 
 # datetime imported but not used - keeping for future enhancements
 from datetime import datetime  # pylint: disable=unused-import
@@ -32,8 +33,13 @@ class EnhancedRuleBasedClassifier:
             self.nlp = spacy_model
         else:
             try:
-                # Load spaCy model with minimal components for speed
-                self.nlp = spacy.load("en_core_web_sm", disable=["parser", "tagger"])
+                # Suppress spaCy warnings during model loading
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=UserWarning, module="spacy")
+                    # Load spaCy model optimized for NER and classification
+                    # Keep tagger, attribute_ruler, and lemmatizer for better text analysis
+                    # Only disable parser (slowest component) since we don't need dependency parsing
+                    self.nlp = spacy.load("en_core_web_sm", disable=["parser"])
             except OSError:
                 # Graceful fallback if spaCy not available - warn only once
                 if not EnhancedRuleBasedClassifier._spacy_warning_shown:
@@ -204,7 +210,7 @@ class EnhancedRuleBasedClassifier:
         return category_scores
 
     def _score_modern_entity_patterns(self, content: str) -> Dict[str, float]:
-        """Use spaCy entity recognition for additional scoring."""
+        """Use spaCy NLP features for enhanced scoring."""
         if not self.nlp:
             return {}
 
@@ -212,6 +218,27 @@ class EnhancedRuleBasedClassifier:
             # Process content with spaCy (limit to first 2000 chars for speed)
             doc = self.nlp(content[:2000])
             entity_scores = {}
+            
+            # Extract lemmatized content for better pattern matching
+            lemmatized_tokens = [token.lemma_.lower() for token in doc 
+                               if not token.is_stop and not token.is_punct and token.is_alpha]
+            lemmatized_text = ' '.join(lemmatized_tokens)
+            
+            # Enhanced pattern matching using lemmatized content
+            lemma_patterns = {
+                "contracts": ["agreement", "contract", "party", "clause", "obligation", "breach"],
+                "invoices": ["invoice", "payment", "amount", "due", "billing", "charge"],
+                "reports": ["report", "analysis", "finding", "summary", "conclusion", "recommendation"],
+                "financial": ["financial", "revenue", "profit", "expense", "budget", "cost"],
+                "legal": ["legal", "law", "regulation", "compliance", "liability", "jurisdiction"],
+                "correspondence": ["letter", "email", "correspondence", "communication", "message"]
+            }
+            
+            for category, patterns in lemma_patterns.items():
+                pattern_count = sum(1 for pattern in patterns if pattern in lemmatized_text)
+                if pattern_count > 0:
+                    # Score based on pattern density
+                    entity_scores[category] = entity_scores.get(category, 0) + (pattern_count * 0.1)
 
             # Score based on entity types found
             for ent in doc.ents:
